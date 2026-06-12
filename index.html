@@ -1182,13 +1182,8 @@
 
     function init() {
       if (STATIC_PUBLIC_MODE) {
-        state.token = '';
-        state.user = null;
-        sessionStorage.removeItem('rasporedToken');
-        sessionStorage.removeItem('rasporedUser');
-        $('#loginTab').classList.add('hidden');
         $('#heroText').textContent =
-          'Javni raspored se automatski učitava iz lokalno objavljenih podataka.';
+          'Prijavite se svojim userom da vidite svoje smene.';
       }
       bindEvents();
       updateNetworkStatus();
@@ -1260,7 +1255,7 @@
 
     async function callServer(name, ...args) {
       if (STATIC_PUBLIC_MODE) {
-        return callStaticData(name);
+        return callStaticData(name, args);
       }
 
       if (location.protocol === 'http:' &&
@@ -1296,8 +1291,11 @@
       );
     }
 
-    async function callStaticData(name) {
-      if (name !== 'getBootstrap' && name !== 'getAllSchedule') {
+    async function callStaticData(name, args) {
+      const allowedActions = [
+        'getBootstrap', 'getAllSchedule', 'login', 'logout'
+      ];
+      if (!allowedActions.includes(name)) {
         throw new Error(
           'Prijava i administracija dostupne su samo u lokalnoj aplikaciji.'
         );
@@ -1316,7 +1314,63 @@
         throw new Error('Objavljeni raspored nema ispravan format.');
       }
       updateNetworkStatus('online');
-      return name === 'getAllSchedule' ? data.schedule : data;
+
+      if (name === 'login') {
+        const username = String(args[0] || '').trim().toLowerCase();
+        if (!username) throw new Error('Unesite korisničko ime.');
+        const person = findStaticPerson(data.schedule, username);
+        if (!person) {
+          throw new Error('Korisnik nije pronađen u objavljenom rasporedu.');
+        }
+        return {
+          token: 'static-public-session',
+          user: {
+            name: person.name,
+            user: person.user,
+            role: 'zaposleni',
+            duty: person.duty || ''
+          },
+          schedule: markStaticSchedule(data.schedule, person.user)
+        };
+      }
+      if (name === 'logout') return true;
+      if (name === 'getAllSchedule') {
+        return markStaticSchedule(
+          data.schedule,
+          state.user ? state.user.user : ''
+        );
+      }
+      return data;
+    }
+
+    function findStaticPerson(schedule, username) {
+      for (const day of schedule) {
+        for (const shiftId of [1, 2, 3]) {
+          const people = day.shifts[String(shiftId)] ||
+            day.shifts[shiftId] || [];
+          const person = people.find(item =>
+            String(item.user || '').trim().toLowerCase() === username
+          );
+          if (person) return person;
+        }
+      }
+      return null;
+    }
+
+    function markStaticSchedule(schedule, username) {
+      const normalized = String(username || '').trim().toLowerCase();
+      return schedule.map(day => ({
+        ...day,
+        shifts: Object.fromEntries([1, 2, 3].map(shiftId => {
+          const people = day.shifts[String(shiftId)] ||
+            day.shifts[shiftId] || [];
+          return [String(shiftId), people.map(person => ({
+            ...person,
+            mine: Boolean(normalized) &&
+              String(person.user || '').trim().toLowerCase() === normalized
+          }))];
+        }))
+      }));
     }
 
     async function callLocalServer(name, args) {
