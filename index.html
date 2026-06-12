@@ -1,0 +1,3441 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raspored App</title>
+  <style>
+    :root {
+      --ink: #17312e;
+      --muted: #687b77;
+      --paper: #f5f2e9;
+      --card: #fffdf7;
+      --line: #d9ded8;
+      --green: #1d6258;
+      --green-2: #2e8576;
+      --lime: #d8ed9b;
+      --orange: #f2a65a;
+      --night: #3a416f;
+      --danger: #a84036;
+      --shadow: 0 18px 50px rgba(23, 49, 46, .09);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(216, 237, 155, .42), transparent 28rem),
+        linear-gradient(180deg, #faf8f1, var(--paper));
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+
+    .app-shell {
+      width: min(1900px, 100%);
+      margin: 0 auto;
+      padding: 20px clamp(14px, 2vw, 32px) 60px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      border-radius: 15px;
+      color: white;
+      background: var(--green);
+      box-shadow: 0 9px 24px rgba(29, 98, 88, .24);
+      font-weight: 900;
+      letter-spacing: -.05em;
+    }
+    .brand-copy strong { display: block; font-size: 18px; }
+    .brand-copy span { color: var(--muted); font-size: 12px; }
+
+    .tabs {
+      display: flex;
+      gap: 5px;
+      padding: 5px;
+      border: 1px solid rgba(23, 49, 46, .08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .64);
+    }
+    .tab {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 18px;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 750;
+    }
+    .tab.active { color: white; background: var(--ink); }
+
+    .session {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      min-width: 180px;
+    }
+    .session-copy { text-align: right; line-height: 1.2; }
+    .session-copy strong { display: block; font-size: 14px; }
+    .session-copy span { color: var(--muted); font-size: 12px; }
+    .api-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .api-status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #2e8576;
+    }
+    .api-status.degraded::before { background: #e6a325; }
+    .api-status.offline::before { background: var(--danger); }
+
+    .btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 16px;
+      color: white;
+      background: var(--green);
+      font-weight: 800;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(29, 98, 88, .2); }
+    .btn.secondary { color: var(--ink); background: #e8ece7; }
+    .btn.ghost { color: var(--green); background: transparent; border: 1px solid #b9cbc5; }
+    .btn.danger { color: var(--danger); background: #fae5df; }
+    .btn.small { padding: 8px 11px; font-size: 13px; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .hero-main, .hero-side, .panel {
+      border: 1px solid rgba(23, 49, 46, .08);
+      border-radius: var(--radius);
+      background: rgba(255, 253, 247, .86);
+      box-shadow: var(--shadow);
+    }
+    .hero-main {
+      min-height: 190px;
+      padding: clamp(24px, 4vw, 52px);
+      background:
+        linear-gradient(120deg, rgba(23, 63, 58, .96), rgba(29, 98, 88, .88)),
+        var(--green);
+      color: white;
+      overflow: hidden;
+      position: relative;
+    }
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      width: 230px;
+      height: 230px;
+      right: -65px;
+      bottom: -115px;
+      border: 35px solid rgba(216, 237, 155, .18);
+      border-radius: 50%;
+    }
+    .eyebrow {
+      margin: 0 0 8px;
+      text-transform: uppercase;
+      letter-spacing: .13em;
+      font-size: 11px;
+      font-weight: 900;
+      opacity: .75;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 10px; font-size: clamp(28px, 5vw, 54px); letter-spacing: -.045em; line-height: 1; }
+    .hero-main p { max-width: 600px; margin: 0; color: rgba(255,255,255,.76); }
+    .hero-side { padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
+    .clock { font-size: clamp(30px, 5vw, 52px); line-height: 1; font-weight: 900; letter-spacing: -.06em; }
+    .date-label { margin-top: 7px; color: var(--muted); text-transform: capitalize; }
+    .current-pill {
+      align-self: flex-start;
+      margin-top: 24px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--lime);
+      font-weight: 850;
+      font-size: 13px;
+    }
+
+    .panel { padding: clamp(17px, 2.5vw, 28px); }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .panel-head h2, .panel-head h3 { margin: 0; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+    .schedule-grid { display: grid; gap: 4px; }
+    .month-divider {
+      margin: 20px 0 2px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      color: white;
+      background: var(--green);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: -.02em;
+    }
+    .month-toggle {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      border: 0;
+      padding: 0;
+      color: inherit;
+      background: transparent;
+      font: inherit;
+      font-weight: inherit;
+      cursor: pointer;
+    }
+    .month-days { display: grid; gap: 4px; }
+    .month-shift-headings {
+      display: grid;
+      grid-template-columns: 150px repeat(3, minmax(190px, 1fr));
+      gap: 4px;
+      padding: 2px 4px 0;
+    }
+    .month-shift-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      color: var(--ink);
+      background: #e8eeea;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .month-shift-heading span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .archive-controls {
+      display: grid;
+      grid-template-columns: minmax(150px, 220px) minmax(150px, 220px) auto;
+      gap: 10px;
+      margin-bottom: 14px;
+      align-items: end;
+    }
+    .past-days-toggle { margin: 4px 0 12px; }
+    .day-row {
+      display: grid;
+      grid-template-columns: 150px repeat(3, minmax(190px, 1fr));
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+    .day-row.weekend {
+      border-color: #c9ddd3;
+      background: #eef7f2;
+    }
+    .day-row.weekend .shift-card { background: #e3f0e9; }
+    .day-meta {
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .day-meta-line {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .day-meta strong { font-size: 16px; }
+    .day-meta span { color: var(--muted); font-size: 13px; }
+    .day-meta .holiday-name {
+      margin-top: 5px;
+      color: #a33a3a;
+      font-size: 11px;
+      font-weight: 850;
+      line-height: 1.2;
+    }
+    .day-row.today { border-color: var(--green-2); box-shadow: inset 4px 0 var(--green-2); }
+
+    .shift-card {
+      min-height: 70px;
+      padding: 8px;
+      border-radius: 9px;
+      background: #f3f6f2;
+      border: 1px solid transparent;
+    }
+    .shift-card.current {
+      border-color: var(--orange);
+      background: #fff5e9;
+      box-shadow: 0 8px 18px rgba(242, 166, 90, .13);
+    }
+    .shift-card.understaffed {
+      border: 2px solid #b53f36;
+      background: #ffe8e4;
+      box-shadow: inset 5px 0 #b53f36, 0 7px 18px rgba(181, 63, 54, .16);
+    }
+    .shift-card.understaffed .shift-head strong {
+      color: #8d2f29;
+    }
+    .shortage-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 7px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      color: white;
+      background: #b53f36;
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .04em;
+      vertical-align: middle;
+    }
+    .staff-shortage {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 7px;
+      border-radius: 7px;
+      color: #8d2f29;
+      background: #ffd7d2;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .shift-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .shift-head strong { color: var(--ink); font-size: 13px; }
+    .schedule-grid:not(.admin-schedule) .shift-head { display: none; }
+    .schedule-grid:not(.admin-schedule) .shift-card {
+      min-height: 0;
+      padding: 6px 8px;
+    }
+    .schedule-grid:not(.admin-schedule) .shift-people { padding-bottom: 0; }
+    .shift-people {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: thin;
+    }
+    .person {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      gap: 5px;
+      padding: 4px 6px;
+      margin-top: 0;
+      border-radius: 8px;
+      background: rgba(255,255,255,.68);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .person::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #2878d0;
+      flex: 0 0 auto;
+      box-shadow: 0 0 0 2px rgba(255,255,255,.85);
+    }
+    .person.shift-leader::before { background: #d6453d; }
+    .person.monitoring::before { background: #e6b325; }
+    .person.employee::before { background: #2878d0; }
+    .person.mine { background: var(--lime); font-weight: 900; }
+    .person small { margin-left: auto; color: var(--muted); font-size: 10px; }
+    .person.highlighted { background: #ffe5a8; box-shadow: inset 0 0 0 2px #e69a2c; }
+    .person-remove-shift, .shift-add {
+      display: inline-grid;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      color: white;
+      background: var(--danger);
+      font-weight: 900;
+    }
+    .shift-add { margin-left: 4px; background: var(--green); }
+    .schedule-search {
+      display: grid;
+      grid-template-columns: minmax(220px, 360px) auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .search-result { color: var(--green); font-weight: 850; }
+    .modal {
+      position: fixed;
+      z-index: 50;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(23,49,46,.65);
+    }
+    .modal-card {
+      width: min(520px, 100%);
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .candidate-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+      padding-right: 4px;
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      min-height: 0;
+    }
+    .candidate {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: white;
+    }
+    .empty { padding: 6px; color: #9aa7a3; font-size: 12px; font-style: italic; }
+
+    .login-wrap {
+      width: min(480px, 100%);
+      margin: 8vh auto 0;
+    }
+    .login-card { padding: clamp(25px, 5vw, 44px); }
+    .login-card h2 { font-size: 32px; margin-bottom: 9px; letter-spacing: -.035em; }
+    .login-card > p { color: var(--muted); margin-bottom: 26px; }
+    label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 800; }
+    input, select {
+      width: 100%;
+      border: 1px solid #cdd6d2;
+      border-radius: 11px;
+      padding: 11px 12px;
+      color: var(--ink);
+      background: white;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--green-2); box-shadow: 0 0 0 3px rgba(46,133,118,.12); }
+    .field { margin-bottom: 16px; }
+    .login-card .btn { width: 100%; padding: 13px; }
+    .login-note { margin: 18px 0 0; color: var(--muted); font-size: 12px; text-align: center; }
+
+    .employee-dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .status-card { position: relative; overflow: hidden; min-height: 180px; }
+    .status-card.primary { color: white; background: var(--green); }
+    .status-card.tomorrow { background: #fff8e9; }
+    .status-label { color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; }
+    .primary .status-label { color: rgba(255,255,255,.7); }
+    .status-value { margin-top: 20px; font-size: clamp(27px, 4vw, 44px); font-weight: 900; letter-spacing: -.04em; line-height: 1; }
+    .status-detail { margin-top: 10px; color: var(--muted); }
+    .primary .status-detail { color: rgba(255,255,255,.75); }
+    .week-panel { grid-column: 1 / -1; }
+    .week-list { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .week-day { padding: 13px 10px; border: 1px solid var(--line); border-radius: 12px; background: white; text-align: center; }
+    .week-day strong, .week-day span { display: block; }
+    .week-day span { margin: 6px 0; color: var(--muted); font-size: 11px; }
+    .week-day b { color: var(--green); font-size: 12px; }
+
+    .admin-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+    .admin-layout .full { grid-column: 1 / -1; }
+    #adminView { font-size: 13px; }
+    #adminView > .panel-head { margin-bottom: 12px; }
+    #adminView > .panel-head h2 { font-size: 22px; }
+    #adminView .panel {
+      padding: clamp(13px, 1.7vw, 19px);
+      border-radius: 15px;
+    }
+    #adminView .panel-head { gap: 12px; margin-bottom: 12px; }
+    #adminView h3 { font-size: 16px; }
+    #adminView h4 { font-size: 14px; }
+    #adminView .panel-head p,
+    #adminView p { font-size: 12px; line-height: 1.35; }
+    #adminView label { margin-bottom: 4px; font-size: 11px; }
+    #adminView input,
+    #adminView select {
+      padding: 7px 9px;
+      border-radius: 9px;
+      font-size: 12px;
+    }
+    #adminView .btn { padding: 8px 12px; font-size: 12px; }
+    #adminView .btn.small { padding: 6px 9px; font-size: 11px; }
+    #adminView .field { margin-bottom: 10px; }
+    #adminView .admin-layout { gap: 11px; }
+    .admin-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+      margin-bottom: 14px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .7);
+    }
+    .admin-tab {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 13px;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 850;
+    }
+    .admin-tab.active {
+      color: white;
+      background: var(--green);
+    }
+    .admin-tab-pane { display: none; }
+    .admin-tab-pane.active { display: block; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 750px; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+    td input, td select { min-width: 105px; padding: 8px; }
+    td .check { width: 18px; height: 18px; }
+    .staff-grid { display: grid; gap: 12px; }
+    .staff-item { display: grid; grid-template-columns: 1fr 80px; align-items: center; gap: 10px; }
+    .month-fields {
+      display: grid;
+      grid-template-columns: minmax(180px, 260px) minmax(140px, 200px);
+      gap: 12px;
+    }
+    .month-fields .field { margin: 0; }
+    .generation-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+      gap: 18px;
+      align-items: start;
+    }
+    .generation-staff {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #f8faf7;
+    }
+    .generation-staff h4 { margin: 0 0 4px; }
+    .generation-staff > p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .generation-action {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+    .staff-suggestion {
+      margin-top: 16px;
+      padding: 13px;
+      border-radius: 12px;
+      background: #edf5f1;
+      font-size: 13px;
+    }
+    .staff-suggestion strong { display: block; margin-bottom: 5px; }
+    .action-row { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; flex-wrap: wrap; }
+    .warnings { margin-top: 16px; padding: 14px; border-radius: 12px; color: #74441d; background: #fff0d9; font-size: 13px; }
+    .warnings p { margin: 4px 0; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .summary-box {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #f8faf7;
+    }
+    .summary-box h4 { margin: 0 0 10px; }
+    .summary-box table { min-width: 420px; background: white; }
+    .summary-total { font-weight: 900; color: var(--green); }
+    .admin-schedule { margin-top: 16px; overflow-x: auto; }
+    .admin-schedule .day-row {
+      min-width: 860px;
+      grid-template-columns: 132px repeat(3, minmax(190px, 1fr));
+      gap: 3px;
+      padding: 3px;
+      border-radius: 10px;
+    }
+    .admin-schedule .day-meta { padding: 8px 10px; }
+    .admin-schedule .day-meta strong { font-size: 14px; }
+    .admin-schedule .day-meta span { font-size: 12px; }
+    .admin-schedule .shift-card {
+      min-height: 66px;
+      padding: 7px;
+      border-radius: 8px;
+    }
+    .admin-schedule .shift-head { margin-bottom: 4px; }
+    .admin-schedule .shift-people {
+      display: grid;
+      gap: 2px;
+      overflow: visible;
+    }
+    .admin-schedule .person {
+      display: flex;
+      width: 100%;
+      margin-top: 0;
+      padding: 3px 6px;
+      font-size: 12px;
+      white-space: normal;
+    }
+    .admin-schedule .person-remove-shift,
+    .admin-schedule .shift-add {
+      width: 20px;
+      height: 20px;
+    }
+    .admin-schedule .month-days,
+    .admin-schedule.schedule-grid { gap: 3px; }
+    .add-person-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr 150px auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .replace-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 160px 160px auto;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+    .swap-grid {
+      display: grid;
+      grid-template-columns: 180px 1fr 1fr auto;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+    .replace-grid .field, .swap-grid .field { margin: 0; }
+    .add-person-grid .field { margin: 0; }
+    .people-list { display: grid; gap: 8px; }
+    .people-row {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 170px 140px 90px;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 9px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+    }
+    .people-row .person-name strong, .people-row .person-name span { display: block; }
+    .people-row .person-name span { margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .role-badge {
+      display: inline-flex;
+      width: fit-content;
+      padding: 6px 9px;
+      border-radius: 999px;
+      color: var(--green);
+      background: #e3f0eb;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .monthly-plan table { min-width: 900px; }
+    .monthly-plan th, .monthly-plan td { padding: 5px 4px; }
+    .monthly-plan th { white-space: nowrap; vertical-align: bottom; text-align: center; }
+    .monthly-plan th:first-child, .monthly-plan td:first-child { text-align: left; }
+    .monthly-plan select { min-width: 88px; padding: 5px 4px; font-size: 12px; }
+    .week-range { display: block; margin-top: 3px; color: var(--ink); font-size: 10px; text-transform: none; }
+    .replacement-note { display: block; margin-top: 4px; color: #17643b; font-size: 10px; font-weight: 700; }
+    .plan-replacement-choice {
+      min-width: 112px;
+      margin-top: 5px;
+      padding: 5px 4px;
+      border-color: #e6b825;
+      background: #fffdf3;
+      font-size: 11px;
+    }
+    .plan-person { min-width: 180px; }
+    .plan-person strong, .plan-person span { display: block; }
+    .plan-person span { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .plan-person .replacement-check { display: flex; gap: 6px; margin-top: 5px; color: var(--ink); font-size: 11px; }
+    .group-row td {
+      padding: 7px 9px;
+      color: var(--green);
+      background: #edf5f1;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .replacement-indicator {
+      display: inline-block;
+      margin-left: 4px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #d4edda;
+      color: #155724;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .plan-week-duty {
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+    .plan-week-duty[style*="background: rgb(212, 237, 218)"] {
+      font-weight: 700;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 20;
+      right: 20px;
+      bottom: 20px;
+      max-width: min(390px, calc(100vw - 40px));
+      padding: 13px 16px;
+      border-radius: 12px;
+      color: white;
+      background: var(--ink);
+      box-shadow: var(--shadow);
+      transform: translateY(30px);
+      opacity: 0;
+      pointer-events: none;
+      transition: .22s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: var(--danger); }
+    .loader {
+      position: fixed;
+      z-index: 30;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: rgba(23,49,46,.74);
+      backdrop-filter: blur(5px);
+      font-weight: 850;
+    }
+
+    .mobile-current,
+    .mobile-upcoming { display: none; }
+
+    @media (max-width: 900px) {
+      .topbar { flex-wrap: wrap; }
+      .tabs { order: 3; width: 100%; }
+      .tab { flex: 1; }
+      #scheduleView .hero,
+      #scheduleView .desktop-schedule { display: none !important; }
+      #scheduleView .employee-dashboard {
+        grid-template-columns: 1fr 1fr;
+        margin-bottom: 14px;
+      }
+      #scheduleView .employee-dashboard .week-panel { display: none; }
+      .mobile-current { display: block; }
+      .mobile-upcoming {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .mobile-upcoming-title {
+        margin: 6px 2px 2px;
+        font-size: 20px;
+      }
+      .mobile-day {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 253, 247, .94);
+        box-shadow: 0 8px 24px rgba(23, 49, 46, .06);
+      }
+      .mobile-day.today {
+        border-color: var(--green-2);
+        box-shadow: inset 4px 0 var(--green-2);
+      }
+      .mobile-day-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .mobile-day-head strong { font-size: 17px; }
+      .mobile-day-head span { color: var(--muted); font-size: 13px; }
+      .mobile-day-shifts { display: grid; gap: 7px; }
+      .mobile-day-shift {
+        padding: 10px;
+        border-radius: 11px;
+        background: #eef3ef;
+      }
+      .mobile-day-shift.current {
+        background: #fff1df;
+        box-shadow: inset 3px 0 var(--orange);
+      }
+      .mobile-day-shift-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 7px;
+        font-size: 12px;
+      }
+      .mobile-day-shift-head span { color: var(--muted); }
+      .mobile-personal-status {
+        padding: 12px;
+        border-radius: 11px;
+        color: var(--green);
+        background: #e6f1ec;
+        font-size: 18px;
+        font-weight: 900;
+      }
+      .mobile-personal-status.off {
+        color: var(--muted);
+        background: #f0f1ee;
+      }
+      .mobile-personal-detail {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .employee-dashboard { grid-template-columns: 1fr; }
+      .shift-people {
+        display: grid;
+        overflow: visible;
+      }
+      .person {
+        display: flex;
+        width: 100%;
+        white-space: normal;
+      }
+      .week-panel { grid-column: auto; }
+      .week-list { grid-template-columns: 1fr; }
+      .week-day { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; text-align: left; }
+      .admin-layout { grid-template-columns: 1fr; }
+      .admin-layout .full { grid-column: auto; }
+      .admin-tabs {
+        grid-template-columns: 1fr;
+        border-radius: 12px;
+      }
+      .generation-layout { grid-template-columns: 1fr; }
+      .month-fields { grid-template-columns: 1fr 1fr; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .archive-controls { grid-template-columns: 1fr 1fr; }
+      .archive-controls .btn { grid-column: 1 / -1; }
+      .session { min-width: 0; }
+      .session-copy { display: none; }
+      .add-person-grid { grid-template-columns: 1fr 1fr; }
+      .replace-grid, .swap-grid { grid-template-columns: 1fr 1fr; }
+      .people-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      .app-shell { padding-top: 12px; }
+      .brand-copy span { display: none; }
+      .hero-main { min-height: 170px; padding: 26px 22px; }
+      .panel { border-radius: 16px; }
+      #scheduleView .employee-dashboard { grid-template-columns: 1fr; }
+      .mobile-shift {
+        padding: 24px;
+        color: white;
+        background: var(--night);
+      }
+      .mobile-shift h2 { margin: 5px 0 18px; font-size: 34px; }
+      .mobile-shift .person { color: var(--ink); background: rgba(255,255,255,.9); padding: 10px; }
+      .mobile-shift .empty { color: rgba(255,255,255,.7); }
+      .add-person-grid, .people-row { grid-template-columns: 1fr; }
+      .replace-grid, .swap-grid { grid-template-columns: 1fr; }
+      .month-fields { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loader" class="loader">Učitavanje rasporeda…</div>
+  <div id="toast" class="toast"></div>
+
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">RA</div>
+        <div class="brand-copy">
+          <strong id="brandName">Raspored App</strong>
+          <span>Smene bez nagađanja</span>
+        </div>
+      </div>
+
+      <nav class="tabs" aria-label="Glavna navigacija">
+        <button class="tab active" data-view="scheduleView">Raspored</button>
+        <button class="tab" data-view="loginView" id="loginTab">Login</button>
+        <button class="tab hidden" data-view="adminView" id="adminTab">Admin portal</button>
+      </nav>
+
+      <div class="session">
+        <span id="apiStatus" class="api-status">API</span>
+        <div id="sessionCopy" class="session-copy hidden"></div>
+        <button id="logoutBtn" class="btn small secondary hidden">Odjava</button>
+      </div>
+    </header>
+
+    <section id="scheduleView" class="view">
+      <div id="publicHero" class="hero">
+        <article class="hero-main">
+          <p class="eyebrow">Mesečni plan rada</p>
+          <h1 id="heroTitle">Ko radi danas?</h1>
+          <p id="heroText">Javni pregled je dostupan bez prijave. Prijavite se da odmah vidite svoje smene.</p>
+        </article>
+        <article class="hero-side">
+          <div>
+            <div id="clock" class="clock">--:--</div>
+            <div id="dateLabel" class="date-label"></div>
+          </div>
+          <div id="currentPill" class="current-pill">Učitavanje smene</div>
+        </article>
+      </div>
+
+      <div id="employeeDashboard" class="employee-dashboard hidden"></div>
+
+      <section id="mobileCurrent" class="panel mobile-current mobile-shift"></section>
+      <section id="mobileUpcoming" class="mobile-upcoming"></section>
+
+      <section class="panel desktop-schedule">
+        <div class="panel-head">
+          <div>
+            <h2>Raspored po danima</h2>
+            <p>Svaki red je jedan dan, jasno podeljen na tri smene.</p>
+          </div>
+        </div>
+        <div class="schedule-search">
+          <select id="publicEmployeeSearch"><option value="">Pronađi zaposlenog…</option></select>
+          <span id="publicSearchResult" class="search-result"></span>
+        </div>
+        <div class="archive-controls">
+          <div><label for="publicArchiveYear">Godina</label><select id="publicArchiveYear"></select></div>
+          <div><label for="publicArchiveMonth">Mesec</label><select id="publicArchiveMonth"></select></div>
+          <button id="showCurrentTimeline" class="btn small ghost" type="button">Tekući i naredni meseci</button>
+        </div>
+        <div id="scheduleGrid" class="schedule-grid"></div>
+      </section>
+    </section>
+
+    <section id="loginView" class="view hidden">
+      <div class="login-wrap">
+        <article class="panel login-card">
+          <p class="eyebrow">Pristup rasporedu</p>
+          <h2>Dobro došli</h2>
+          <p>Unesite svoj user iz taba <strong>Login</strong>. Lozinka nije potrebna.</p>
+          <form id="loginForm">
+            <div class="field">
+              <label for="username">Korisničko ime</label>
+              <input id="username" name="username" autocomplete="username" placeholder="npr. zaposleni1" required>
+            </div>
+            <button class="btn" type="submit">Prijavi se</button>
+          </form>
+          <p class="login-note">Za početno podešavanje administrator koristi user <strong>admin</strong>.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="adminView" class="view hidden">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Kontrolni centar</p>
+          <h2>Kreiranje mesečnog rasporeda</h2>
+        </div>
+      </div>
+
+      <nav class="admin-tabs" aria-label="Admin sekcije">
+        <button class="admin-tab active" type="button" data-admin-tab="adminPeopleTab">Osobe u sistemu</button>
+        <button class="admin-tab" type="button" data-admin-tab="adminPlanTab">Plan zaposlenih po nedeljama</button>
+        <button class="admin-tab" type="button" data-admin-tab="adminScheduleTab">Tekući i naredni rasporedi</button>
+      </nav>
+
+      <div id="adminPeopleTab" class="admin-tab-pane active">
+        <div class="admin-layout">
+          <section class="panel full">
+          <div class="panel-head">
+            <div>
+              <h3>Dodaj osobu</h3>
+              <p>Ime, user i osnovna rola čuvaju se u Login tabu.</p>
+            </div>
+          </div>
+          <form id="addPersonForm" class="add-person-grid">
+            <div class="field">
+              <label for="newPersonName">Ime i prezime</label>
+              <input id="newPersonName" required placeholder="Ime i prezime">
+            </div>
+            <div class="field">
+              <label for="newPersonUser">User</label>
+              <input id="newPersonUser" required placeholder="korisnicko.ime">
+            </div>
+            <div class="field">
+              <label for="newPersonRole">Rola</label>
+              <select id="newPersonRole">
+                <option value="radnik">Radnik</option>
+                <option value="shift_lider">Shift lider</option>
+                <option value="monitoring">Monitoring</option>
+                <option value="administrator">Administrator</option>
+              </select>
+            </div>
+            <div class="field" id="newMonitorField">
+              <label for="newMonitorShift">Monitoring smena</label>
+              <select id="newMonitorShift">
+                <option value="1">I smena</option>
+                <option value="2">II smena</option>
+                <option value="3">III smena</option>
+              </select>
+            </div>
+            <button class="btn" type="submit">Dodaj osobu</button>
+          </form>
+          </section>
+
+          <section class="panel full">
+          <div class="panel-head">
+            <div>
+              <h3>Osobe u sistemu</h3>
+              <p>Ovde možete promeniti osnovnu rolu ili deaktivirati osobu.</p>
+            </div>
+            <button id="savePeopleBtn" class="btn ghost">Sačuvaj izmene</button>
+          </div>
+          <div id="peopleList" class="people-list"></div>
+          </section>
+        </div>
+      </div>
+
+      <div id="adminPlanTab" class="admin-tab-pane">
+        <div class="admin-layout">
+          <section class="panel full">
+          <h3>Mesec</h3>
+          <div class="month-fields">
+            <div class="field">
+              <label for="adminMonth">Mesec</label>
+              <select id="adminMonth"></select>
+            </div>
+            <div class="field">
+              <label for="adminYear">Godina</label>
+              <input id="adminYear" type="number" min="2020" max="2100">
+            </div>
+          </div>
+          </section>
+
+          <section class="panel full">
+          <div class="panel-head">
+            <div>
+              <h3>Plan zaposlenih po nedeljama</h3>
+              <p id="monthPlanDescription">Izaberite mesec. Prva i poslednja nedelja prikazuju samo dane koji pripadaju tom mesecu.</p>
+            </div>
+          </div>
+          <div class="table-wrap monthly-plan">
+            <table>
+              <thead id="monthPlanHead"></thead>
+              <tbody id="monthPlanBody"></tbody>
+            </table>
+          </div>
+          </section>
+
+          <section class="panel full">
+          <div class="generation-layout">
+            <div>
+              <h3>Generisanje</h3>
+              <p>Postojeći raspored za izabrani mesec biće zamenjen. Prethodni meseci ostaju sačuvani.</p>
+              <div class="generation-action">
+                <button id="generateBtn" class="btn">Napravi raspored</button>
+              </div>
+            </div>
+            <div class="generation-staff">
+              <h4>Broj zaposlenih po smeni</h4>
+              <p>Shift lider i monitoring se dodaju posebno.</p>
+              <div class="staff-grid">
+                <div class="staff-item"><label for="staff1">I smena</label><select id="staff1"></select></div>
+                <div class="staff-item"><label for="staff2">II smena</label><select id="staff2"></select></div>
+                <div class="staff-item"><label for="staff3">III smena</label><select id="staff3"></select></div>
+              </div>
+              <div id="staffSuggestion" class="staff-suggestion"></div>
+              <button id="applySuggestionBtn" class="btn small ghost" type="button">Primeni predlog</button>
+            </div>
+          </div>
+          <div id="scheduleSummary" class="summary-grid hidden"></div>
+          </section>
+        </div>
+      </div>
+
+      <div id="adminScheduleTab" class="admin-tab-pane">
+        <div class="admin-layout">
+          <section class="panel full">
+          <div class="panel-head">
+            <div>
+              <h3>Tekući i naredni rasporedi</h3>
+              <p>Tekući mesec je otvoren. Naredni generisani meseci otvaraju se klikom na naslov.</p>
+            </div>
+          </div>
+          <div id="warnings" class="warnings hidden"></div>
+          <form id="replaceEmployeeForm" class="replace-grid">
+            <div class="field">
+              <label for="replaceFromUser">Replace zaposleni</label>
+              <select id="replaceFromUser" required></select>
+            </div>
+            <div class="field">
+              <label for="replaceToUser">Rotira mesta sa</label>
+              <select id="replaceToUser" required></select>
+            </div>
+            <div class="field">
+              <label for="replaceFromDate">Od datuma</label>
+              <input id="replaceFromDate" type="date" required>
+            </div>
+            <div class="field">
+              <label for="replaceToDate">Do datuma</label>
+              <input id="replaceToDate" type="date" required>
+            </div>
+            <button class="btn" type="submit">Replace</button>
+          </form>
+          <form id="swapEmployeesForm" class="swap-grid">
+            <div class="field">
+              <label for="swapDate">Datum</label>
+              <select id="swapDate" required></select>
+            </div>
+            <div class="field">
+              <label for="swapFirstUser">Prvi zaposleni</label>
+              <select id="swapFirstUser" required></select>
+            </div>
+            <div class="field">
+              <label for="swapSecondUser">Drugi zaposleni</label>
+              <select id="swapSecondUser" required></select>
+            </div>
+            <button class="btn" type="submit">Zameni smene</button>
+          </form>
+          <div class="schedule-search">
+            <select id="adminEmployeeSearch"><option value="">Pronađi zaposlenog…</option></select>
+            <span id="adminSearchResult" class="search-result"></span>
+          </div>
+          <div id="adminScheduleGrid" class="schedule-grid admin-schedule"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="addShiftModal" class="modal hidden">
+    <section class="panel modal-card">
+      <div class="panel-head">
+        <div><h3>Dodaj zaposlenog</h3><p id="addShiftDescription"></p></div>
+        <button id="closeAddShiftModal" class="btn small secondary" type="button">Zatvori</button>
+      </div>
+      <div id="addShiftCandidates" class="candidate-list"></div>
+    </section>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbykdWCxhnxMPbgqIaUP3yzZaWV-J-ZctTXg9GNvqX7z72j7cRPdkAuLhxpkBqZ-P_do/exec';
+
+    const state = {
+      token: sessionStorage.getItem('rasporedToken') || '',
+      user: JSON.parse(sessionStorage.getItem('rasporedUser') || 'null'),
+      schedule: [],
+      adminSchedule: [],
+      shifts: [],
+      admin: null,
+      publicSearchUser: '',
+      adminSearchUser: '',
+      pendingShift: null,
+      publicArchiveKey: '',
+      expandedMonths: {},
+      expandedPastDays: {}
+    };
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const months = ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'];
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    function init() {
+      bindEvents();
+      updateNetworkStatus();
+      updateClock();
+      setInterval(updateClock, 30000);
+      callServer('getBootstrap')
+        .then(data => {
+          state.schedule = data.schedule || [];
+          state.shifts = data.shifts || [];
+          $('#brandName').textContent = data.appName || 'Raspored App';
+          renderAll();
+          if (state.token && state.user) restoreSession();
+        })
+        .catch(showError)
+        .finally(() => setLoading(false));
+    }
+
+    function bindEvents() {
+      $$('.tab').forEach(tab => tab.addEventListener('click', () => showView(tab.dataset.view)));
+      $$('.admin-tab').forEach(tab => tab.addEventListener('click', () =>
+        showAdminTab(tab.dataset.adminTab)
+      ));
+      $('#loginForm').addEventListener('submit', handleLogin);
+      $('#logoutBtn').addEventListener('click', logout);
+      $('#addPersonForm').addEventListener('submit', addPerson);
+      $('#newPersonRole').addEventListener('change', toggleNewMonitorField);
+      $('#savePeopleBtn').addEventListener('click', savePeople);
+      $('#replaceEmployeeForm').addEventListener('submit', replaceEmployee);
+      $('#swapEmployeesForm').addEventListener('submit', swapEmployees);
+      $('#swapDate').addEventListener('change', renderSwapEmployeeOptions);
+      $('#adminMonth').addEventListener('change', handleAdminMonthChange);
+      $('#adminYear').addEventListener('change', handleAdminMonthChange);
+      $('#generateBtn').addEventListener('click', generateSchedule);
+      $('#applySuggestionBtn').addEventListener('click', applyStaffingSuggestion);
+      $('#publicEmployeeSearch').addEventListener('change', event => {
+        state.publicSearchUser = event.target.value;
+        renderSchedule();
+        updateSearchResult(false);
+      });
+      $('#adminEmployeeSearch').addEventListener('change', event => {
+        state.adminSearchUser = event.target.value;
+        renderAdminSchedule();
+        updateSearchResult(true);
+      });
+      $('#closeAddShiftModal').addEventListener('click', closeAddShiftModal);
+      $('#addShiftModal').addEventListener('click', event => {
+        if (event.target.id === 'addShiftModal') closeAddShiftModal();
+      });
+      $('#publicArchiveYear').addEventListener('change', () => {
+        syncPublicArchiveMonths();
+        selectPublicArchive();
+      });
+      $('#publicArchiveMonth').addEventListener('change', () => {
+        selectPublicArchive();
+      });
+      $('#showCurrentTimeline').addEventListener('click', () => {
+        state.publicArchiveKey = '';
+        renderSchedule();
+      });
+      window.addEventListener('online', () => {
+        updateNetworkStatus();
+        showToast('Internet veza je ponovo dostupna.');
+      });
+      window.addEventListener('offline', () => {
+        updateNetworkStatus();
+        showToast('Nema internet veze. Izmene trenutno nisu moguće.', true);
+      });
+    }
+
+    async function callServer(name, ...args) {
+      if (location.protocol === 'http:' &&
+          (location.hostname === '127.0.0.1' ||
+           location.hostname === 'localhost')) {
+        return callLocalServer(name, args);
+      }
+
+      if (!navigator.onLine) {
+        updateNetworkStatus('offline');
+        const error = new Error(
+          'Nema internet veze. Proverite konekciju i pokušajte ponovo.'
+        );
+        error.transient = true;
+        throw error;
+      }
+
+      const payload = JSON.stringify(args);
+      if (encodeURIComponent(payload).length > 1500) {
+        return callServerChunked(name, payload);
+      }
+      const readActions = [
+        'health', 'getBootstrap', 'getSchedule', 'getAllSchedule',
+        'getMonthSchedule', 'getAdminSchedule', 'getAdminData'
+      ];
+      const retryActions = readActions.concat(['saveUsers']);
+      const canRetry = retryActions.includes(name);
+      return callServerWithRetry(
+        name,
+        payload,
+        readActions.includes(name) ? 90000 : 120000,
+        canRetry ? 3 : 1
+      );
+    }
+
+    async function callLocalServer(name, args) {
+      const controller = new AbortController();
+      const timeoutMs = name === 'generateSchedule' ? 300000 : 120000;
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch('/api', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: name, args }),
+          signal: controller.signal
+        });
+        const result = await response.json();
+        if (!result || result.ok !== true) {
+          throw new Error(
+            result && result.error ? result.error : 'Nepoznata lokalna API greška.'
+          );
+        }
+        updateNetworkStatus('online');
+        return result.data;
+      } catch (error) {
+        updateNetworkStatus('degraded');
+        if (error && error.name === 'AbortError') {
+          throw new Error('Lokalni API nije završio akciju na vreme.');
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    async function callServerWithRetry(name, payload, timeoutMs, attempts) {
+      let lastError;
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+          const data = await callServerJsonp(name, payload, timeoutMs);
+          updateNetworkStatus('online');
+          return data;
+        } catch (error) {
+          lastError = error;
+          if (error.transient) updateNetworkStatus('degraded');
+          if (!error.transient || attempt === attempts) throw error;
+          await wait(800 * attempt + Math.floor(Math.random() * 350));
+        }
+      }
+      throw lastError;
+    }
+
+    function callServerJsonp(name, payload, timeoutMs = 30000) {
+      return new Promise((resolve, reject) => {
+        const callback = '__rasporedJsonp' + Date.now() + Math.random().toString(36).slice(2);
+        const script = document.createElement('script');
+        const timeout = setTimeout(() => {
+          cleanup();
+          const error = new Error(
+            'API timeout tokom akcije "' + name +
+            '". Google servis možda još obrađuje zahtev.'
+          );
+          error.transient = true;
+          error.action = name;
+          reject(error);
+        }, timeoutMs);
+
+        function cleanup() {
+          clearTimeout(timeout);
+          script.remove();
+          try { delete window[callback]; } catch (_) { window[callback] = undefined; }
+        }
+
+        window[callback] = response => {
+          cleanup();
+          if (!response || response.ok !== true) {
+            const error = new Error(
+              response && response.error
+                ? response.error
+                : 'Nepoznata API greška.'
+            );
+            error.transient = Boolean(response && response.transient);
+            reject(error);
+            return;
+          }
+          resolve(response.data);
+        };
+
+        const query = new URLSearchParams({
+          action: name,
+          payload,
+          callback,
+          _: String(Date.now())
+        });
+        script.src = API_URL + '?' + query.toString();
+        script.async = true;
+        script.onerror = () => {
+          cleanup();
+          const error = new Error(
+            'Trenutno nije moguće povezivanje sa Apps Script API-jem.'
+          );
+          error.transient = true;
+          reject(error);
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    async function callServerChunked(name, payload) {
+      const uploadId = 'up_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      const encoded = utf8ToBase64(payload);
+      const chunkSize = 1000;
+      const chunks = [];
+      for (let index = 0; index < encoded.length; index += chunkSize) {
+        chunks.push(encoded.slice(index, index + chunkSize));
+      }
+
+      for (let index = 0; index < chunks.length; index += 1) {
+        await callServerWithRetry(
+          'uploadChunk',
+          JSON.stringify([uploadId, index, chunks.length, chunks[index]]),
+          75000,
+          3
+        );
+      }
+      const timeoutMs = name === 'generateSchedule' ? 300000 : 120000;
+      const executePayload = JSON.stringify([uploadId, chunks.length, name]);
+      try {
+        return name === 'saveUsers'
+          ? await callServerWithRetry(
+              'executeUpload', executePayload, timeoutMs, 2
+            )
+          : await callServerJsonp(
+              'executeUpload', executePayload, timeoutMs
+            );
+      } catch (error) {
+        if (!error.transient) throw error;
+        updateNetworkStatus('degraded');
+        return waitForUploadResult(uploadId, name);
+      }
+    }
+
+    async function waitForUploadResult(uploadId, action) {
+      const attempts = action === 'generateSchedule' ? 18 : 8;
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        await wait(5000);
+        try {
+          const status = await callServerWithRetry(
+            'getUploadResult',
+            JSON.stringify([uploadId]),
+            30000,
+            2
+          );
+          if (status && status.ready) {
+            updateNetworkStatus('online');
+            return status.result;
+          }
+        } catch (error) {
+          if (!error.transient) throw error;
+        }
+      }
+      throw new Error(
+        'Google API nije potvrdio završetak akcije "' + action +
+        '". Sačekajte minut i osvežite raspored pre ponovnog pokretanja.'
+      );
+    }
+
+    function updateNetworkStatus(status) {
+      const box = $('#apiStatus');
+      if (!box) return;
+      const nextStatus = status || (navigator.onLine ? 'online' : 'offline');
+      box.classList.toggle('degraded', nextStatus === 'degraded');
+      box.classList.toggle('offline', nextStatus === 'offline');
+      box.textContent = nextStatus === 'offline'
+        ? 'Nema mreže'
+        : nextStatus === 'degraded'
+          ? 'API usporen'
+          : 'API povezan';
+    }
+
+    function wait(milliseconds) {
+      return new Promise(resolve => setTimeout(resolve, milliseconds));
+    }
+
+    function utf8ToBase64(value) {
+      const bytes = new TextEncoder().encode(value);
+      let binary = '';
+      const block = 8192;
+      for (let index = 0; index < bytes.length; index += block) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + block));
+      }
+      return btoa(binary);
+    }
+
+    async function restoreSession() {
+      try {
+        applySession();
+        if (state.user.role === 'administrator') {
+          await loadAdmin();
+          renderSchedule();
+          renderArchiveControls();
+          renderMobileCurrent();
+          updateCurrentPill();
+        } else {
+          state.schedule = await callServer('getAllSchedule', state.token);
+          renderAll();
+        }
+      } catch (error) {
+        const message = error && error.message ? error.message : String(error);
+        if (/Sesija je istekla/i.test(message)) {
+          clearSession();
+          showToast('Sesija je istekla. Prijavite se ponovo.', true);
+        } else {
+          showError(error);
+        }
+      }
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      setLoading(true, 'Prijavljivanje…');
+      try {
+        const data = await callServer('login', $('#username').value);
+        state.token = data.token;
+        state.user = data.user;
+        state.schedule = data.schedule || [];
+        sessionStorage.setItem('rasporedToken', state.token);
+        sessionStorage.setItem('rasporedUser', JSON.stringify(state.user));
+        applySession();
+        if (state.user.role === 'administrator') await loadAdmin();
+        renderAll();
+        showView('scheduleView');
+        showToast('Prijavljeni ste kao ' + state.user.name + '.');
+      } catch (error) {
+        showError(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function applySession() {
+      if (!state.user) return;
+      $('#sessionCopy').innerHTML = '<strong>' + escapeHtml(state.user.name) + '</strong><span>' + escapeHtml(state.user.role) + '</span>';
+      $('#sessionCopy').classList.remove('hidden');
+      $('#logoutBtn').classList.remove('hidden');
+      $('#loginTab').classList.add('hidden');
+      $('#adminTab').classList.toggle('hidden', state.user.role !== 'administrator');
+      $('#heroTitle').textContent = 'Zdravo, ' + state.user.name.split(' ')[0];
+      $('#heroText').textContent = state.user.role === 'administrator'
+        ? 'Pregledajte raspored ili otvorite admin portal za novi mesec.'
+        : 'Vaše smene su obeležene zelenom bojom kroz ceo raspored.';
+    }
+
+    async function logout() {
+      if (state.token) callServer('logout', state.token).catch(() => {});
+      clearSession();
+      setLoading(true);
+      try {
+        const data = await callServer('getBootstrap');
+        state.schedule = data.schedule || [];
+        state.shifts = data.shifts || [];
+      } finally {
+        setLoading(false);
+      }
+      renderAll();
+      showView('scheduleView');
+    }
+
+    function clearSession() {
+      state.token = '';
+      state.user = null;
+      state.admin = null;
+      state.adminSchedule = [];
+      sessionStorage.removeItem('rasporedToken');
+      sessionStorage.removeItem('rasporedUser');
+      $('#sessionCopy').classList.add('hidden');
+      $('#logoutBtn').classList.add('hidden');
+      $('#loginTab').classList.remove('hidden');
+      $('#adminTab').classList.add('hidden');
+      $('#heroTitle').textContent = 'Ko radi danas?';
+      $('#heroText').textContent = 'Javni pregled je dostupan bez prijave. Prijavite se da odmah vidite svoje smene.';
+    }
+
+    function showView(id) {
+      $$('.view').forEach(view => view.classList.toggle('hidden', view.id !== id));
+      $$('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
+    }
+
+    function showAdminTab(id) {
+      $$('.admin-tab-pane').forEach(pane =>
+        pane.classList.toggle('active', pane.id === id)
+      );
+      $$('.admin-tab').forEach(tab =>
+        tab.classList.toggle('active', tab.dataset.adminTab === id)
+      );
+    }
+
+    function renderAll() {
+      renderSchedule();
+      renderAdminSchedule();
+      renderScheduleSummary();
+      renderEmployeeSearches();
+      renderArchiveControls();
+      renderMobileCurrent();
+      renderMobileUpcoming();
+      renderEmployeeDashboard();
+      updateCurrentPill();
+    }
+
+    function renderSchedule() {
+      const grid = $('#scheduleGrid');
+      renderScheduleInto(grid, publicDisplayedSchedule());
+    }
+
+    function publicDisplayedSchedule() {
+      return state.publicArchiveKey
+        ? state.schedule.filter(day => day.date.slice(0, 7) === state.publicArchiveKey)
+        : state.schedule;
+    }
+
+    function publicVisibleSchedule() {
+      if (state.publicArchiveKey) return publicDisplayedSchedule();
+      const currentMonth = dateKey(new Date()).slice(0, 7);
+      return state.schedule.filter(day => {
+        const month = day.date.slice(0, 7);
+        if (month < currentMonth) return false;
+        const sectionKey = 'scheduleGrid|' + month;
+        return month === currentMonth
+          ? state.expandedMonths[sectionKey] !== false
+          : Boolean(state.expandedMonths[sectionKey]);
+      });
+    }
+
+    function renderAdminSchedule() {
+      const grid = $('#adminScheduleGrid');
+      if (!grid) return;
+      renderScheduleInto(grid, state.adminSchedule);
+    }
+
+    function renderScheduleInto(grid, schedule = state.schedule) {
+      if (!schedule.length) {
+        const selectedMonth = $('#adminMonth') && $('#adminMonth').value
+          ? months[Number($('#adminMonth').value) - 1] + ' ' + $('#adminYear').value
+          : 'izabrani period';
+        grid.innerHTML = '<div class="empty">Nema učitanog rasporeda za ' +
+          escapeHtml(selectedMonth) +
+          '. Proverite tab Raspored i objavite novu Apps Script verziju.</div>';
+        return;
+      }
+      const current = getCurrentShift();
+      const adminMode = grid.id === 'adminScheduleGrid';
+      const archiveMode = !adminMode && Boolean(state.publicArchiveKey);
+      const today = dateKey(new Date());
+      const currentMonth = today.slice(0, 7);
+      const grouped = {};
+      schedule.forEach(day => {
+        const key = day.date.slice(0, 7);
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(day);
+      });
+      const keys = Object.keys(grouped).sort().filter(key =>
+        archiveMode || adminMode || key >= currentMonth
+      );
+      grid.innerHTML = keys.map(monthKey => {
+        const parts = monthKey.split('-').map(Number);
+        const future = monthKey > currentMonth;
+        const past = monthKey < currentMonth;
+        const sectionKey = grid.id + '|' + monthKey;
+        const expanded = archiveMode || past || (
+          monthKey === currentMonth
+            ? state.expandedMonths[sectionKey] !== false
+            : Boolean(state.expandedMonths[sectionKey])
+        );
+        const pastExpanded = Boolean(state.expandedPastDays[sectionKey]);
+        const days = grouped[monthKey];
+        const visibleDays = monthKey === currentMonth && !archiveMode && !pastExpanded
+          ? days.filter(day => day.date >= today)
+          : days;
+        const hiddenPastCount = days.length - visibleDays.length;
+        const heading = `<div class="month-divider">
+          <button class="month-toggle" type="button"
+            onclick="toggleMonthSection('${escapeAttr(sectionKey)}', ${expanded})">
+            <span>${escapeHtml(months[parts[1] - 1])} ${parts[0]}</span>
+            <span>${expanded ? 'Sakrij' : 'Prikaži'}</span>
+          </button>
+        </div>`;
+        if (!expanded) return heading;
+        const pastToggle = hiddenPastCount
+          ? `<button class="btn small ghost past-days-toggle" type="button"
+              onclick="togglePastDays('${escapeAttr(sectionKey)}')">
+              Prikaži prethodne dane (${hiddenPastCount})
+            </button>`
+          : '';
+        const shiftHeadings = adminMode ? '' : renderMonthShiftHeadings();
+        return heading + `<div class="month-days">${shiftHeadings}${pastToggle}` +
+          visibleDays.map(day => renderDayRow(day, current, adminMode)).join('') +
+          '</div>';
+      }).join('');
+    }
+
+    function renderMonthShiftHeadings() {
+      return `<div class="month-shift-headings">
+        <div></div>
+        ${[1, 2, 3].map(shiftId => {
+          const shift = state.shifts.find(item =>
+            Number(item.id) === shiftId
+          ) || {
+            name: shiftId + '. smena',
+            start: '',
+            end: ''
+          };
+          return `<div class="month-shift-heading">
+            ${escapeHtml(shift.name)}
+            <span>${escapeHtml(shift.start)}–${escapeHtml(shift.end)}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
+    function renderDayRow(day, current, adminMode) {
+        const isToday = day.date === dateKey(new Date());
+        const date = parseDateKey(day.date);
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+        const holiday = holidayName(day.date);
+        return `
+          <article class="day-row ${isToday ? 'today' : ''} ${isWeekend ? 'weekend' : ''}">
+            <div class="day-meta">
+              <div class="day-meta-line">
+                <strong>${escapeHtml(shortDayName(day.day))}</strong>
+                <span>${formatShortDate(day.date)}</span>
+              </div>
+              ${holiday ? `<span class="holiday-name">${escapeHtml(holiday)}</span>` : ''}
+            </div>
+            ${[1, 2, 3].map(shift =>
+              shiftCard(day, shift, current, adminMode)).join('')}
+          </article>`;
+    }
+
+    function toggleMonthSection(sectionKey, currentlyExpanded) {
+      state.expandedMonths[sectionKey] = !currentlyExpanded;
+      if (sectionKey.startsWith('adminScheduleGrid|')) {
+        renderAdminViews();
+      } else {
+        renderSchedule();
+        renderEmployeeSearches();
+      }
+    }
+
+    function togglePastDays(sectionKey) {
+      state.expandedPastDays[sectionKey] = true;
+      renderSchedule();
+      renderAdminSchedule();
+    }
+
+    function renderScheduleSummary() {
+      const box = $('#scheduleSummary');
+      if (!box) return;
+      if (!state.adminSchedule.length) {
+        box.innerHTML = '';
+        box.classList.add('hidden');
+        return;
+      }
+
+      const employeeTotals = {};
+      const shiftTotals = { 1: 0, 2: 0, 3: 0 };
+      const dailyRows = state.adminSchedule.map(day => {
+        const counts = [1, 2, 3].map(shiftId => {
+          const people = day.shifts[String(shiftId)] || day.shifts[shiftId] || [];
+          shiftTotals[shiftId] += people.length;
+          people.forEach(person => {
+            const key = person.user || person.name;
+            if (!employeeTotals[key]) {
+              employeeTotals[key] = {
+                name: person.name,
+                duty: shortDuty(person.duty),
+                shifts: { 1: 0, 2: 0, 3: 0 },
+                total: 0
+              };
+            }
+            employeeTotals[key].shifts[shiftId] += 1;
+            employeeTotals[key].total += 1;
+          });
+          return people.length;
+        });
+        return `<tr>
+          <td>${escapeHtml(formatDate(day.date))}</td>
+          <td>${counts[0]}</td>
+          <td>${counts[1]}</td>
+          <td>${counts[2]}</td>
+          <td class="summary-total">${counts[0] + counts[1] + counts[2]}</td>
+        </tr>`;
+      }).join('');
+
+      const employeeRows = Object.values(employeeTotals)
+        .sort((a, b) => a.name.localeCompare(b.name, 'sr'))
+        .map(person => `<tr>
+          <td><strong>${escapeHtml(person.name)}</strong><br><small>${escapeHtml(person.duty)}</small></td>
+          <td>${person.shifts[1]}</td>
+          <td>${person.shifts[2]}</td>
+          <td>${person.shifts[3]}</td>
+          <td class="summary-total">${person.total}</td>
+        </tr>`).join('');
+
+      box.innerHTML = `
+        <div class="summary-box">
+          <h4>Broj ljudi po smenama</h4>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Datum</th><th>I</th><th>II</th><th>III</th><th>Ukupno</th></tr></thead>
+            <tbody>${dailyRows}</tbody>
+            <tfoot><tr>
+              <th>Ukupno mesec</th>
+              <th>${shiftTotals[1]}</th>
+              <th>${shiftTotals[2]}</th>
+              <th>${shiftTotals[3]}</th>
+              <th class="summary-total">${shiftTotals[1] + shiftTotals[2] + shiftTotals[3]}</th>
+            </tr></tfoot>
+          </table></div>
+        </div>
+        <div class="summary-box">
+          <h4>Fond smena po zaposlenom</h4>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Zaposleni</th><th>I</th><th>II</th><th>III</th><th>Ukupno</th></tr></thead>
+            <tbody>${employeeRows}</tbody>
+          </table></div>
+        </div>`;
+      box.classList.remove('hidden');
+    }
+
+    function shiftCard(day, shiftId, current, adminMode = false) {
+      const shift = state.shifts.find(item => Number(item.id) === shiftId) || { name: shiftId + '. smena', start: '', end: '' };
+      const people = [...(day.shifts[String(shiftId)] || day.shifts[shiftId] || [])]
+        .sort((a, b) => dutyDisplayOrder(a.duty) - dutyDisplayOrder(b.duty) ||
+          a.name.localeCompare(b.name, 'sr'));
+      const active = current.date === day.date && current.shift === shiftId;
+      const selectedUser = adminMode ? state.adminSearchUser : state.publicSearchUser;
+      const employeeCount = people.filter(person => person.duty === 'Zaposleni').length;
+      const minimum = adminMode ? adminShiftMinimum(day, shiftId) : 0;
+      const shortage = adminMode ? Math.max(0, minimum - employeeCount) : 0;
+      return `
+        <div class="shift-card ${active ? 'current' : ''} ${shortage ? 'understaffed' : ''}"
+          ${shortage ? `title="Ispod minimuma: ${employeeCount} od ${minimum} radnika"` : ''}>
+          <div class="shift-head">
+            <strong>${escapeHtml(shift.name)}
+              ${shortage ? `<span class="shortage-badge">MANJAK ${employeeCount}/${minimum}</span>` : ''}
+            </strong>
+            <span>${escapeHtml(shift.start)}–${escapeHtml(shift.end)}
+              ${adminMode ? `<button class="shift-add" type="button"
+                onclick="openAddShiftModal('${escapeAttr(day.date)}', ${shiftId})">+</button>` : ''}
+            </span>
+          </div>
+          <div class="shift-people">
+            ${people.length ? people.map(person =>
+              personHtml(person, {
+                adminMode,
+                date: day.date,
+                shift: shiftId,
+                highlighted: selectedUser === person.user
+              })).join('') : '<div class="empty">Nema unosa</div>'}
+          </div>
+          ${shortage ? `<div class="staff-shortage">Nedostaje ${shortage} ${shortage === 1 ? 'zaposleni' : 'zaposlena'}</div>` : ''}
+        </div>`;
+    }
+
+    function adminShiftMinimum(day, shiftId) {
+      const savedMinimum = Number(
+        day && day.minimums &&
+        (day.minimums[String(shiftId)] || day.minimums[shiftId])
+      );
+      if (savedMinimum > 0) return savedMinimum;
+      const dateKeyValue = day && day.date ? day.date : '';
+      const parts = String(dateKeyValue).split('-').map(Number);
+      const date = new Date(parts[0], parts[1] - 1, parts[2], 12);
+      if (date.getDay() === 0 || date.getDay() === 6) return 2;
+      const selectedMonth = $('#adminYear').value + '-' +
+        String($('#adminMonth').value).padStart(2, '0');
+      if (String(dateKeyValue).slice(0, 7) !== selectedMonth) return 2;
+      const select = $('#staff' + shiftId);
+      return select ? staffingRange(select.value).min : 2;
+    }
+
+    function adminShiftMaximum(day, shiftId) {
+      const savedMaximum = Number(
+        day && day.maximums &&
+        (day.maximums[String(shiftId)] || day.maximums[shiftId])
+      );
+      if (savedMaximum > 0) return savedMaximum;
+      const dateKeyValue = day && day.date ? day.date : '';
+      const parts = String(dateKeyValue).split('-').map(Number);
+      const date = new Date(parts[0], parts[1] - 1, parts[2], 12);
+      if (date.getDay() === 0 || date.getDay() === 6) {
+        return shiftId === 1 ? 2 : 3;
+      }
+      const selectedMonth = $('#adminYear').value + '-' +
+        String($('#adminMonth').value).padStart(2, '0');
+      if (String(dateKeyValue).slice(0, 7) !== selectedMonth) return 3;
+      const select = $('#staff' + shiftId);
+      return select ? staffingRange(select.value).max : 3;
+    }
+
+    function personHtml(person, options = {}) {
+      const replacementClass = person.replacedName ? 'replacement-person' : '';
+      const roleTitle = person.replacedName
+        ? 'Zamena za ' + person.replacedName
+        : shortDuty(person.duty);
+      return `<div class="person ${dutyDisplayClass(person.duty)} ${person.mine ? 'mine' : ''} ${options.highlighted ? 'highlighted' : ''} ${replacementClass}" 
+        title="${escapeAttr(roleTitle)}">
+        <span>${escapeHtml(person.name)}</span>
+        ${options.adminMode ? `<button class="person-remove-shift" type="button"
+          title="Ukloni iz smene"
+          onclick="removeFromShift('${escapeAttr(options.date)}', ${options.shift}, '${escapeAttr(person.user)}')">×</button>` : ''}
+      </div>`;
+    }
+
+    function dutyDisplayOrder(duty) {
+      if (duty === 'Shift lider') return 0;
+      if (String(duty).startsWith('Monitoring')) return 1;
+      return 2;
+    }
+
+    function dutyDisplayClass(duty) {
+      if (duty === 'Shift lider') return 'shift-leader';
+      if (String(duty).startsWith('Monitoring')) return 'monitoring';
+      return 'employee';
+    }
+
+    function renderEmployeeSearches() {
+      fillEmployeeSearch(
+        $('#publicEmployeeSearch'), publicVisibleSchedule(), state.publicSearchUser
+      );
+      fillEmployeeSearch(
+        $('#adminEmployeeSearch'), adminVisibleSchedule(), state.adminSearchUser
+      );
+      updateSearchResult(false);
+      updateSearchResult(true);
+    }
+
+    function renderArchiveControls() {
+      const yearSelect = $('#publicArchiveYear');
+      if (!yearSelect) return;
+      const monthKeys = [...new Set(state.schedule.map(day => day.date.slice(0, 7)))]
+        .sort().reverse();
+      const years = [...new Set(monthKeys.map(key => key.slice(0, 4)))];
+      const selectedYear = state.publicArchiveKey
+        ? state.publicArchiveKey.slice(0, 4)
+        : yearSelect.value || years[0] || '';
+      yearSelect.innerHTML = years.length
+        ? years.map(year => `<option value="${year}" ${year === selectedYear ? 'selected' : ''}>${year}</option>`).join('')
+        : '<option value="">Nema arhive</option>';
+      syncPublicArchiveMonths();
+    }
+
+    function syncPublicArchiveMonths() {
+      const year = $('#publicArchiveYear').value;
+      const monthSelect = $('#publicArchiveMonth');
+      const available = [...new Set(state.schedule
+        .map(day => day.date.slice(0, 7))
+        .filter(key => key.startsWith(year + '-')))]
+        .sort().reverse();
+      const selectedMonth = state.publicArchiveKey &&
+        state.publicArchiveKey.startsWith(year + '-')
+        ? Number(state.publicArchiveKey.slice(5, 7))
+        : available.length ? Number(available[0].slice(5, 7)) : 0;
+      monthSelect.innerHTML = available.length
+        ? available.map(key => {
+          const month = Number(key.slice(5, 7));
+          return `<option value="${month}" ${month === selectedMonth ? 'selected' : ''}>${escapeHtml(months[month - 1])}</option>`;
+        }).join('')
+        : '<option value="">Nema meseci</option>';
+    }
+
+    function selectPublicArchive() {
+      const year = $('#publicArchiveYear').value;
+      const month = $('#publicArchiveMonth').value;
+      state.publicArchiveKey = year && month
+        ? year + '-' + String(month).padStart(2, '0')
+        : '';
+      renderSchedule();
+      renderEmployeeSearches();
+    }
+
+    function fillEmployeeSearch(select, schedule, selected) {
+      if (!select) return;
+      const people = {};
+      schedule.forEach(day => [1, 2, 3].forEach(shift => {
+        (day.shifts[String(shift)] || day.shifts[shift] || []).forEach(person => {
+          people[person.user] = person.name;
+        });
+      }));
+      select.innerHTML = '<option value="">Pronađi zaposlenog…</option>' +
+        Object.entries(people)
+          .sort((a, b) => a[1].localeCompare(b[1], 'sr'))
+          .map(([user, name]) => `<option value="${escapeAttr(user)}" ${selected === user ? 'selected' : ''}>${escapeHtml(name)}</option>`)
+          .join('');
+    }
+
+    function updateSearchResult(adminMode) {
+      const user = adminMode ? state.adminSearchUser : state.publicSearchUser;
+      const schedule = adminMode
+        ? adminVisibleSchedule()
+        : publicVisibleSchedule();
+      const box = $(adminMode ? '#adminSearchResult' : '#publicSearchResult');
+      if (!box) return;
+      if (!user) {
+        box.textContent = '';
+        return;
+      }
+      let name = user;
+      let count = 0;
+      schedule.forEach(day => [1, 2, 3].forEach(shift => {
+        (day.shifts[String(shift)] || day.shifts[shift] || []).forEach(person => {
+          if (person.user === user) {
+            name = person.name;
+            count += 1;
+          }
+        });
+      }));
+      box.textContent = name + ': ' + count + ' smena';
+    }
+
+    function adminVisibleSchedule() {
+      const todayMonth = dateKey(new Date()).slice(0, 7);
+      return state.adminSchedule.filter(day => {
+        const month = day.date.slice(0, 7);
+        const sectionKey = 'adminScheduleGrid|' + month;
+        return month === todayMonth
+          ? state.expandedMonths[sectionKey] !== false
+          : Boolean(state.expandedMonths[sectionKey]);
+      });
+    }
+
+    function monthlyEmployeeCounts(monthKey) {
+      const counts = {};
+      state.adminSchedule
+        .filter(day => !monthKey || day.date.slice(0, 7) === monthKey)
+        .forEach(day => [1, 2, 3].forEach(shift => {
+        (day.shifts[String(shift)] || day.shifts[shift] || []).forEach(person => {
+          const user = String(person.user || '').trim().toLowerCase();
+          counts[user] = (counts[user] || 0) + 1;
+        });
+      }));
+      return counts;
+    }
+
+    function openAddShiftModal(date, shift) {
+      state.pendingShift = { date, shift };
+      const monthKey = date.slice(0, 7);
+      const monthParts = monthKey.split('-').map(Number);
+      const scheduleYear = monthParts[0];
+      const scheduleMonth = monthParts[1];
+      const baseTarget = baseTargetShifts(scheduleYear, scheduleMonth);
+      const counts = monthlyEmployeeCounts(monthKey);
+      const day = state.adminSchedule.find(item => item.date === date);
+      const workingUsers = new Set();
+      if (day) [1, 2, 3].forEach(shiftId => {
+        (day.shifts[String(shiftId)] || day.shifts[shiftId] || [])
+          .forEach(person => workingUsers.add(
+            String(person.user || '').trim().toLowerCase()
+          ));
+      });
+      const candidates = (state.admin ? state.admin.users : [])
+        .filter(user => {
+          const userKey = String(user.user || '').trim().toLowerCase();
+          return user.active && user.role === 'zaposleni' &&
+            !workingUsers.has(userKey) &&
+            (counts[userKey] || 0) < baseTarget;
+        })
+        .sort((a, b) => a.name.localeCompare(b.name, 'sr'));
+      $('#addShiftDescription').textContent =
+        formatDate(date) + ' · ' + shift + '. smena';
+      $('#addShiftCandidates').innerHTML = candidates.length
+        ? candidates.map(user => {
+          const userKey = String(user.user || '').trim().toLowerCase();
+          const count = counts[userKey] || 0;
+          return `<div class="candidate">
+            <span><strong>${escapeHtml(user.name)}</strong><br><small>${count} / ${baseTarget} smena</small></span>
+            <button class="btn small" type="button"
+              onclick="addToShift('${escapeAttr(user.user)}')">Dodaj</button>
+          </div>`;
+        }).join('')
+        : '<div class="empty">Nema zaposlenih koji su ispod fonda i slobodni tog dana.</div>';
+      $('#addShiftModal').classList.remove('hidden');
+    }
+
+    function closeAddShiftModal() {
+      state.pendingShift = null;
+      $('#addShiftModal').classList.add('hidden');
+    }
+
+    async function removeFromShift(date, shift, user) {
+      await saveManualScheduleEdit({ action: 'remove', date, shift, user });
+    }
+
+    async function addToShift(user) {
+      if (!state.pendingShift) return;
+      await saveManualScheduleEdit({
+        action: 'add',
+        date: state.pendingShift.date,
+        shift: state.pendingShift.shift,
+        user
+      });
+      closeAddShiftModal();
+    }
+
+    async function saveManualScheduleEdit(request) {
+      setLoading(true, 'Čuvanje ručne izmene…');
+      try {
+        const data = await callServer('editSchedule', state.token, request);
+        applyManualScheduleChange(state.adminSchedule, data.change);
+        applyManualScheduleChange(state.schedule, data.change);
+        renderAdminViews();
+        renderSchedule();
+        renderEmployeeSearches();
+        showToast('Ručna izmena rasporeda je sačuvana.');
+      } catch (error) {
+        showError(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function applyManualScheduleChange(schedule, change) {
+      if (!change || !change.date || !change.person) return;
+      let day = schedule.find(item => item.date === change.date);
+      if (!day && change.action === 'add') {
+        day = {
+          date: change.date,
+          day: '',
+          shifts: { 1: [], 2: [], 3: [] }
+        };
+        schedule.push(day);
+        schedule.sort((a, b) => a.date.localeCompare(b.date));
+      }
+      if (!day) return;
+      const people = day.shifts[String(change.shift)] ||
+        day.shifts[change.shift] || [];
+      if (change.action === 'remove') {
+        const index = people.findIndex(person =>
+          person.user === change.person.user
+        );
+        if (index >= 0) people.splice(index, 1);
+      } else if (!people.some(person => person.user === change.person.user)) {
+        people.push(Object.assign({ mine: false }, change.person));
+      }
+    }
+
+    function renderMobileCurrent() {
+      const box = $('#mobileCurrent');
+      box.classList.remove('hidden');
+      const current = getCurrentShift();
+      const day = state.schedule.find(item => item.date === current.date);
+      const people = day
+        ? [...(day.shifts[String(current.shift)] || day.shifts[current.shift] || [])]
+          .sort((a, b) => dutyDisplayOrder(a.duty) - dutyDisplayOrder(b.duty) ||
+            a.name.localeCompare(b.name, 'sr'))
+        : [];
+      const shift = state.shifts.find(item => Number(item.id) === current.shift);
+      box.innerHTML = `
+        <p class="eyebrow">Trenutno radi</p>
+        <h2>${shift ? escapeHtml(shift.name) : current.shift + '. smena'}</h2>
+        <p style="opacity:.72">${formatDate(current.date)} · ${shift ? escapeHtml(shift.start + '–' + shift.end) : ''}</p>
+        ${people.length ? people.map(personHtml).join('') : '<div class="empty">Za ovu smenu nema unosa.</div>'}`;
+    }
+
+    function renderMobileUpcoming() {
+      const box = $('#mobileUpcoming');
+      const today = new Date();
+      const employeeMode = state.user && state.user.role === 'zaposleni';
+      const current = getCurrentShift();
+      const dates = Array.from({ length: 14 }, (_, index) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() + index);
+        return dateKey(date);
+      });
+      const days = dates
+        .map(key => state.schedule.find(day => day.date === key))
+        .filter(Boolean);
+
+      box.innerHTML = `
+        <h2 class="mobile-upcoming-title">${employeeMode ? 'Moje smene · narednih 14 dana' : 'Narednih 14 dana'}</h2>
+        ${employeeMode
+          ? dates.map(renderMobilePersonalDay).join('')
+          : days.length ? days.map(day => renderMobileDay(day, current)).join('') :
+          '<div class="mobile-day empty">Nema unetog rasporeda za narednih 14 dana.</div>'}`;
+    }
+
+    function renderMobilePersonalDay(key, index) {
+      const date = parseDateKey(key);
+      const status = personalStatus(key);
+      const off = status.title === 'Slobodan dan';
+      return `
+        <article class="mobile-day ${index === 0 ? 'today' : ''}">
+          <div class="mobile-day-head">
+            <strong>${index === 0 ? 'Danas' : index === 1 ? 'Sutra' : escapeHtml(shortDay(date))}</strong>
+            <span>${formatDate(key)}</span>
+          </div>
+          <div class="mobile-personal-status ${off ? 'off' : ''}">
+            ${escapeHtml(status.title)}
+            <span class="mobile-personal-detail">${escapeHtml(status.detail)}</span>
+          </div>
+        </article>`;
+    }
+
+    function renderMobileDay(day, current) {
+      const date = parseDateKey(day.date);
+      const holiday = holidayName(day.date);
+      return `
+        <article class="mobile-day ${day.date === dateKey(new Date()) ? 'today' : ''}">
+          <div class="mobile-day-head">
+            <strong>${escapeHtml(shortDay(date))}${day.date === dateKey(new Date()) ? ' · Danas' : ''}</strong>
+            <span>${formatDate(day.date)}</span>
+          </div>
+          ${holiday ? `<div class="holiday-name">${escapeHtml(holiday)}</div>` : ''}
+          <div class="mobile-day-shifts">
+            ${[1, 2, 3].map(shiftId => {
+              const shift = state.shifts.find(item => Number(item.id) === shiftId) || {
+                name: shiftId + '. smena',
+                start: '',
+                end: ''
+              };
+              const people = [...(day.shifts[String(shiftId)] || day.shifts[shiftId] || [])]
+                .sort((a, b) => dutyDisplayOrder(a.duty) - dutyDisplayOrder(b.duty) ||
+                  a.name.localeCompare(b.name, 'sr'));
+              const active = current.date === day.date && current.shift === shiftId;
+              return `
+                <div class="mobile-day-shift ${active ? 'current' : ''}">
+                  <div class="mobile-day-shift-head">
+                    <strong>${escapeHtml(shift.name)}</strong>
+                    <span>${escapeHtml(shift.start)}–${escapeHtml(shift.end)}</span>
+                  </div>
+                  <div class="shift-people">
+                    ${people.length ? people.map(personHtml).join('') :
+                      '<div class="empty">Nema unosa</div>'}
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        </article>`;
+    }
+
+    function renderEmployeeDashboard() {
+      const dashboard = $('#employeeDashboard');
+      if (!state.user || state.user.role !== 'zaposleni') {
+        dashboard.classList.add('hidden');
+        $('#publicHero').classList.remove('hidden');
+        return;
+      }
+
+      const today = dateKey(new Date());
+      const tomorrowDate = new Date();
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      const tomorrow = dateKey(tomorrowDate);
+      const todayStatus = personalStatus(today);
+      const tomorrowStatus = personalStatus(tomorrow);
+      const week = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() + index);
+        const key = dateKey(date);
+        const status = personalStatus(key);
+        return `<div class="week-day">
+          <strong>${index === 0 ? 'Danas' : shortDay(date)}</strong>
+          <span>${formatDate(key)}</span>
+          <b>${escapeHtml(status.title)}</b>
+        </div>`;
+      }).join('');
+
+      dashboard.innerHTML = `
+        <article class="panel status-card primary">
+          <div class="status-label">Danas · ${formatDate(today)}</div>
+          <div class="status-value">${escapeHtml(todayStatus.title)}</div>
+          <div class="status-detail">${escapeHtml(todayStatus.detail)}</div>
+        </article>
+        <article class="panel status-card tomorrow">
+          <div class="status-label">Sutra · ${formatDate(tomorrow)}</div>
+          <div class="status-value">${escapeHtml(tomorrowStatus.title)}</div>
+          <div class="status-detail">${escapeHtml(tomorrowStatus.detail)}</div>
+        </article>
+        <article class="panel week-panel">
+          <div class="panel-head"><div><h3>Narednih 7 dana</h3><p>Vaše smene na jednom mestu.</p></div></div>
+          <div class="week-list">${week}</div>
+        </article>`;
+      dashboard.classList.remove('hidden');
+      $('#publicHero').classList.add('hidden');
+    }
+
+    function personalStatus(key) {
+      const day = state.schedule.find(item => item.date === key);
+      if (!day) return { title: 'Slobodan dan', detail: 'Nema planirane smene.' };
+      for (const shiftId of [1, 2, 3]) {
+        const people = day.shifts[String(shiftId)] || day.shifts[shiftId] || [];
+        const mine = people.find(person => person.user === state.user.user || person.mine);
+        if (mine) {
+          const shift = state.shifts.find(item => Number(item.id) === shiftId);
+          return {
+            title: shift ? shift.name : shiftId + '. smena',
+            detail: shift ? shift.start + '–' + shift.end + ' · ' + mine.duty : mine.duty
+          };
+        }
+      }
+      return { title: 'Slobodan dan', detail: 'Nema planirane smene.' };
+    }
+
+    async function loadAdmin() {
+      state.admin = await callServer('getAdminData', state.token);
+      renderAdmin();
+      await loadSelectedMonthSchedule();
+    }
+
+    function renderAdmin() {
+      if (!state.admin) return;
+      const monthSelect = $('#adminMonth');
+      monthSelect.innerHTML = months.map((month, index) =>
+        `<option value="${index + 1}">${month}</option>`).join('');
+      monthSelect.value = state.admin.defaults.month;
+      $('#adminYear').value = state.admin.defaults.year;
+      [1, 2, 3].forEach(shift => {
+        const select = $('#staff' + shift);
+        select.innerHTML = [
+          ['2-3', '2 ili 3'],
+          ['3-4', '3 ili 4'],
+          ['4-5', '4 ili 5']
+        ].map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+        const defaults = state.admin.defaults.staffing[String(shift)] || { min: 2, max: 3 };
+        select.value = defaults.min + '-' + defaults.max;
+        select.onchange = renderAdminViews;
+      });
+      renderPeopleList();
+      renderReplaceOptions();
+      toggleNewMonitorField();
+      renderMonthPlan();
+    }
+
+    function renderReplaceOptions() {
+      if (!state.admin) return;
+      const users = state.admin.users
+        .filter(user => user.active && user.role === 'zaposleni')
+        .sort((a, b) => a.name.localeCompare(b.name, 'sr'));
+      const options = users.map(user =>
+        `<option value="${escapeAttr(user.user)}">${escapeHtml(user.name)}</option>`
+      ).join('');
+      $('#replaceFromUser').innerHTML = '<option value="">Izaberite…</option>' + options;
+      $('#replaceToUser').innerHTML = '<option value="">Izaberite…</option>' + options;
+      updateReplaceDateLimits();
+    }
+
+    function updateReplaceDateLimits() {
+      const year = Number($('#adminYear').value);
+      const month = Number($('#adminMonth').value);
+      if (!year || !month) return;
+      const first = year + '-' + String(month).padStart(2, '0') + '-01';
+      const last = year + '-' + String(month).padStart(2, '0') + '-' +
+        String(new Date(year, month, 0).getDate()).padStart(2, '0');
+      ['replaceFromDate', 'replaceToDate'].forEach(id => {
+        if (!$('#' + id).value) {
+          $('#' + id).value = id === 'replaceFromDate' ? first : last;
+        }
+      });
+    }
+
+    async function handleAdminMonthChange() {
+      renderMonthPlan();
+      updateReplaceDateLimits();
+      renderAdminViews();
+    }
+
+    async function loadSelectedMonthSchedule() {
+      if (!state.token) return;
+      try {
+        state.adminSchedule = await callServer(
+          'getAdminSchedule',
+          state.token
+        );
+        renderAdminViews();
+        if (!state.adminSchedule.length) {
+          showToast(
+            'Nema kreiranog rasporeda za tekući ili naredne mesece.',
+            true
+          );
+        }
+      } catch (error) {
+        showError(error);
+      }
+    }
+
+    function renderAdminViews() {
+      renderAdminSchedule();
+      renderScheduleSummary();
+      renderSwapDates();
+      fillEmployeeSearch(
+        $('#adminEmployeeSearch'), adminVisibleSchedule(), state.adminSearchUser
+      );
+      updateSearchResult(true);
+    }
+
+    function renderSwapDates() {
+      const dateSelect = $('#swapDate');
+      if (!dateSelect) return;
+      const previous = dateSelect.value;
+      const days = state.adminSchedule.filter(day =>
+        swapOptionsForDay(day).length >= 2
+      );
+      dateSelect.innerHTML = days.length
+        ? days.map(day =>
+          `<option value="${escapeAttr(day.date)}">${escapeHtml(
+            formatDate(day.date) + ' · ' + day.day
+          )}</option>`
+        ).join('')
+        : '<option value="">Nema datuma sa dva zaposlena</option>';
+      if (days.some(day => day.date === previous)) {
+        dateSelect.value = previous;
+      } else {
+        const today = dateKey(new Date());
+        const nextDay = days.find(day => day.date >= today) || days[0];
+        dateSelect.value = nextDay ? nextDay.date : '';
+      }
+      renderSwapEmployeeOptions();
+    }
+
+    function renderSwapEmployeeOptions() {
+      const date = $('#swapDate').value;
+      const day = state.adminSchedule.find(item => item.date === date);
+      const options = swapOptionsForDay(day);
+      const html = '<option value="">Izaberite…</option>' + options.map(option =>
+        `<option value="${escapeAttr(option.user)}">${escapeHtml(option.label)}</option>`
+      ).join('');
+      $('#swapFirstUser').innerHTML = html;
+      $('#swapSecondUser').innerHTML = html;
+    }
+
+    function swapOptionsForDay(day) {
+      const options = [];
+      if (!day) return options;
+      [1, 2, 3].forEach(shift => {
+        const people = day.shifts[String(shift)] || day.shifts[shift] || [];
+        const employees = people.filter(person => person.duty === 'Zaposleni');
+        employees.sort((a, b) => a.name.localeCompare(b.name, 'sr'))
+          .forEach(person => options.push({
+            user: person.user,
+            label: ['', 'I', 'II', 'III'][shift] + ' smena · ' + person.name
+          }));
+        const maximum = adminShiftMaximum(day, shift);
+        if (employees.length < maximum) {
+          options.push({
+            user: '__empty_shift_' + shift,
+            label: ['', 'I', 'II', 'III'][shift] +
+              ' smena · Prazno mesto (' + employees.length +
+              '/' + maximum + ')'
+          });
+        }
+      });
+      return options;
+    }
+
+    async function swapEmployees(event) {
+      event.preventDefault();
+      const request = {
+        date: $('#swapDate').value,
+        firstUser: $('#swapFirstUser').value,
+        secondUser: $('#swapSecondUser').value
+      };
+      if (!request.date || !request.firstUser || !request.secondUser) {
+        showToast('Izaberite datum i oba zaposlena.', true);
+        return;
+      }
+      if (request.firstUser === request.secondUser) {
+        showToast('Izaberite dva različita zaposlena.', true);
+        return;
+      }
+      const day = state.adminSchedule.find(item => item.date === request.date);
+      const firstEmptyShift = emptyShiftFromValue(request.firstUser);
+      const secondEmptyShift = emptyShiftFromValue(request.secondUser);
+      const firstShift = firstEmptyShift ||
+        scheduledShiftForUser(day, request.firstUser);
+      const secondShift = secondEmptyShift ||
+        scheduledShiftForUser(day, request.secondUser);
+      if ((firstEmptyShift && secondEmptyShift) ||
+          !firstShift || !secondShift || firstShift === secondShift) {
+        showToast(
+          'Izaberite zaposlene iz različitih smena ili prazno mesto i zaposlenog.',
+          true
+        );
+        return;
+      }
+
+      setLoading(true, 'Zamena smena…');
+      try {
+        const data = await callServer('swapEmployees', state.token, request);
+        applyEmployeeSwap(state.adminSchedule, data.swap);
+        applyEmployeeSwap(state.schedule, data.swap);
+        renderAdminViews();
+        renderSchedule();
+        renderEmployeeSearches();
+        showToast(data.swap.move
+          ? data.swap.employee.name + ' je premešten u smenu sa manjkom.'
+          : data.swap.first.name + ' i ' + data.swap.second.name +
+            ' su zamenili smene.'
+        );
+      } catch (error) {
+        showError(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function scheduledShiftForUser(day, user) {
+      if (!day) return 0;
+      return [1, 2, 3].find(shift => {
+        const people = day.shifts[String(shift)] || day.shifts[shift] || [];
+        return people.some(person => person.user === user);
+      }) || 0;
+    }
+
+    function emptyShiftFromValue(value) {
+      const match = String(value || '').match(/^__empty_shift_([1-3])$/);
+      return match ? Number(match[1]) : 0;
+    }
+
+    function applyEmployeeSwap(schedule, swap) {
+      if (!swap || !swap.date) return;
+      const day = schedule.find(item => item.date === swap.date);
+      if (!day) return;
+      if (swap.move) {
+        const source = day.shifts[String(swap.employee.fromShift)] ||
+          day.shifts[swap.employee.fromShift] || [];
+        const index = source.findIndex(person =>
+          person.user === swap.employee.user
+        );
+        if (index < 0) return;
+        const employee = source.splice(index, 1)[0];
+        const target = day.shifts[String(swap.employee.toShift)] ||
+          day.shifts[swap.employee.toShift];
+        target.push(employee);
+        return;
+      }
+      const firstList = day.shifts[String(swap.first.fromShift)] ||
+        day.shifts[swap.first.fromShift] || [];
+      const secondList = day.shifts[String(swap.second.fromShift)] ||
+        day.shifts[swap.second.fromShift] || [];
+      const firstIndex = firstList.findIndex(person =>
+        person.user === swap.first.user
+      );
+      const secondIndex = secondList.findIndex(person =>
+        person.user === swap.second.user
+      );
+      if (firstIndex < 0 || secondIndex < 0) return;
+      const first = firstList.splice(firstIndex, 1)[0];
+      const second = secondList.splice(secondIndex, 1)[0];
+      const firstTarget = day.shifts[String(swap.first.toShift)] ||
+        day.shifts[swap.first.toShift];
+      const secondTarget = day.shifts[String(swap.second.toShift)] ||
+        day.shifts[swap.second.toShift];
+      firstTarget.push(first);
+      secondTarget.push(second);
+    }
+
+    function renderPeopleList() {
+      const list = $('#peopleList');
+      const users = [...state.admin.users].sort((a, b) =>
+        Number(b.active) - Number(a.active) || a.name.localeCompare(b.name, 'sr'));
+      list.innerHTML = users.map(user => `
+        <div class="people-row" data-user="${escapeAttr(user.user)}">
+          <div class="person-name">
+            <strong>${escapeHtml(user.name)}</strong>
+            <span>${escapeHtml(user.user)}</span>
+          </div>
+          <select class="person-base-role">
+            ${roleOptions(user.role === 'administrator' ? 'administrator' : user.duty)}
+          </select>
+          <select class="person-monitor-shift" ${user.duty === 'monitoring' ? '' : 'disabled'}>
+            <option value="1" ${Number(user.monitorShift) === 1 ? 'selected' : ''}>Monitoring I</option>
+            <option value="2" ${Number(user.monitorShift) === 2 ? 'selected' : ''}>Monitoring II</option>
+            <option value="3" ${Number(user.monitorShift) === 3 ? 'selected' : ''}>Monitoring III</option>
+          </select>
+          <label style="margin:0"><input class="check person-active" type="checkbox" ${user.active !== false ? 'checked' : ''}> Aktivan</label>
+          <button class="btn small danger person-remove" type="button">Ukloni</button>
+        </div>`).join('');
+
+      $$('.person-base-role', list).forEach(select => select.addEventListener('change', event => {
+        const row = event.target.closest('.people-row');
+        $('.person-monitor-shift', row).disabled = event.target.value !== 'monitoring';
+        renderMonthPlan();
+      }));
+      $$('.person-monitor-shift', list).forEach(select =>
+        select.addEventListener('change', renderMonthPlan));
+      $$('.person-active', list).forEach(input => input.addEventListener('change', renderMonthPlan));
+      $$('.person-remove', list).forEach(button => button.addEventListener('click', event => {
+        const user = event.target.closest('.people-row').dataset.user;
+        state.admin.users = state.admin.users.filter(item => item.user !== user);
+        renderPeopleList();
+        renderMonthPlan();
+      }));
+    }
+
+    function roleOptions(selected) {
+      return [
+        ['shift_lider', 'Shift lider'],
+        ['monitoring', 'Monitoring'],
+        ['radnik', 'Radnik'],
+        ['administrator', 'Administrator']
+      ].map(([value, label]) =>
+        `<option value="${value}" ${selected === value ? 'selected' : ''}>${label}</option>`
+      ).join('');
+    }
+
+    function collectUsers() {
+      const byUser = Object.fromEntries(state.admin.users.map(user => [user.user, user]));
+      return $$('.people-row').map(row => {
+        const original = byUser[row.dataset.user];
+        const baseRole = $('.person-base-role', row).value;
+        return {
+          active: $('.person-active', row).checked,
+          name: original.name,
+          user: original.user,
+          role: baseRole === 'administrator' ? 'administrator' : 'zaposleni',
+          duty: baseRole === 'administrator' ? 'off' : baseRole,
+          monitorShift: Number($('.person-monitor-shift', row).value) || 1
+        };
+      });
+    }
+
+    function collectEmployeeConfig() {
+      return $$('#monthPlanBody tr[data-user]').map((row, index) => {
+        const weekOverrides = {};
+        $$('.plan-week-duty', row).forEach(select => {
+          const baseDuty = row.dataset.duty;
+          if (select.value !== baseDuty) {
+            weekOverrides[select.dataset.week] = select.value;
+          }
+        });
+        
+        // Collect replacement info
+        const replacementInfo = {};
+        $$('.plan-week-duty', row).forEach(select => {
+          if (select.dataset.replacementFor) {
+            replacementInfo[select.dataset.week] = select.dataset.replacementFor;
+          }
+        });
+        
+        return {
+          active: true,
+          user: row.dataset.user,
+          duty: row.dataset.duty,
+          eligibleForReplacement: $('.plan-eligible-replacement', row).checked,
+          monitorShift: Number($('.plan-monitor-shift', row).value) || 1,
+          leaderOrder: index,
+          weekOverrides,
+          replacementInfo,
+          freeDates: $('.plan-free-date', row).value
+            ? [$('.plan-free-date', row).value]
+            : [],
+          freeDayType: $('.plan-free-type', row).value
+        };
+      });
+    }
+
+    function toggleNewMonitorField() {
+      $('#newMonitorField').classList.toggle('hidden', $('#newPersonRole').value !== 'monitoring');
+    }
+
+    async function addPerson(event) {
+      event.preventDefault();
+      const name = $('#newPersonName').value.trim();
+      const user = $('#newPersonUser').value.trim().toLowerCase();
+      const selectedRole = $('#newPersonRole').value;
+      if (!name || !user) return;
+      if (state.admin.users.some(item => item.user.toLowerCase() === user)) {
+        showToast('User već postoji.', true);
+        return;
+      }
+      state.admin.users.push({
+        name,
+        user,
+        role: selectedRole === 'administrator' ? 'administrator' : 'zaposleni',
+        active: true,
+        duty: selectedRole === 'administrator' ? 'off' : selectedRole,
+        monitorShift: Number($('#newMonitorShift').value) || 1
+      });
+      event.target.reset();
+      toggleNewMonitorField();
+      renderPeopleList();
+      renderMonthPlan();
+      await savePeople();
+    }
+
+    async function savePeople() {
+      setLoading(true, 'Čuvanje korisnika…');
+      try {
+        const data = await callServer('saveUsers', state.token, collectUsers());
+        state.admin.users = data.users;
+        renderPeopleList();
+        renderReplaceOptions();
+        renderMonthPlan();
+        showToast('Osobe su sačuvane u Login tabu.');
+      } catch (error) {
+        showError(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function replaceEmployee(event) {
+      event.preventDefault();
+      const request = {
+        fromUser: $('#replaceFromUser').value,
+        toUser: $('#replaceToUser').value,
+        fromDate: $('#replaceFromDate').value,
+        toDate: $('#replaceToDate').value
+      };
+      if (!request.fromUser || !request.toUser) {
+        showToast('Izaberite zaposlenog i zamenu.', true);
+        return;
+      }
+      if (request.fromUser === request.toUser) {
+        showToast('Zaposleni i zamena moraju biti različiti.', true);
+        return;
+      }
+      setLoading(true, 'Zamena zaposlenog u rasporedu…');
+      try {
+        const data = await callServer('replaceEmployee', state.token, request);
+        state.adminSchedule = await callServer('getAdminSchedule', state.token);
+        state.schedule = await callServer('getAllSchedule', state.token);
+        renderAdminViews();
+        renderSchedule();
+        renderEmployeeSearches();
+        showToast(
+          'Rotirano smena: ' + data.rotated +
+          ' kroz ' + data.days + ' dana.'
+        );
+      } catch (error) {
+        showError(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function getMonthWeeks(year, month) {
+      const lastDay = new Date(year, month, 0).getDate();
+      const weeks = [];
+      let start = 1;
+      while (start <= lastDay) {
+        const startDate = new Date(year, month - 1, start, 12);
+        const daysUntilSunday = 7 - (startDate.getDay() || 7);
+        const end = Math.min(lastDay, start + daysUntilSunday);
+        weeks.push({ index: weeks.length, start, end });
+        start = end + 1;
+      }
+      return weeks;
+    }
+
+    function renderMonthPlan() {
+      if (!state.admin) return;
+      const year = Number($('#adminYear').value);
+      const month = Number($('#adminMonth').value);
+      if (!year || !month) return;
+      const weeks = getMonthWeeks(year, month);
+      const users = collectUsers()
+        .filter(user => user.active && user.role === 'zaposleni')
+        .sort((a, b) => dutyOrder(a.duty) - dutyOrder(b.duty) || a.name.localeCompare(b.name, 'sr'));
+
+      $('#monthPlanDescription').textContent =
+        months[month - 1] + ' ' + year + ' · svaka kolona prikazuje samo datume tog meseca.';
+      $('#monthPlanHead').innerHTML = `<tr>
+        <th>Zaposleni</th>
+        <th>Osnovna rola</th>
+        <th>Monitoring smena</th>
+        <th>Obavezno slobodan</th>
+        <th>Tip</th>
+        <th>Fond</th>
+        ${weeks.map((week, index) => `<th>
+          Nedelja ${index + 1}
+          <span class="week-range">${weekRangeLabel(month, week)}</span>
+        </th>`).join('')}
+      </tr>`;
+
+      let lastDuty = '';
+      $('#monthPlanBody').innerHTML = users.map(user => {
+        const group = user.duty !== lastDuty
+          ? `<tr class="group-row"><td colspan="${6 + weeks.length}">${dutyGroupLabel(user.duty)}</td></tr>`
+          : '';
+        lastDuty = user.duty;
+        return group + `<tr data-user="${escapeAttr(user.user)}" data-duty="${escapeAttr(user.duty)}">
+          <td class="plan-person"><strong>${escapeHtml(user.name)}</strong>
+            <span>${escapeHtml(user.user)}</span>
+            <label class="replacement-check" title="Označi radnika koji može biti zamena">
+              <input class="plan-eligible-replacement" type="checkbox"
+                ${user.duty !== 'radnik' ? 'disabled' : ''}>
+              Pogodan za zamenu
+            </label>
+          </td>
+          <td><span class="role-badge">${escapeHtml(dutyLabel(user.duty))}</span></td>
+          <td><select class="plan-monitor-shift" title="Koristi se kada je osoba raspoređena kao monitoring">
+            <option value="1" ${Number(user.monitorShift) === 1 ? 'selected' : ''}>I</option>
+            <option value="2" ${Number(user.monitorShift) === 2 ? 'selected' : ''}>II</option>
+            <option value="3" ${Number(user.monitorShift) === 3 ? 'selected' : ''}>III</option>
+          </select></td>
+          <td><input class="plan-free-date" type="date"
+            min="${year}-${String(month).padStart(2, '0')}-01"
+            max="${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}"></td>
+          <td><select class="plan-free-type">
+            <option value="drugo">Drugo</option>
+            <option value="slava">Slava</option>
+          </select></td>
+          <td><strong class="plan-target">-</strong></td>
+          ${weeks.map(week => `<td><select class="plan-week-duty" data-week="${week.index}">
+            ${monthlyDutyOptions(user.duty, user.duty)}
+          </select><small class="replacement-note"></small></td>`).join('')}
+        </tr>`;
+      }).join('');
+      $$('.plan-week-duty, .plan-free-date, .plan-free-type', $('#monthPlanBody'))
+        .forEach(control => control.addEventListener('change', updateStaffingSuggestion));
+      $$('.plan-week-duty', $('#monthPlanBody'))
+        .forEach(control => control.addEventListener('change', handleWeekDutyChange));
+      $$('.plan-eligible-replacement', $('#monthPlanBody'))
+        .forEach(control => control.addEventListener('change', reconcileWeekReplacements));
+      updateStaffingSuggestion();
+      reconcileWeekReplacements();
+    }
+
+    function monthlyDutyOptions(selected, baseDuty) {
+      const options = [
+        ['shift_lider', 'Shift lider'],
+        ['monitoring', 'Monitoring'],
+        ['radnik', 'Radnik'],
+        ['off', 'Ne radi']
+      ];
+      if (baseDuty === 'radnik') {
+        options.splice(3, 0, ['zamena', 'Zamena shift lidera']);
+      }
+      return options.map(([value, label]) =>
+        `<option value="${value}" ${selected === value ? 'selected' : ''}
+          ${value === 'zamena' ? 'disabled' : ''}>${label}</option>`
+      ).join('');
+    }
+
+    function dutyOrder(duty) {
+      return { shift_lider: 0, monitoring: 1, radnik: 2, off: 3 }[duty] ?? 9;
+    }
+
+    function dutyLabel(duty) {
+      return {
+        shift_lider: 'Shift lider',
+        monitoring: 'Monitoring',
+        radnik: 'Radnik',
+        zamena: 'Zamena',
+        off: 'Ne radi'
+      }[duty] || duty;
+    }
+
+    function dutyGroupLabel(duty) {
+      return {
+        shift_lider: 'Shift lideri',
+        monitoring: 'Monitoring',
+        radnik: 'Radnici',
+        zamena: 'Zamene',
+        off: 'Ne rade'
+      }[duty] || duty;
+    }
+
+    function weekRangeLabel(month, week) {
+      const mm = String(month).padStart(2, '0');
+      return String(week.start).padStart(2, '0') + '.' + mm +
+        '-' + String(week.end).padStart(2, '0') + '.' + mm;
+    }
+
+    function baseTargetShifts(year, month) {
+      const days = new Date(year, month, 0).getDate();
+      return days === 31 ? 21 : days === 30 ? 20 : 19;
+    }
+
+    function updateStaffingSuggestion() {
+      const box = $('#staffSuggestion');
+      if (!box || !$('#monthPlanBody')) return;
+      const year = Number($('#adminYear').value);
+      const month = Number($('#adminMonth').value);
+      if (!year || !month) return;
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const baseTarget = baseTargetShifts(year, month);
+      const monthWeeks = getMonthWeeks(year, month);
+      let totalFund = 0;
+      let replacementFund = 0;
+
+      $$('#monthPlanBody tr[data-user]').forEach(row => {
+        let unavailableDays = 0;
+        let regularWorkerDays = 0;
+        $$('.plan-week-duty', row).forEach(select => {
+          const week = monthWeeks[Number(select.dataset.week)];
+          const weekDays = week.end - week.start + 1;
+          if (select.value === 'off') unavailableDays += weekDays;
+          if (row.dataset.duty === 'radnik' &&
+              select.value === 'radnik' &&
+              !select.dataset.replacementFor) {
+            regularWorkerDays += weekDays;
+          }
+        });
+        let target = Math.round(
+          (daysInMonth - unavailableDays) / (daysInMonth / baseTarget)
+        );
+        if ($('.plan-free-date', row).value &&
+            $('.plan-free-type', row).value === 'slava') {
+          target -= 1;
+        }
+        target = Math.max(0, target);
+        $('.plan-target', row).textContent = target;
+        if (row.dataset.duty === 'radnik') {
+          let regularFund = Math.round(
+            regularWorkerDays / (daysInMonth / baseTarget)
+          );
+          if ($('.plan-free-date', row).value &&
+              $('.plan-free-type', row).value === 'slava') {
+            regularFund -= 1;
+          }
+          regularFund = Math.max(0, regularFund);
+          totalFund += regularFund;
+          replacementFund += Math.max(0, target - regularFund);
+        }
+      });
+
+      const calculated = Math.floor(totalFund / daysInMonth);
+      const supported = Math.max(6, Math.min(13, calculated));
+      const distribution = {
+        6: [2, 2, 2], 7: [2, 2, 3], 8: [2, 3, 3], 9: [3, 3, 3],
+        10: [3, 3, 4], 11: [3, 4, 4], 12: [4, 4, 4], 13: [4, 4, 5]
+      }[supported];
+      state.staffingSuggestion = distribution.map(min => min + '-' + (min + 1));
+      const note = calculated === supported ? '' :
+        ' (tabela je ograničena na 6-13, primenjena je vrednost ' + supported + ')';
+      box.innerHTML = '<strong>Predlog: I = ' + distribution[0] +
+        ', II = ' + distribution[1] + ', III = ' + distribution[2] + '</strong>' +
+        'Fond radnika ' + totalFund + ' / ' + daysInMonth +
+        ' dana = ' + calculated + note + '. ' +
+        (replacementFund
+          ? 'Iz predloga je izuzeto ' + replacementFund +
+            ' smena zaposlenih dok rade kao zamene ili u posebnoj ulozi.'
+          : '');
+    }
+
+    function applyStaffingSuggestion() {
+      if (!state.staffingSuggestion) updateStaffingSuggestion();
+      (state.staffingSuggestion || []).forEach((value, index) => {
+        $('#staff' + (index + 1)).value = value;
+      });
+      showToast('Predloženi broj zaposlenih po smenama je primenjen.');
+    }
+
+    async function generateSchedule() {
+      const missingReplacement = $$('.plan-week-duty').find(select =>
+        select.value === 'off' &&
+        !$('.plan-replacement-choice', select.parentElement)?.value
+      );
+      if (missingReplacement) {
+        showToast(
+          'Izaberite zamenu za svaku osobu koja ima nedelju Ne radi.',
+          true
+        );
+        missingReplacement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        return;
+      }
+
+      const phaseMessages = [
+        'Faza 1/9: shift lideri i zamenski lideri…',
+        'Faza 2/9: nastavak smena iz prethodnog meseca…',
+        'Faza 3/9: popunjavanje minimuma…',
+        'Faza 4/9: slobodni datumi i vikend III smena…',
+        'Faza 5/9: odsustva i upisivanje zamena…',
+        'Faza 6/9: korekcija fonda zamena…',
+        'Faza 7/9: završna dopuna fondova…',
+        'Faza 8/9: uklanjanje prelaza iz II u I smenu…',
+        'Faza 9/9: završna provera odmora i fondova…'
+      ];
+      let phaseIndex = 0;
+      setLoading(true, phaseMessages[phaseIndex]);
+      const phaseTimer = setInterval(() => {
+        phaseIndex = Math.min(phaseIndex + 1, phaseMessages.length - 1);
+        setLoading(true, phaseMessages[phaseIndex]);
+      }, 2500);
+      try {
+        await callServer('saveUsers', state.token, collectUsers());
+        const request = {
+          year: Number($('#adminYear').value),
+          month: Number($('#adminMonth').value),
+          staffing: {
+            1: staffingRange($('#staff1').value),
+            2: staffingRange($('#staff2').value),
+            3: staffingRange($('#staff3').value)
+          },
+          employeeConfig: collectEmployeeConfig()
+        };
+        const data = await callServer('generateSchedule', state.token, request);
+        renderWarnings(data.warnings || []);
+        if ((data.warnings || []).length) {
+          showAdminTab('adminScheduleTab');
+        }
+        state.adminSchedule = await callServer('getAdminSchedule', state.token);
+        state.schedule = await callServer('getAllSchedule', state.token);
+        renderAll();
+        showToast('Raspored je napravljen: ' + data.rowsCreated + ' unosa.');
+      } catch (error) {
+        showError(error);
+      } finally {
+        clearInterval(phaseTimer);
+        setLoading(false);
+      }
+    }
+
+    function staffingRange(value) {
+      const [min, max] = String(value).split('-').map(Number);
+      return { min, max };
+    }
+
+    function handleWeekDutyChange(event) {
+      const select = event.target;
+      const row = select.closest('tr[data-user]');
+      if (!row) return;
+      delete select.dataset.replacementFor;
+      delete select.dataset.replacementRole;
+      reconcileWeekReplacements();
+    }
+
+    function reconcileWeekReplacements() {
+      const year = Number($('#adminYear').value);
+      const month = Number($('#adminMonth').value);
+      if (!year || !month) return;
+      const weeks = getMonthWeeks(year, month);
+      const allRows = $$('#monthPlanBody tr[data-user]');
+      const requested = {};
+
+      $$('.plan-replacement-choice').forEach(choice => {
+        if (choice.value) {
+          requested[
+            choice.dataset.week + '|' + choice.dataset.absentUser
+          ] = choice.value;
+        }
+      });
+      allRows.forEach(row => {
+        $$('.plan-week-duty[data-replacement-for]', row).forEach(select => {
+          const key = select.dataset.week + '|' +
+            select.dataset.replacementFor;
+          if (!requested[key]) requested[key] = row.dataset.user;
+        });
+      });
+
+      $$('.plan-replacement-choice').forEach(choice => choice.remove());
+      $$('.plan-week-duty[data-replacement-for]').forEach(select => {
+        select.value = select.closest('tr[data-user]').dataset.duty;
+        delete select.dataset.replacementFor;
+        delete select.dataset.replacementRole;
+      });
+
+      weeks.forEach(week => {
+        const usedCandidates = {};
+        const absences = allRows.filter(row => {
+          const select = $('.plan-week-duty[data-week="' + week.index + '"]', row);
+          return select && select.value === 'off';
+        }).sort((a, b) =>
+          dutyOrder(a.dataset.duty) - dutyOrder(b.dataset.duty)
+        );
+
+        absences.forEach(absentRow => {
+          const eligibleRows = allRows.filter(row => {
+            if (row === absentRow || row.dataset.duty !== 'radnik') return false;
+            const checkbox = $('.plan-eligible-replacement', row);
+            const select = $('.plan-week-duty[data-week="' + week.index + '"]', row);
+            return checkbox && checkbox.checked && select &&
+              select.value === 'radnik';
+          });
+
+          const absentSelect = $(
+            '.plan-week-duty[data-week="' + week.index + '"]',
+            absentRow
+          );
+          const choice = document.createElement('select');
+          choice.className = 'plan-replacement-choice';
+          choice.dataset.week = String(week.index);
+          choice.dataset.absentUser = absentRow.dataset.user;
+          choice.innerHTML = '<option value="">Izaberi zamenu…</option>' +
+            eligibleRows.map(row =>
+              `<option value="${escapeAttr(row.dataset.user)}">${escapeHtml(
+                $('strong', row).textContent
+              )}</option>`
+            ).join('');
+
+          const requestKey = week.index + '|' + absentRow.dataset.user;
+          const requestedUser = requested[requestKey] || '';
+          const candidate = eligibleRows.find(row =>
+            row.dataset.user === requestedUser &&
+            !usedCandidates[row.dataset.user]
+          );
+          if (candidate) {
+            choice.value = candidate.dataset.user;
+            const candidateSelect = $(
+              '.plan-week-duty[data-week="' + week.index + '"]',
+              candidate
+            );
+            const replacementRole = absentRow.dataset.duty;
+            candidateSelect.value = replacementRole === 'shift_lider'
+              ? 'zamena'
+              : replacementRole;
+            candidateSelect.dataset.replacementFor = absentRow.dataset.user;
+            candidateSelect.dataset.replacementRole = replacementRole;
+            usedCandidates[candidate.dataset.user] = true;
+          }
+
+          choice.addEventListener('change', reconcileWeekReplacements);
+          absentSelect.parentElement.appendChild(choice);
+        });
+      });
+
+      updateReplacementIndicators();
+      updateStaffingSuggestion();
+    }
+
+    function updateReplacementIndicators() {
+      const allRows = $$('#monthPlanBody tr[data-user]');
+
+      $$('.plan-week-duty').forEach(select => {
+        select.style.backgroundColor = '';
+        select.style.borderColor = '';
+        select.style.boxShadow = '';
+        select.title = '';
+        const note = $('.replacement-note', select.parentElement);
+        if (note) {
+          note.textContent = '';
+          note.style.color = '';
+        }
+      });
+
+      const replacementsByWeek = {};
+      allRows.forEach(row => {
+        $$('.plan-week-duty', row).forEach(select => {
+          if (select.dataset.replacementFor) {
+            const weekIndex = Number(select.dataset.week);
+            if (!replacementsByWeek[weekIndex]) replacementsByWeek[weekIndex] = [];
+
+            const replacedRow = allRows.find(r =>
+              r.dataset.user === select.dataset.replacementFor
+            );
+            if (replacedRow) {
+              replacementsByWeek[weekIndex].push({
+                replacementName: $('strong', row).textContent,
+                replacedName: $('strong', replacedRow).textContent,
+                select: select
+              });
+            }
+          }
+        });
+      });
+
+      Object.values(replacementsByWeek).forEach(replacements => {
+        replacements.forEach(replacement => {
+          replacement.select.style.backgroundColor = '#d4edda';
+          replacement.select.style.borderColor = '#28a745';
+          replacement.select.style.boxShadow = 'inset 0 0 0 1px #28a745';
+          replacement.select.title =
+            `${replacement.replacementName} zamenjuje ${replacement.replacedName}`;
+          const note = $('.replacement-note', replacement.select.parentElement);
+          if (note) note.textContent = `Zamena za ${replacement.replacedName}`;
+        });
+      });
+
+      allRows.forEach(absentRow => {
+        $$('.plan-week-duty', absentRow).forEach(select => {
+          const weekIndex = Number(select.dataset.week);
+          if (select.value === 'off') {
+            const replacement = (replacementsByWeek[weekIndex] || []).find(r =>
+              r.replacedName === $('strong', absentRow).textContent
+            );
+            if (replacement) {
+              select.style.backgroundColor = '#fff3cd';
+              select.style.borderColor = '#e6b825';
+              select.title = `Menja ga ${replacement.replacementName}`;
+              const note = $('.replacement-note', select.parentElement);
+              if (note) note.textContent = `Menja: ${replacement.replacementName}`;
+            } else {
+              select.style.borderColor = '#b42318';
+              const note = $('.replacement-note', select.parentElement);
+              if (note) {
+                note.textContent = 'Nema dostupne zamene';
+                note.style.color = '#b42318';
+              }
+            }
+          }
+        });
+      });
+
+      renderReplacementSummary(
+        getMonthWeeks(Number($('#adminYear').value), Number($('#adminMonth').value))
+      );
+    }
+
+    function renderReplacementSummary(weeks) {
+      const allRows = $$('#monthPlanBody tr[data-user]');
+      const replacementInfo = {};
+      weeks.forEach(week => {
+        replacementInfo[week.index] = [];
+      });
+
+      allRows.forEach(row => {
+        $$('.plan-week-duty', row).forEach(select => {
+          if (select.dataset.replacementFor) {
+            const weekIndex = Number(select.dataset.week);
+            const replacedRow = allRows.find(r =>
+              r.dataset.user === select.dataset.replacementFor
+            );
+            if (replacedRow) {
+              const replacementName = $('strong', row).textContent;
+              replacementInfo[weekIndex].push({
+                replacement: replacementName,
+                absent: $('strong', replacedRow).textContent
+              });
+            }
+          }
+        });
+      });
+
+      let hasAnyReplacement = false;
+      const summary = weeks.map(week => {
+        const replacements = replacementInfo[week.index] || [];
+        if (replacements.length === 0) return '';
+        hasAnyReplacement = true;
+
+        const items = replacements.map(r =>
+          `<small style="display:block;margin:4px 0"><strong>${escapeHtml(r.replacement)}</strong> zamenjuje <strong>${escapeHtml(r.absent)}</strong></small>`
+        ).join('');
+
+        return `<div style="margin-bottom:12px;padding:10px;border-radius:8px;background:#d4edda;border-left:3px solid #28a745">
+          <strong style="color:#155724">Nedelja ${week.index + 1}</strong>${items}
+        </div>`;
+      }).join('');
+      
+      if (hasAnyReplacement) {
+        let summaryPanel = $('#replacementSummaryPanel');
+        if (!summaryPanel) {
+          summaryPanel = document.createElement('div');
+          summaryPanel.id = 'replacementSummaryPanel';
+          summaryPanel.className = 'panel full';
+          summaryPanel.style.marginTop = '16px';
+          const monthPlanSection = $('#monthPlanBody').closest('.panel.full');
+          if (monthPlanSection && monthPlanSection.parentNode) {
+            monthPlanSection.parentNode.insertBefore(summaryPanel, monthPlanSection.nextSibling);
+          }
+        }
+        summaryPanel.innerHTML = `
+          <div class="panel-head">
+            <div>
+              <h3>Pregled zamena po nedeljama</h3>
+              <p>Odsutni zaposleni i automatski izabrane zamene.</p>
+            </div>
+          </div>
+          <div style="padding:0 16px 16px">${summary || '<div class="empty">Nema zamena.</div>'}</div>
+        `;
+      } else {
+        const summaryPanel = $('#replacementSummaryPanel');
+        if (summaryPanel) summaryPanel.remove();
+      }
+    }
+
+    function renderWarnings(warnings) {
+      const box = $('#warnings');
+      if (!warnings.length) {
+        box.classList.add('hidden');
+        box.innerHTML = '';
+        return;
+      }
+      box.innerHTML = '<strong>Generator je završio uz napomene:</strong>' +
+        warnings.slice(0, 30).map(item => '<p>' + escapeHtml(item) + '</p>').join('') +
+        (warnings.length > 30 ? '<p>…i još ' + (warnings.length - 30) + ' napomena.</p>' : '');
+      box.classList.remove('hidden');
+    }
+
+    function getCurrentShift() {
+      const now = new Date();
+      const minutes = now.getHours() * 60 + now.getMinutes();
+      let shift = 1;
+      const scheduleDate = new Date(now);
+      if (minutes >= 6 * 60 && minutes < 14 * 60) shift = 1;
+      else if (minutes >= 14 * 60 && minutes < 22 * 60) shift = 2;
+      else {
+        shift = 3;
+        if (minutes < 6 * 60) scheduleDate.setDate(scheduleDate.getDate() - 1);
+      }
+      return { shift, date: dateKey(scheduleDate) };
+    }
+
+    function updateClock() {
+      const now = new Date();
+      $('#clock').textContent = now.toLocaleTimeString('sr-RS', { hour: '2-digit', minute: '2-digit' });
+      $('#dateLabel').textContent = now.toLocaleDateString('sr-RS', { weekday: 'long', day: 'numeric', month: 'long' });
+      if (state.shifts.length) {
+        updateCurrentPill();
+        renderMobileCurrent();
+        renderMobileUpcoming();
+      }
+    }
+
+    function updateCurrentPill() {
+      const current = getCurrentShift();
+      const shift = state.shifts.find(item => Number(item.id) === current.shift);
+      $('#currentPill').textContent = shift ? 'Sada: ' + shift.name : 'Sada: ' + current.shift + '. smena';
+    }
+
+    function setLoading(active, text = 'Učitavanje rasporeda…') {
+      $('#loader').textContent = text;
+      $('#loader').classList.toggle('hidden', !active);
+    }
+
+    function showToast(message, error = false) {
+      const toast = $('#toast');
+      toast.textContent = message;
+      toast.classList.toggle('error', error);
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    function showError(error) {
+      showToast(error.message || String(error), true);
+    }
+
+    function dateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function parseDateKey(key) {
+      const [year, month, day] = String(key).split('-').map(Number);
+      return new Date(year, month - 1, day, 12);
+    }
+
+    function holidayName(key) {
+      const year = Number(String(key).slice(0, 4));
+      if (!holidayName.cache[year]) {
+        holidayName.cache[year] = buildHolidayNames(year);
+      }
+      return (holidayName.cache[year][key] || []).join(' / ');
+    }
+    holidayName.cache = {};
+
+    function buildHolidayNames(year) {
+      const holidays = {};
+      const add = (date, name) => {
+        const key = dateKey(date);
+        if (!holidays[key]) holidays[key] = [];
+        holidays[key].push(name);
+      };
+
+      add(new Date(year, 0, 1, 12), 'Nova godina');
+      add(nthWeekdayOfMonth(year, 0, 1, 3), 'Dan Martina Lutera Kinga');
+      add(nthWeekdayOfMonth(year, 1, 1, 3), 'Dan predsednika');
+      add(lastWeekdayOfMonth(year, 4, 1), 'Memorijalni dan');
+      add(new Date(year, 5, 19, 12), 'Juneteenth');
+      add(new Date(year, 6, 4, 12), 'Dan nezavisnosti');
+      add(nthWeekdayOfMonth(year, 8, 1, 1), 'Praznik rada');
+      add(nthWeekdayOfMonth(year, 9, 1, 2), 'Kolumbov dan');
+      add(new Date(year, 10, 11, 12), 'Dan veterana');
+      add(nthWeekdayOfMonth(year, 10, 4, 4), 'Dan zahvalnosti');
+      add(new Date(year, 11, 25, 12), 'Katolički Božić');
+      add(new Date(year, 0, 7, 12), 'Pravoslavni Božić');
+      add(westernEaster(year), 'Katolički Uskrs');
+      add(orthodoxEaster(year), 'Pravoslavni Uskrs');
+      return holidays;
+    }
+
+    function nthWeekdayOfMonth(year, monthIndex, weekday, occurrence) {
+      const first = new Date(year, monthIndex, 1, 12);
+      const offset = (weekday - first.getDay() + 7) % 7;
+      return new Date(
+        year, monthIndex, 1 + offset + (occurrence - 1) * 7, 12
+      );
+    }
+
+    function lastWeekdayOfMonth(year, monthIndex, weekday) {
+      const last = new Date(year, monthIndex + 1, 0, 12);
+      const offset = (last.getDay() - weekday + 7) % 7;
+      return new Date(year, monthIndex, last.getDate() - offset, 12);
+    }
+
+    function westernEaster(year) {
+      const a = year % 19;
+      const b = Math.floor(year / 100);
+      const c = year % 100;
+      const d = Math.floor(b / 4);
+      const e = b % 4;
+      const f = Math.floor((b + 8) / 25);
+      const g = Math.floor((b - f + 1) / 3);
+      const h = (19 * a + b - d - g + 15) % 30;
+      const i = Math.floor(c / 4);
+      const k = c % 4;
+      const l = (32 + 2 * e + 2 * i - h - k) % 7;
+      const m = Math.floor((a + 11 * h + 22 * l) / 451);
+      const month = Math.floor((h + l - 7 * m + 114) / 31);
+      const day = ((h + l - 7 * m + 114) % 31) + 1;
+      return new Date(year, month - 1, day, 12);
+    }
+
+    function orthodoxEaster(year) {
+      const a = year % 4;
+      const b = year % 7;
+      const c = year % 19;
+      const d = (19 * c + 15) % 30;
+      const e = (2 * a + 4 * b - d + 34) % 7;
+      const julianMonth = Math.floor((d + e + 114) / 31);
+      const julianDay = ((d + e + 114) % 31) + 1;
+      const calendarOffset =
+        Math.floor(year / 100) - Math.floor(year / 400) - 2;
+      return new Date(
+        year, julianMonth - 1, julianDay + calendarOffset, 12
+      );
+    }
+
+    function formatDate(key) {
+      if (!key) return '';
+      const [year, month, day] = key.split('-');
+      return `${day}.${month}.${year}`;
+    }
+
+    function formatShortDate(key) {
+      if (!key) return '';
+      const [, month, day] = key.split('-');
+      return `${day}.${month}`;
+    }
+
+    function shortDayName(day) {
+      const names = {
+        Ponedeljak: 'Pon',
+        Utorak: 'Uto',
+        Sreda: 'Sre',
+        Četvrtak: 'Čet',
+        Petak: 'Pet',
+        Subota: 'Sub',
+        Nedelja: 'Ned'
+      };
+      return names[day] || String(day || '').slice(0, 3);
+    }
+
+    function shortDay(date) {
+      return date.toLocaleDateString('sr-RS', { weekday: 'short' }).replace('.', '');
+    }
+
+    function shortDuty(duty) {
+      if (duty === 'Zaposleni') return '';
+      if (duty === 'Shift lider') return 'Lider';
+      return duty || '';
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value);
+    }
+  </script>
+</body>
+</html>
