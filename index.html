@@ -1158,10 +1158,28 @@
     const API_URL = 'https://script.google.com/macros/s/AKfycbykdWCxhnxMPbgqIaUP3yzZaWV-J-ZctTXg9GNvqX7z72j7cRPdkAuLhxpkBqZ-P_do/exec';
     const STATIC_PUBLIC_MODE = location.hostname.endsWith('.github.io');
     const STATIC_DATA_URL = './raspored.json';
+    const SESSION_TOKEN_KEY = 'rasporedToken';
+    const SESSION_USER_KEY = 'rasporedUser';
+    const SESSION_USERNAME_KEY = 'rasporedUsername';
+
+    function readStoredUser() {
+      try {
+        return JSON.parse(
+          localStorage.getItem(SESSION_USER_KEY) ||
+          sessionStorage.getItem(SESSION_USER_KEY) ||
+          'null'
+        );
+      } catch (error) {
+        return null;
+      }
+    }
 
     const state = {
-      token: sessionStorage.getItem('rasporedToken') || '',
-      user: JSON.parse(sessionStorage.getItem('rasporedUser') || 'null'),
+      token:
+        localStorage.getItem(SESSION_TOKEN_KEY) ||
+        sessionStorage.getItem(SESSION_TOKEN_KEY) ||
+        '',
+      user: readStoredUser(),
       schedule: [],
       adminSchedule: [],
       shifts: [],
@@ -1181,6 +1199,14 @@
     document.addEventListener('DOMContentLoaded', init);
 
     function init() {
+      if (state.token && state.user &&
+          !localStorage.getItem(SESSION_TOKEN_KEY)) {
+        setSession({
+          token: state.token,
+          user: state.user,
+          schedule: state.schedule
+        });
+      }
       if (STATIC_PUBLIC_MODE) {
         $('#heroText').textContent =
           'Prijavite se svojim userom da vidite svoje smene.';
@@ -1582,6 +1608,24 @@
       } catch (error) {
         const message = error && error.message ? error.message : String(error);
         if (/Sesija je istekla/i.test(message)) {
+          const username =
+            localStorage.getItem(SESSION_USERNAME_KEY) ||
+            (state.user && state.user.user) ||
+            '';
+          if (username) {
+            try {
+              const data = await callServer('login', username);
+              setSession(data);
+              applySession();
+              if (state.user.role === 'administrator') await loadAdmin();
+              renderAll();
+              return;
+            } catch (loginError) {
+              clearSession();
+              showError(loginError);
+              return;
+            }
+          }
           clearSession();
           showToast('Sesija je istekla. Prijavite se ponovo.', true);
         } else {
@@ -1595,11 +1639,7 @@
       setLoading(true, 'Prijavljivanje…');
       try {
         const data = await callServer('login', $('#username').value);
-        state.token = data.token;
-        state.user = data.user;
-        state.schedule = data.schedule || [];
-        sessionStorage.setItem('rasporedToken', state.token);
-        sessionStorage.setItem('rasporedUser', JSON.stringify(state.user));
+        setSession(data);
         applySession();
         if (state.user.role === 'administrator') await loadAdmin();
         renderAll();
@@ -1610,6 +1650,17 @@
       } finally {
         setLoading(false);
       }
+    }
+
+    function setSession(data) {
+      state.token = data.token;
+      state.user = data.user;
+      state.schedule = data.schedule || [];
+      localStorage.setItem(SESSION_TOKEN_KEY, state.token);
+      localStorage.setItem(SESSION_USER_KEY, JSON.stringify(state.user));
+      localStorage.setItem(SESSION_USERNAME_KEY, state.user.user);
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      sessionStorage.removeItem(SESSION_USER_KEY);
     }
 
     function applySession() {
@@ -1645,8 +1696,11 @@
       state.user = null;
       state.admin = null;
       state.adminSchedule = [];
-      sessionStorage.removeItem('rasporedToken');
-      sessionStorage.removeItem('rasporedUser');
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      localStorage.removeItem(SESSION_USER_KEY);
+      localStorage.removeItem(SESSION_USERNAME_KEY);
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      sessionStorage.removeItem(SESSION_USER_KEY);
       $('#sessionCopy').classList.add('hidden');
       $('#logoutBtn').classList.add('hidden');
       $('#loginTab').classList.remove('hidden');
