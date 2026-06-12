@@ -3072,6 +3072,7 @@
     async function generateSchedule() {
       const missingReplacement = $$('.plan-week-duty').find(select =>
         select.value === 'off' &&
+        select.closest('tr[data-user]')?.dataset.duty !== 'monitoring' &&
         !$('.plan-replacement-choice', select.parentElement)?.value
       );
       if (missingReplacement) {
@@ -3180,7 +3181,8 @@
         const usedCandidates = {};
         const absences = allRows.filter(row => {
           const select = $('.plan-week-duty[data-week="' + week.index + '"]', row);
-          return select && select.value === 'off';
+          return row.dataset.duty !== 'monitoring' &&
+            select && select.value === 'off';
         }).sort((a, b) =>
           dutyOrder(a.dataset.duty) - dutyOrder(b.dataset.duty)
         );
