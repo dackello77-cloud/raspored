@@ -1156,6 +1156,8 @@
 
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbykdWCxhnxMPbgqIaUP3yzZaWV-J-ZctTXg9GNvqX7z72j7cRPdkAuLhxpkBqZ-P_do/exec';
+    const STATIC_PUBLIC_MODE = location.hostname.endsWith('.github.io');
+    const STATIC_DATA_URL = './raspored.json';
 
     const state = {
       token: sessionStorage.getItem('rasporedToken') || '',
@@ -1179,6 +1181,15 @@
     document.addEventListener('DOMContentLoaded', init);
 
     function init() {
+      if (STATIC_PUBLIC_MODE) {
+        state.token = '';
+        state.user = null;
+        sessionStorage.removeItem('rasporedToken');
+        sessionStorage.removeItem('rasporedUser');
+        $('#loginTab').classList.add('hidden');
+        $('#heroText').textContent =
+          'Javni raspored se automatski učitava iz lokalno objavljenih podataka.';
+      }
       bindEvents();
       updateNetworkStatus();
       updateClock();
@@ -1248,6 +1259,10 @@
     }
 
     async function callServer(name, ...args) {
+      if (STATIC_PUBLIC_MODE) {
+        return callStaticData(name);
+      }
+
       if (location.protocol === 'http:' &&
           (location.hostname === '127.0.0.1' ||
            location.hostname === 'localhost')) {
@@ -1279,6 +1294,29 @@
         readActions.includes(name) ? 90000 : 120000,
         canRetry ? 3 : 1
       );
+    }
+
+    async function callStaticData(name) {
+      if (name !== 'getBootstrap' && name !== 'getAllSchedule') {
+        throw new Error(
+          'Prijava i administracija dostupne su samo u lokalnoj aplikaciji.'
+        );
+      }
+
+      const response = await fetch(
+        STATIC_DATA_URL + '?v=' + Date.now(),
+        { cache: 'no-store' }
+      );
+      if (!response.ok) {
+        throw new Error('Objavljeni raspored trenutno nije dostupan.');
+      }
+
+      const data = await response.json();
+      if (!data || !Array.isArray(data.schedule)) {
+        throw new Error('Objavljeni raspored nema ispravan format.');
+      }
+      updateNetworkStatus('online');
+      return name === 'getAllSchedule' ? data.schedule : data;
     }
 
     async function callLocalServer(name, args) {
@@ -1449,6 +1487,10 @@
       const nextStatus = status || (navigator.onLine ? 'online' : 'offline');
       box.classList.toggle('degraded', nextStatus === 'degraded');
       box.classList.toggle('offline', nextStatus === 'offline');
+      if (STATIC_PUBLIC_MODE && nextStatus === 'online') {
+        box.textContent = 'Javni raspored';
+        return;
+      }
       box.textContent = nextStatus === 'offline'
         ? 'Nema mreže'
         : nextStatus === 'degraded'
