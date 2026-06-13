@@ -10,11 +10,21 @@ const host = process.env.HOST || '127.0.0.1';
 const dataDirectory = process.env.RASPORED_DATA_DIR ||
   path.join(os.homedir(), 'Library', 'Application Support', 'Raspored App');
 const databasePath = path.join(dataDirectory, 'raspored.db');
+const appsScriptPath = path.join(projectRoot, 'appscript.gs');
 
-const runtime = createRuntime({
-  databasePath,
-  appsScriptPath: path.join(projectRoot, 'appscript.gs')
-});
+let runtime = createRuntime({ databasePath, appsScriptPath });
+let runtimeSourceModified = fs.statSync(appsScriptPath).mtimeMs;
+
+function getRuntime() {
+  const sourceModified = fs.statSync(appsScriptPath).mtimeMs;
+  if (sourceModified !== runtimeSourceModified) {
+    runtime.close();
+    runtime = createRuntime({ databasePath, appsScriptPath });
+    runtimeSourceModified = sourceModified;
+    console.log('Backend logika je ponovo učitana.');
+  }
+  return runtime;
+}
 
 function sendJson(response, statusCode, value) {
   response.writeHead(statusCode, {
@@ -95,7 +105,7 @@ const server = http.createServer(async (request, response) => {
       if (!Array.isArray(body.args)) {
         throw new Error('API args mora biti niz.');
       }
-      const data = runtime.dispatch(body.action, body.args);
+      const data = getRuntime().dispatch(body.action, body.args);
       sendJson(response, 200, { ok: true, data });
     } catch (error) {
       console.error(error);
