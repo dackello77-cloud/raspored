@@ -1,6 +1,6 @@
 const APP = {
   spreadsheetId: '11R4ScsR11CeQIsqu-LfwMQsZbsU-jUGwJxjbUYOia4g',
-  apiVersion: '1.18.2',
+  apiVersion: '1.18.3',
   sheets: {
     users: 'Login',
     schedule: 'Raspored',
@@ -655,6 +655,36 @@ function editSchedule(token, request) {
       new Date(), '', ''
     ]]);
     sheet.getRange(nextRow, 1).setNumberFormat('dd.MM.yyyy');
+  } else if (action === 'assignLeader') {
+    const shiftRows = rows.filter(function (row) {
+      return dateKey_(row.date) === dateKey && row.shift === shift;
+    });
+    if (shiftRows.some(function (row) {
+      return row.duty === 'Shift lider';
+    })) {
+      throw new Error('Izabrana smena već ima shift lidera.');
+    }
+    const matchingRow = shiftRows.find(function (row) {
+      return row.user.toLowerCase() === userKey;
+    });
+    if (!matchingRow) {
+      throw new Error('Zaposleni nije pronađen u izabranoj smeni.');
+    }
+    if (matchingRow.duty !== 'Zaposleni') {
+      throw new Error('Za shift lidera može biti postavljen samo redovni zaposleni.');
+    }
+    const range = sheet.getRange(
+      matchingRow.rowIndex + 2, 1, 1, APP.scheduleHeaders.length
+    );
+    const values = range.getValues()[0];
+    values[7] = 'Shift lider';
+    values[10] = new Date();
+    range.setValues([values]);
+    changedPerson = {
+      name: matchingRow.name,
+      user: matchingRow.user,
+      duty: 'Shift lider'
+    };
   } else {
     throw new Error('Nepoznata ručna izmena rasporeda.');
   }
@@ -1040,11 +1070,12 @@ function applyReplacementRoles_(configs) {
         String(replacement.replacementInfo[week] || '').toLowerCase()
       ];
       if (!absent) return;
+      if (absent.duty === 'monitoring') {
+        delete replacement.replacementInfo[week];
+        return;
+      }
       if (absent.duty === 'shift_lider') {
         replacement.weekOverrides[week] = 'zamena';
-      } else if (absent.duty === 'monitoring') {
-        replacement.weekOverrides[week] = 'monitoring';
-        replacement.monitorShiftByWeek[week] = absent.monitorShift;
       } else {
         replacement.weekOverrides[week] = 'radnik';
       }
@@ -2884,24 +2915,34 @@ function isMinimumStaffingHoliday_(date) {
   const year = date.getFullYear();
   const key = dateKey_(date);
   const holidays = {};
+  const add = function (holiday, observeSunday) {
+    holidays[dateKey_(holiday)] = true;
+    if (observeSunday && holiday.getDay() === 0) {
+      const observed = new Date(holiday);
+      observed.setDate(observed.getDate() + 1);
+      holidays[dateKey_(observed)] = true;
+    }
+  };
+
+  [
+    lastWeekdayOfMonth_(year, 4, 1),    // Memorial Day
+    nthWeekdayOfMonth_(year, 8, 1, 1),  // Labor Day
+    nthWeekdayOfMonth_(year, 10, 4, 4)  // Thanksgiving
+  ].forEach(function (holiday) {
+    add(holiday, false);
+  });
+
   [
     new Date(year, 0, 1, 12),   // New Year
-    nthWeekdayOfMonth_(year, 0, 1, 3),  // Martin Luther King Jr. Day
-    nthWeekdayOfMonth_(year, 1, 1, 3),  // Washington's Birthday
-    lastWeekdayOfMonth_(year, 4, 1),    // Memorial Day
-    new Date(year, 5, 19, 12),  // Juneteenth
     new Date(year, 6, 4, 12),   // Independence Day
-    nthWeekdayOfMonth_(year, 8, 1, 1),  // Labor Day
-    nthWeekdayOfMonth_(year, 9, 1, 2),  // Columbus Day
-    new Date(year, 10, 11, 12), // Veterans Day
-    nthWeekdayOfMonth_(year, 10, 4, 4), // Thanksgiving
-    new Date(year, 11, 25, 12), // Catholic Christmas
-    new Date(year, 0, 7, 12),   // Orthodox Christmas
-    westernEaster_(year),
-    orthodoxEaster_(year)
+    new Date(year, 11, 25, 12)  // Christmas Day
   ].forEach(function (holiday) {
-    holidays[dateKey_(holiday)] = true;
+    add(holiday, true);
   });
+
+  add(new Date(year, 0, 7, 12), false); // Orthodox Christmas
+  add(westernEaster_(year), false);
+  add(orthodoxEaster_(year), false);
   return Boolean(holidays[key]);
 }
 

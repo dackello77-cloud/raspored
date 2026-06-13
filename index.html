@@ -631,6 +631,17 @@
       width: 20px;
       height: 20px;
     }
+    .admin-schedule .person-assign-leader {
+      margin-left: auto;
+      border: 0;
+      border-radius: 6px;
+      padding: 3px 6px;
+      color: white;
+      background: var(--danger);
+      font-size: 10px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
     .admin-schedule .month-days,
     .admin-schedule.schedule-grid { gap: 3px; }
     .add-person-grid {
@@ -1986,15 +1997,18 @@
           a.name.localeCompare(b.name, 'sr'));
       const active = current.date === day.date && current.shift === shiftId;
       const selectedUser = adminMode ? state.adminSearchUser : state.publicSearchUser;
-      const employeeCount = people.filter(person => person.duty === 'Zaposleni').length;
+      const hasShiftLeader = people.some(person => person.duty === 'Shift lider');
+      const coverageCount = people.filter(person =>
+        person.duty === 'Zaposleni' || person.duty === 'Shift lider'
+      ).length;
       const minimum = adminMode ? adminShiftMinimum(day, shiftId) : 0;
-      const shortage = adminMode ? Math.max(0, minimum - employeeCount) : 0;
+      const shortage = adminMode ? Math.max(0, minimum - coverageCount) : 0;
       return `
         <div class="shift-card ${active ? 'current' : ''} ${shortage ? 'understaffed' : ''}"
-          ${shortage ? `title="Ispod minimuma: ${employeeCount} od ${minimum} radnika"` : ''}>
+          ${shortage ? `title="Ispod minimuma: ${coverageCount} od ${minimum} ljudi"` : ''}>
           <div class="shift-head">
             <strong>${escapeHtml(shift.name)}
-              ${shortage ? `<span class="shortage-badge">MANJAK ${employeeCount}/${minimum}</span>` : ''}
+              ${shortage ? `<span class="shortage-badge">MANJAK ${coverageCount}/${minimum}</span>` : ''}
             </strong>
             <span>${escapeHtml(shift.start)}–${escapeHtml(shift.end)}
               ${adminMode ? `<button class="shift-add" type="button"
@@ -2007,10 +2021,12 @@
                 adminMode,
                 date: day.date,
                 shift: shiftId,
+                canAssignLeader: adminMode && !hasShiftLeader &&
+                  person.duty === 'Zaposleni',
                 highlighted: selectedUser === person.user
               })).join('') : '<div class="empty">Nema unosa</div>'}
           </div>
-          ${shortage ? `<div class="staff-shortage">Nedostaje ${shortage} ${shortage === 1 ? 'zaposleni' : 'zaposlena'}</div>` : ''}
+          ${shortage ? `<div class="staff-shortage">Nedostaje ${shortage} ${shortage === 1 ? 'osoba' : 'osobe'}</div>` : ''}
         </div>`;
     }
 
@@ -2058,6 +2074,9 @@
       return `<div class="person ${dutyDisplayClass(person.duty)} ${person.mine ? 'mine' : ''} ${options.highlighted ? 'highlighted' : ''} ${replacementClass}" 
         title="${escapeAttr(roleTitle)}">
         <span>${escapeHtml(person.name)}</span>
+        ${options.canAssignLeader ? `<button class="person-assign-leader" type="button"
+          title="Postavi za shift lidera u ovoj smeni"
+          onclick="assignShiftLeader('${escapeAttr(options.date)}', ${options.shift}, '${escapeAttr(person.user)}')">Postavi lidera</button>` : ''}
         ${options.adminMode ? `<button class="person-remove-shift" type="button"
           title="Ukloni iz smene"
           onclick="removeFromShift('${escapeAttr(options.date)}', ${options.shift}, '${escapeAttr(person.user)}')">×</button>` : ''}
@@ -2243,6 +2262,15 @@
       await saveManualScheduleEdit({ action: 'remove', date, shift, user });
     }
 
+    async function assignShiftLeader(date, shift, user) {
+      await saveManualScheduleEdit({
+        action: 'assignLeader',
+        date,
+        shift,
+        user
+      });
+    }
+
     async function addToShift(user) {
       if (!state.pendingShift) return;
       await saveManualScheduleEdit({
@@ -2291,6 +2319,9 @@
           person.user === change.person.user
         );
         if (index >= 0) people.splice(index, 1);
+      } else if (change.action === 'assignLeader') {
+        const person = people.find(item => item.user === change.person.user);
+        if (person) person.duty = change.person.duty;
       } else if (!people.some(person => person.user === change.person.user)) {
         people.push(Object.assign({ mine: false }, change.person));
       }
