@@ -481,7 +481,12 @@
 
     .admin-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
     .admin-layout .full { grid-column: 1 / -1; }
-    #adminView { font-size: 13px; }
+    #adminView {
+      width: 100%;
+      max-width: 1280px;
+      margin-inline: auto;
+      font-size: 13px;
+    }
     #adminView > .panel-head { margin-bottom: 12px; }
     #adminView > .panel-head h2 { font-size: 22px; }
     #adminView .panel {
@@ -2293,8 +2298,9 @@
       const box = $('#mobileUpcoming');
       const today = new Date();
       const employeeMode = state.user && state.user.role === 'zaposleni';
+      const upcomingDays = employeeMode ? 30 : 14;
       const current = getCurrentShift();
-      const dates = Array.from({ length: 14 }, (_, index) => {
+      const dates = Array.from({ length: upcomingDays }, (_, index) => {
         const date = new Date(today);
         date.setDate(date.getDate() + index);
         return dateKey(date);
@@ -2304,7 +2310,7 @@
         .filter(Boolean);
 
       box.innerHTML = `
-        <h2 class="mobile-upcoming-title">${employeeMode ? 'Moje smene · narednih 14 dana' : 'Narednih 14 dana'}</h2>
+        <h2 class="mobile-upcoming-title">${employeeMode ? 'Moje smene · narednih 30 dana' : 'Narednih 14 dana'}</h2>
         ${employeeMode
           ? dates.map(renderMobilePersonalDay).join('')
           : days.length ? days.map(day => renderMobileDay(day, current)).join('') :
