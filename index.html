@@ -693,10 +693,30 @@
       background: #fffdf3;
       font-size: 11px;
     }
-    .plan-person { min-width: 180px; }
-    .plan-person strong, .plan-person span { display: block; }
-    .plan-person span { margin-top: 3px; color: var(--muted); font-size: 11px; }
-    .plan-person .replacement-check { display: flex; gap: 6px; margin-top: 5px; color: var(--ink); font-size: 11px; }
+    .plan-person { min-width: 145px; }
+    .plan-person-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      margin: 0;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .plan-person-main input {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+      margin: 1px 0 0;
+    }
+    .plan-person-copy,
+    .plan-person-copy strong,
+    .plan-person-copy small { display: block; }
+    .plan-person-copy small {
+      margin-top: 1px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 500;
+    }
     .group-row td {
       padding: 7px 9px;
       color: var(--green);
@@ -2912,12 +2932,15 @@
           : '';
         lastDuty = user.duty;
         return group + `<tr data-user="${escapeAttr(user.user)}" data-duty="${escapeAttr(user.duty)}">
-          <td class="plan-person"><strong>${escapeHtml(user.name)}</strong>
-            <span>${escapeHtml(user.user)}</span>
-            <label class="replacement-check" title="Označi radnika koji može biti zamena">
+          <td class="plan-person">
+            <label class="plan-person-main" title="Pogodan za zamenu">
               <input class="plan-eligible-replacement" type="checkbox"
+                aria-label="Pogodan za zamenu"
                 ${user.duty !== 'radnik' ? 'disabled' : ''}>
-              Pogodan za zamenu
+              <span class="plan-person-copy">
+                <strong>${escapeHtml(user.name)}</strong>
+                <small>${escapeHtml(user.user)}</small>
+              </span>
             </label>
           </td>
           <td><span class="role-badge">${escapeHtml(dutyLabel(user.duty))}</span></td>
