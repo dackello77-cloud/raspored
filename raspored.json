@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-06-13T21:40:17.564Z",
+  "exportedAt": "2026-06-13T21:43:21.405Z",
   "today": "2026-06-13",
   "appName": "Raspored App",
   "shifts": [
@@ -3137,7 +3137,7 @@
           {
             "name": "NIKOLA",
             "user": "nikola",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3253,7 +3253,7 @@
           {
             "name": "NIKOLA",
             "user": "nikola",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3361,7 +3361,7 @@
           {
             "name": "DIMITRIJE",
             "user": "dimitrije",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3451,7 +3451,7 @@
           {
             "name": "JELENA C",
             "user": "jecac",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3461,7 +3461,7 @@
           {
             "name": "DANIEL",
             "user": "daniel",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3487,7 +3487,7 @@
           {
             "name": "VUKASIN",
             "user": "vukasin",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3511,7 +3511,7 @@
           {
             "name": "NIKOLA",
             "user": "nikola",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3521,7 +3521,7 @@
           {
             "name": "DANIEL",
             "user": "daniel",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3547,7 +3547,7 @@
           {
             "name": "DIMITRIJE",
             "user": "dimitrije",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4199,7 +4199,7 @@
           {
             "name": "NIKOLA",
             "user": "nikola",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4225,7 +4225,7 @@
           {
             "name": "DANIEL",
             "user": "daniel",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4235,7 +4235,7 @@
           {
             "name": "VUKASIN",
             "user": "vukasin",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4259,7 +4259,7 @@
           {
             "name": "IVANA",
             "user": "ivana",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4277,7 +4277,7 @@
           {
             "name": "JELENA C",
             "user": "jecac",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4295,7 +4295,7 @@
           {
             "name": "DANIEL",
             "user": "daniel",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4955,7 +4955,7 @@
           {
             "name": "JELENA C",
             "user": "jecac",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4965,7 +4965,7 @@
           {
             "name": "DANIEL",
             "user": "daniel",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4999,7 +4999,7 @@
           {
             "name": "OLGA",
             "user": "olga",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "dimitrije",
             "replacedName": "DIMITRIJE",
             "mine": false
@@ -5023,7 +5023,7 @@
           {
             "name": "SASKA",
             "user": "saska",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "nikola",
             "replacedName": "NIKOLA",
             "mine": false
@@ -5049,7 +5049,7 @@
           {
             "name": "NEVENA D",
             "user": "dinic",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -5059,7 +5059,7 @@
           {
             "name": "DANIEL",
             "user": "daniel",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -5727,7 +5727,7 @@
           {
             "name": "SASKA",
             "user": "saska",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "nikola",
             "replacedName": "NIKOLA",
             "mine": false
@@ -5753,7 +5753,7 @@
           {
             "name": "JELENA D",
             "user": "jecad",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -5763,7 +5763,7 @@
           {
             "name": "DANIEL",
             "user": "daniel",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -5787,7 +5787,7 @@
           {
             "name": "IVANA",
             "user": "ivana",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -5821,7 +5821,7 @@
           {
             "name": "SASKA",
             "user": "saska",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "nikola",
             "replacedName": "NIKOLA",
             "mine": false
@@ -5831,7 +5831,7 @@
           {
             "name": "JELENA D",
             "user": "jecad",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
