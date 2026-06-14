@@ -395,14 +395,51 @@
       font-weight: 900;
     }
     .shift-add { margin-left: 4px; background: var(--green); }
-    .schedule-search {
+    .schedule-tools {
+      position: sticky;
+      z-index: 20;
+      top: 0;
       display: grid;
-      grid-template-columns: minmax(220px, 360px) auto;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 16px;
+      grid-template-columns:
+        minmax(150px, .8fr) minmax(165px, .9fr) minmax(180px, 1.35fr)
+        minmax(180px, 1.35fr) auto minmax(190px, 1fr);
+      gap: 8px;
+      align-items: end;
+      margin: 0 -10px 16px;
+      padding: 10px;
+      border: 1px solid rgba(23, 49, 46, .1);
+      border-radius: 14px;
+      background: rgba(255, 253, 247, .96);
+      box-shadow: 0 10px 28px rgba(23, 49, 46, .1);
+      backdrop-filter: blur(12px);
     }
+    .schedule-tools.rotate-mode {
+      grid-template-columns:
+        minmax(150px, .8fr) minmax(180px, 1.35fr) minmax(180px, 1.35fr)
+        minmax(145px, .8fr) minmax(145px, .8fr) auto minmax(190px, 1fr);
+    }
+    .schedule-tools .field { min-width: 0; margin: 0; }
+    .schedule-tools label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .schedule-tools select,
+    .schedule-tools input { min-width: 0; }
+    .schedule-tools .btn { white-space: nowrap; }
+    .schedule-tools .schedule-search {
+      min-width: 0;
+      align-self: end;
+    }
+    .schedule-search select { width: 100%; }
     .search-result { color: var(--green); font-weight: 850; }
+    .schedule-search .search-result {
+      display: block;
+      min-height: 14px;
+      margin-top: 3px;
+      font-size: 10px;
+      line-height: 1.1;
+    }
     .modal {
       position: fixed;
       z-index: 50;
@@ -650,33 +687,33 @@
       gap: 12px;
       align-items: end;
     }
-    .replace-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 160px 160px auto;
-      gap: 12px;
-      align-items: end;
-      margin-bottom: 14px;
-    }
-    .swap-grid {
-      display: grid;
-      grid-template-columns: 180px 1fr 1fr auto;
-      gap: 12px;
-      align-items: end;
-      margin-bottom: 18px;
-    }
-    .replace-grid .field, .swap-grid .field { margin: 0; }
     .add-person-grid .field { margin: 0; }
-    .people-list { display: grid; gap: 8px; }
+    .people-list { display: grid; gap: 8px; overflow-x: auto; }
     .people-row {
       display: grid;
-      grid-template-columns: 1.4fr 1fr 170px 140px 90px;
+      grid-template-columns:
+        minmax(150px, 1.3fr) 150px 145px 145px 145px 120px 145px 100px 82px;
       gap: 8px;
       align-items: center;
+      min-width: 1260px;
       padding: 7px 9px;
       border: 1px solid var(--line);
       border-radius: 10px;
       background: white;
     }
+    .people-field { min-width: 0; }
+    .people-field label {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 850;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .people-field input,
+    .people-field select { width: 100%; min-width: 0; padding: 7px 8px; }
+    .people-active { padding-top: 14px; }
     .people-row .person-name strong, .people-row .person-name span { display: block; }
     .people-row .person-name span { margin-top: 2px; color: var(--muted); font-size: 12px; }
     .role-badge {
@@ -892,8 +929,18 @@
       .session { min-width: 0; }
       .session-copy { display: none; }
       .add-person-grid { grid-template-columns: 1fr 1fr; }
-      .replace-grid, .swap-grid { grid-template-columns: 1fr 1fr; }
-      .people-row { grid-template-columns: 1fr 1fr; }
+      .schedule-tools {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        top: 0;
+      }
+      .schedule-tools.rotate-mode {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .schedule-tools .schedule-search { grid-column: span 2; }
+      .people-row {
+        grid-template-columns: 1fr 1fr;
+        min-width: 0;
+      }
     }
 
     @media (max-width: 520px) {
@@ -911,7 +958,13 @@
       .mobile-shift .person { color: var(--ink); background: rgba(255,255,255,.9); padding: 10px; }
       .mobile-shift .empty { color: rgba(255,255,255,.7); }
       .add-person-grid, .people-row { grid-template-columns: 1fr; }
-      .replace-grid, .swap-grid { grid-template-columns: 1fr; }
+      .schedule-tools {
+        position: sticky;
+        grid-template-columns: 1fr;
+        margin-inline: 0;
+      }
+      .schedule-tools.rotate-mode { grid-template-columns: 1fr; }
+      .schedule-tools .schedule-search { grid-column: auto; }
       .month-fields { grid-template-columns: 1fr; }
     }
   </style>
@@ -1135,44 +1188,40 @@
             </div>
           </div>
           <div id="warnings" class="warnings hidden"></div>
-          <form id="replaceEmployeeForm" class="replace-grid">
+          <form id="scheduleToolsForm" class="schedule-tools">
             <div class="field">
-              <label for="replaceFromUser">Replace zaposleni</label>
+              <label for="replaceMode">Vrsta</label>
+              <select id="replaceMode">
+                <option value="swap">Zameni tog dana</option>
+                <option value="rotate">Rotiraj period</option>
+              </select>
+            </div>
+            <div id="swapDateField" class="field">
+              <label for="swapDate">Datum</label>
+              <select id="swapDate" required></select>
+            </div>
+            <div id="replaceFromUserField" class="field">
+              <label id="replaceFromUserLabel" for="replaceFromUser">Prvi zaposleni</label>
               <select id="replaceFromUser" required></select>
             </div>
-            <div class="field">
-              <label for="replaceToUser">Rotira mesta sa</label>
+            <div id="replaceToUserField" class="field">
+              <label id="replaceToUserLabel" for="replaceToUser">Drugi zaposleni</label>
               <select id="replaceToUser" required></select>
             </div>
-            <div class="field">
+            <div id="replaceFromDateField" class="field hidden">
               <label for="replaceFromDate">Od datuma</label>
               <input id="replaceFromDate" type="date" required>
             </div>
-            <div class="field">
+            <div id="replaceToDateField" class="field hidden">
               <label for="replaceToDate">Do datuma</label>
               <input id="replaceToDate" type="date" required>
             </div>
             <button class="btn" type="submit">Replace</button>
+            <div class="schedule-search">
+              <select id="adminEmployeeSearch"><option value="">Pronađi zaposlenog…</option></select>
+              <span id="adminSearchResult" class="search-result"></span>
+            </div>
           </form>
-          <form id="swapEmployeesForm" class="swap-grid">
-            <div class="field">
-              <label for="swapDate">Datum</label>
-              <select id="swapDate" required></select>
-            </div>
-            <div class="field">
-              <label for="swapFirstUser">Prvi zaposleni</label>
-              <select id="swapFirstUser" required></select>
-            </div>
-            <div class="field">
-              <label for="swapSecondUser">Drugi zaposleni</label>
-              <select id="swapSecondUser" required></select>
-            </div>
-            <button class="btn" type="submit">Zameni smene</button>
-          </form>
-          <div class="schedule-search">
-            <select id="adminEmployeeSearch"><option value="">Pronađi zaposlenog…</option></select>
-            <span id="adminSearchResult" class="search-result"></span>
-          </div>
           <div id="adminScheduleGrid" class="schedule-grid admin-schedule"></div>
           </section>
         </div>
@@ -1273,8 +1322,8 @@
       $('#addPersonForm').addEventListener('submit', addPerson);
       $('#newPersonRole').addEventListener('change', toggleNewMonitorField);
       $('#savePeopleBtn').addEventListener('click', savePeople);
-      $('#replaceEmployeeForm').addEventListener('submit', replaceEmployee);
-      $('#swapEmployeesForm').addEventListener('submit', swapEmployees);
+      $('#scheduleToolsForm').addEventListener('submit', submitScheduleTool);
+      $('#replaceMode').addEventListener('change', updateReplaceMode);
       $('#swapDate').addEventListener('change', renderSwapEmployeeOptions);
       $('#adminMonth').addEventListener('change', handleAdminMonthChange);
       $('#adminYear').addEventListener('change', handleAdminMonthChange);
@@ -2525,6 +2574,56 @@
       $('#replaceFromUser').innerHTML = '<option value="">Izaberite…</option>' + options;
       $('#replaceToUser').innerHTML = '<option value="">Izaberite…</option>' + options;
       updateReplaceDateLimits();
+      updateReplaceMode();
+    }
+
+    function updateReplaceMode() {
+      const rotate = $('#replaceMode').value === 'rotate';
+      $('#scheduleToolsForm').classList.toggle('rotate-mode', rotate);
+      $('#swapDateField').classList.toggle('hidden', rotate);
+      $('#replaceFromDateField').classList.toggle('hidden', !rotate);
+      $('#replaceToDateField').classList.toggle('hidden', !rotate);
+      $('#replaceFromUserLabel').textContent = rotate
+        ? 'Replace zaposleni'
+        : 'Prvi zaposleni';
+      $('#replaceToUserLabel').textContent = rotate
+        ? 'Rotira mesta sa'
+        : 'Drugi zaposleni';
+      $('#swapDate').required = !rotate;
+      $('#replaceFromDate').required = rotate;
+      $('#replaceToDate').required = rotate;
+      if (rotate) {
+        renderRotateEmployeeOptions();
+      } else {
+        renderSwapEmployeeOptions();
+      }
+    }
+
+    function renderRotateEmployeeOptions() {
+      if (!state.admin) return;
+      const selectedFrom = $('#replaceFromUser').value;
+      const selectedTo = $('#replaceToUser').value;
+      const users = state.admin.users
+        .filter(user => user.active && user.role === 'zaposleni')
+        .sort((a, b) => a.name.localeCompare(b.name, 'sr'));
+      const html = '<option value="">Izaberite…</option>' + users.map(user =>
+        `<option value="${escapeAttr(user.user)}">${escapeHtml(user.name)}</option>`
+      ).join('');
+      $('#replaceFromUser').innerHTML = html;
+      $('#replaceToUser').innerHTML = html;
+      if (users.some(user => user.user === selectedFrom)) {
+        $('#replaceFromUser').value = selectedFrom;
+      }
+      if (users.some(user => user.user === selectedTo)) {
+        $('#replaceToUser').value = selectedTo;
+      }
+    }
+
+    function submitScheduleTool(event) {
+      if ($('#replaceMode').value === 'rotate') {
+        return replaceEmployee(event);
+      }
+      return swapEmployees(event);
     }
 
     function updateReplaceDateLimits() {
@@ -2601,14 +2700,15 @@
     }
 
     function renderSwapEmployeeOptions() {
+      if ($('#replaceMode').value !== 'swap') return;
       const date = $('#swapDate').value;
       const day = state.adminSchedule.find(item => item.date === date);
       const options = swapOptionsForDay(day);
       const html = '<option value="">Izaberite…</option>' + options.map(option =>
         `<option value="${escapeAttr(option.user)}">${escapeHtml(option.label)}</option>`
       ).join('');
-      $('#swapFirstUser').innerHTML = html;
-      $('#swapSecondUser').innerHTML = html;
+      $('#replaceFromUser').innerHTML = html;
+      $('#replaceToUser').innerHTML = html;
     }
 
     function swapOptionsForDay(day) {
@@ -2639,8 +2739,8 @@
       event.preventDefault();
       const request = {
         date: $('#swapDate').value,
-        firstUser: $('#swapFirstUser').value,
-        secondUser: $('#swapSecondUser').value
+        firstUser: $('#replaceFromUser').value,
+        secondUser: $('#replaceToUser').value
       };
       if (!request.date || !request.firstUser || !request.secondUser) {
         showToast('Izaberite datum i oba zaposlena.', true);
@@ -2747,23 +2847,74 @@
             <strong>${escapeHtml(user.name)}</strong>
             <span>${escapeHtml(user.user)}</span>
           </div>
-          <select class="person-base-role">
-            ${roleOptions(user.role === 'administrator' ? 'administrator' : user.duty)}
-          </select>
-          <select class="person-monitor-shift" ${user.duty === 'monitoring' ? '' : 'disabled'}>
-            <option value="1" ${Number(user.monitorShift) === 1 ? 'selected' : ''}>Monitoring I</option>
-            <option value="2" ${Number(user.monitorShift) === 2 ? 'selected' : ''}>Monitoring II</option>
-            <option value="3" ${Number(user.monitorShift) === 3 ? 'selected' : ''}>Monitoring III</option>
-          </select>
-          <label style="margin:0"><input class="check person-active" type="checkbox" ${user.active !== false ? 'checked' : ''}> Aktivan</label>
+          <div class="people-field">
+            <label>Funkcija</label>
+            <select class="person-base-role">
+              ${roleOptions(user.role === 'administrator' ? 'administrator' : user.duty)}
+            </select>
+          </div>
+          <div class="people-field">
+            <label>Monitoring</label>
+            <select class="person-monitor-shift" ${user.duty === 'monitoring' ? '' : 'disabled'}>
+              <option value="1" ${Number(user.monitorShift) === 1 ? 'selected' : ''}>Monitoring I</option>
+              <option value="2" ${Number(user.monitorShift) === 2 ? 'selected' : ''}>Monitoring II</option>
+              <option value="3" ${Number(user.monitorShift) === 3 ? 'selected' : ''}>Monitoring III</option>
+            </select>
+          </div>
+          <div class="people-field">
+            <label>Slava</label>
+            <input class="person-slava-date" type="date"
+              value="${escapeAttr(user.slavaDate || '')}"
+              ${user.role === 'administrator' ? 'disabled' : ''}>
+          </div>
+          <div class="people-field">
+            <label>Odmor od (pon.)</label>
+            <input class="person-vacation-start" type="date"
+              value="${escapeAttr(user.vacationStart || '')}"
+              ${user.role === 'administrator' ? 'disabled' : ''}>
+          </div>
+          <div class="people-field">
+            <label>Trajanje</label>
+            <select class="person-vacation-weeks"
+              ${user.role === 'administrator' ? 'disabled' : ''}>
+              <option value="1" ${Number(user.vacationWeeks) !== 2 ? 'selected' : ''}>1 nedelja</option>
+              <option value="2" ${Number(user.vacationWeeks) === 2 ? 'selected' : ''}>2 nedelje</option>
+            </select>
+          </div>
+          <div class="people-field">
+            <label>Odmor do (ned.)</label>
+            <input class="person-vacation-end" type="date" readonly
+              value="${escapeAttr(vacationEndDate(user.vacationStart, user.vacationWeeks))}">
+          </div>
+          <label class="people-active"><input class="check person-active"
+            type="checkbox" ${user.active !== false ? 'checked' : ''}> Aktivan</label>
           <button class="btn small danger person-remove" type="button">Ukloni</button>
         </div>`).join('');
 
       $$('.person-base-role', list).forEach(select => select.addEventListener('change', event => {
         const row = event.target.closest('.people-row');
-        $('.person-monitor-shift', row).disabled = event.target.value !== 'monitoring';
+        const administrator = event.target.value === 'administrator';
+        $('.person-monitor-shift', row).disabled =
+          event.target.value !== 'monitoring';
+        $('.person-slava-date', row).disabled = administrator;
+        $('.person-vacation-start', row).disabled = administrator;
+        $('.person-vacation-weeks', row).disabled = administrator;
         renderMonthPlan();
       }));
+      $$('.person-vacation-start', list).forEach(input =>
+        input.addEventListener('change', event => {
+          const row = event.target.closest('.people-row');
+          event.target.value = mondayDateKey(event.target.value);
+          updateVacationEnd(row);
+          renderMonthPlan();
+        }));
+      $$('.person-vacation-weeks', list).forEach(select =>
+        select.addEventListener('change', event => {
+          updateVacationEnd(event.target.closest('.people-row'));
+          renderMonthPlan();
+        }));
+      $$('.person-slava-date', list).forEach(input =>
+        input.addEventListener('change', renderMonthPlan));
       $$('.person-monitor-shift', list).forEach(select =>
         select.addEventListener('change', renderMonthPlan));
       $$('.person-active', list).forEach(input => input.addEventListener('change', renderMonthPlan));
@@ -2786,6 +2937,44 @@
       ).join('');
     }
 
+    function parseLocalDateKey(value) {
+      const parts = String(value || '').split('-').map(Number);
+      if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
+        return null;
+      }
+      const date = new Date(parts[0], parts[1] - 1, parts[2], 12);
+      return isNaN(date.getTime()) ? null : date;
+    }
+
+    function localDateKey(date) {
+      if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+      return date.getFullYear() + '-' +
+        String(date.getMonth() + 1).padStart(2, '0') + '-' +
+        String(date.getDate()).padStart(2, '0');
+    }
+
+    function mondayDateKey(value) {
+      const date = parseLocalDateKey(value);
+      if (!date) return '';
+      const offset = (date.getDay() + 6) % 7;
+      date.setDate(date.getDate() - offset);
+      return localDateKey(date);
+    }
+
+    function vacationEndDate(start, weeks) {
+      const date = parseLocalDateKey(start);
+      if (!date) return '';
+      date.setDate(date.getDate() + Math.max(1, Number(weeks) || 1) * 7 - 1);
+      return localDateKey(date);
+    }
+
+    function updateVacationEnd(row) {
+      $('.person-vacation-end', row).value = vacationEndDate(
+        $('.person-vacation-start', row).value,
+        $('.person-vacation-weeks', row).value
+      );
+    }
+
     function collectUsers() {
       const byUser = Object.fromEntries(state.admin.users.map(user => [user.user, user]));
       return $$('.people-row').map(row => {
@@ -2797,7 +2986,17 @@
           user: original.user,
           role: baseRole === 'administrator' ? 'administrator' : 'zaposleni',
           duty: baseRole === 'administrator' ? 'off' : baseRole,
-          monitorShift: Number($('.person-monitor-shift', row).value) || 1
+          monitorShift: Number($('.person-monitor-shift', row).value) || 1,
+          slavaDate: baseRole === 'administrator'
+            ? ''
+            : $('.person-slava-date', row).value,
+          vacationStart: baseRole === 'administrator'
+            ? ''
+            : $('.person-vacation-start', row).value,
+          vacationWeeks: baseRole === 'administrator' ||
+              !$('.person-vacation-start', row).value
+            ? 0
+            : Number($('.person-vacation-weeks', row).value) || 1
         };
       });
     }
@@ -2857,7 +3056,10 @@
         role: selectedRole === 'administrator' ? 'administrator' : 'zaposleni',
         active: true,
         duty: selectedRole === 'administrator' ? 'off' : selectedRole,
-        monitorShift: Number($('#newMonitorShift').value) || 1
+        monitorShift: Number($('#newMonitorShift').value) || 1,
+        slavaDate: '',
+        vacationStart: '',
+        vacationWeeks: 0
       });
       event.target.reset();
       toggleNewMonitorField();
@@ -2931,6 +3133,29 @@
       return weeks;
     }
 
+    function slavaDateForMonth(user, year, month) {
+      const parts = String(user.slavaDate || '').split('-').map(Number);
+      if (parts.length !== 3 || parts[1] !== month) return '';
+      const date = new Date(year, month - 1, parts[2], 12);
+      return date.getMonth() + 1 === month && date.getDate() === parts[2]
+        ? localDateKey(date)
+        : '';
+    }
+
+    function vacationWeeksForMonth(user, year, month, weeks) {
+      const selected = new Set();
+      const start = parseLocalDateKey(user.vacationStart);
+      if (!start || !Number(user.vacationWeeks)) return selected;
+      const end = new Date(start);
+      end.setDate(end.getDate() + Number(user.vacationWeeks) * 7 - 1);
+      weeks.forEach(week => {
+        const weekStart = new Date(year, month - 1, week.start, 12);
+        const weekEnd = new Date(year, month - 1, week.end, 12);
+        if (weekStart <= end && weekEnd >= start) selected.add(week.index);
+      });
+      return selected;
+    }
+
     function renderMonthPlan() {
       if (!state.admin) return;
       const year = Number($('#adminYear').value);
@@ -2958,6 +3183,12 @@
 
       let lastDuty = '';
       $('#monthPlanBody').innerHTML = users.map(user => {
+        const automaticSlavaDate = slavaDateForMonth(
+          user, year, month
+        );
+        const automaticVacationWeeks = vacationWeeksForMonth(
+          user, year, month, weeks
+        );
         const group = user.duty !== lastDuty
           ? `<tr class="group-row"><td colspan="${6 + weeks.length}">${dutyGroupLabel(user.duty)}</td></tr>`
           : '';
@@ -2982,15 +3213,21 @@
           </select></td>
           <td><input class="plan-free-date" type="date"
             min="${year}-${String(month).padStart(2, '0')}-01"
-            max="${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}"></td>
+            max="${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}"
+            value="${escapeAttr(automaticSlavaDate)}"></td>
           <td><select class="plan-free-type">
-            <option value="drugo">Drugo</option>
-            <option value="slava">Slava</option>
+            <option value="drugo" ${automaticSlavaDate ? '' : 'selected'}>Drugo</option>
+            <option value="slava" ${automaticSlavaDate ? 'selected' : ''}>Slava</option>
           </select></td>
           <td><strong class="plan-target">-</strong></td>
-          ${weeks.map(week => `<td><select class="plan-week-duty" data-week="${week.index}">
-            ${monthlyDutyOptions(user.duty, user.duty)}
-          </select><small class="replacement-note"></small></td>`).join('')}
+          ${weeks.map(week => {
+            const vacation = automaticVacationWeeks.has(week.index);
+            return `<td><select class="plan-week-duty"
+              data-week="${week.index}"
+              ${vacation ? 'data-automatic-vacation="true" disabled' : ''}>
+            ${monthlyDutyOptions(vacation ? 'off' : user.duty, user.duty)}
+          </select><small class="replacement-note"></small></td>`;
+          }).join('')}
         </tr>`;
       }).join('');
       $$('.plan-week-duty, .plan-free-date, .plan-free-type', $('#monthPlanBody'))

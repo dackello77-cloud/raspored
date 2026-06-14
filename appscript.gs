@@ -414,12 +414,20 @@ function saveUsers(token, users) {
     const role = normalizeRole_(item.role);
     const duty = role === APP.roles.admin ? 'off' : normalizeDuty_(item.duty);
     const monitorShift = Math.max(1, Math.min(3, Number(item.monitorShift) || 1));
+    const slavaDate = normalizeOptionalDateKey_(item.slavaDate);
+    const vacationStart = normalizeVacationStart_(item.vacationStart);
+    const vacationWeeks = vacationStart
+      ? Math.max(1, Math.min(2, Number(item.vacationWeeks) || 1))
+      : 0;
     if (!name || !user) throw new Error('Svaki korisnik mora imati ime i user.');
     if (!role) throw new Error('Nepoznata rola za korisnika ' + user + '.');
     if (role !== APP.roles.admin && !duty) {
       throw new Error('Nepoznata funkcija za korisnika ' + user + '.');
     }
-    return [name, user, role, item.active !== false, duty || 'off', monitorShift];
+    return [
+      name, user, role, item.active !== false, duty || 'off', monitorShift,
+      slavaDate, vacationStart, vacationWeeks
+    ];
   });
 
   const duplicates = clean.map(function (row) { return row[1]; })
@@ -431,8 +439,8 @@ function saveUsers(token, users) {
   }
 
   const sheet = getSpreadsheet_().getSheetByName(APP.sheets.users);
-  sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), 6).clearContent();
-  sheet.getRange(2, 1, clean.length, 6).setValues(clean);
+  sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), 9).clearContent();
+  sheet.getRange(2, 1, clean.length, 9).setValues(clean);
   return { ok: true, users: getUsers_() };
 }
 
@@ -455,6 +463,17 @@ function generateSchedule(token, request) {
   const configs = users.map(function (user, index) {
     const source = configByUser[user.user.toLowerCase()] || {};
     const duty = source.duty || user.duty || 'radnik';
+    const automaticConfig = automaticAbsenceConfig_(user, year, month, duty);
+    const weekOverrides = Object.assign(
+      {}, source.weekOverrides || {}, automaticConfig.weekOverrides
+    );
+    const freeDates = Array.isArray(source.freeDates)
+      ? source.freeDates.slice()
+      : [];
+    if (automaticConfig.slavaDate &&
+        freeDates.indexOf(automaticConfig.slavaDate) < 0) {
+      freeDates.push(automaticConfig.slavaDate);
+    }
     return {
       name: user.name,
       user: user.user,
@@ -463,11 +482,13 @@ function generateSchedule(token, request) {
       monitorShift: Number(source.monitorShift) || user.monitorShift || ((index % 3) + 1),
       monitorShiftByWeek: {},
       leaderOrder: Number(source.leaderOrder) || index,
-      weekOverrides: normalizeWeekOverrides_(source.weekOverrides, duty),
+      weekOverrides: normalizeWeekOverrides_(weekOverrides, duty),
       replacementInfo: source.replacementInfo || {},
       eligibleForReplacement: source.eligibleForReplacement === true,
-      freeDates: Array.isArray(source.freeDates) ? source.freeDates : [],
-      freeDayType: normalizeFreeDayType_(source.freeDayType)
+      freeDates: freeDates,
+      freeDayType: automaticConfig.slavaDate
+        ? 'slava'
+        : normalizeFreeDayType_(source.freeDayType)
     };
   }).filter(function (item) { return item.active; });
 
@@ -931,25 +952,43 @@ function ensureSheets_() {
   let users = ss.getSheetByName(APP.sheets.users);
   if (!users) users = ss.insertSheet(APP.sheets.users);
   if (users.getLastRow() === 0) {
-    users.getRange(1, 1, 1, 6).setValues([
-      ['Ime', 'User', 'Rola', 'Aktivan', 'Funkcija', 'MonitoringSmena']
+    users.getRange(1, 1, 1, 9).setValues([
+      [
+        'Ime', 'User', 'Rola', 'Aktivan', 'Funkcija', 'MonitoringSmena',
+        'SlavaDatum', 'OdmorOd', 'OdmorNedelje'
+      ]
     ]);
-    users.getRange(2, 1, 2, 6).setValues([
-      ['Administrator', 'admin', APP.roles.admin, true, 'off', 1],
-      ['Primer Zaposlenog', 'zaposleni1', APP.roles.employee, true, 'radnik', 1]
+    users.getRange(2, 1, 2, 9).setValues([
+      ['Administrator', 'admin', APP.roles.admin, true, 'off', 1, '', '', ''],
+      [
+        'Primer Zaposlenog', 'zaposleni1', APP.roles.employee, true,
+        'radnik', 1, '', '', ''
+      ]
     ]);
-    styleHeader_(users, 6);
+    styleHeader_(users, 9);
     users.setFrozenRows(1);
-  } else if (users.getLastColumn() < 6) {
-    users.getRange(1, 5, 1, 2).setValues([['Funkcija', 'MonitoringSmena']]);
-    if (users.getLastRow() > 1) {
-      const roles = users.getRange(2, 3, users.getLastRow() - 1, 1).getValues();
-      const defaults = roles.map(function (row) {
-        return [normalizeRole_(row[0]) === APP.roles.admin ? 'off' : 'radnik', 1];
-      });
-      users.getRange(2, 5, defaults.length, 2).setValues(defaults);
+  } else {
+    if (users.getLastColumn() < 6) {
+      users.getRange(1, 5, 1, 2)
+        .setValues([['Funkcija', 'MonitoringSmena']]);
+      if (users.getLastRow() > 1) {
+        const roles = users.getRange(
+          2, 3, users.getLastRow() - 1, 1
+        ).getValues();
+        const defaults = roles.map(function (row) {
+          return [
+            normalizeRole_(row[0]) === APP.roles.admin ? 'off' : 'radnik',
+            1
+          ];
+        });
+        users.getRange(2, 5, defaults.length, 2).setValues(defaults);
+      }
     }
-    styleHeader_(users, 6);
+    if (users.getLastColumn() < 9) {
+      users.getRange(1, 7, 1, 3)
+        .setValues([['SlavaDatum', 'OdmorOd', 'OdmorNedelje']]);
+    }
+    styleHeader_(users, 9);
   }
 
   let schedule = ss.getSheetByName(APP.sheets.schedule);
@@ -1013,7 +1052,7 @@ function getSpreadsheet_() {
 function getUsers_() {
   const sheet = getSpreadsheet_().getSheetByName(APP.sheets.users);
   if (!sheet || sheet.getLastRow() < 2) return [];
-  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues()
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 9).getValues()
     .filter(function (row) { return row[0] && row[1]; })
     .map(function (row) {
       return {
@@ -1024,9 +1063,55 @@ function getUsers_() {
         duty: normalizeDuty_(row[4]) || (
           normalizeRole_(row[2]) === APP.roles.admin ? 'off' : 'radnik'
         ),
-        monitorShift: Math.max(1, Math.min(3, Number(row[5]) || 1))
+        monitorShift: Math.max(1, Math.min(3, Number(row[5]) || 1)),
+        slavaDate: normalizeOptionalDateKey_(row[6]),
+        vacationStart: normalizeVacationStart_(row[7]),
+        vacationWeeks: row[7]
+          ? Math.max(1, Math.min(2, Number(row[8]) || 1))
+          : 0
       };
     });
+}
+
+function normalizeOptionalDateKey_(value) {
+  if (!value) return '';
+  const date = normalizeSheetDate_(value);
+  return date instanceof Date && !isNaN(date.getTime()) ? dateKey_(date) : '';
+}
+
+function normalizeVacationStart_(value) {
+  const key = normalizeOptionalDateKey_(value);
+  if (!key) return '';
+  const date = parseDateKey_(key);
+  const offset = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - offset);
+  return dateKey_(date);
+}
+
+function automaticAbsenceConfig_(user, year, month, duty) {
+  const output = { slavaDate: '', weekOverrides: {} };
+  if (user.slavaDate) {
+    const slavaParts = user.slavaDate.split('-').map(Number);
+    const slava = new Date(year, slavaParts[1] - 1, slavaParts[2], 12);
+    if (slava.getFullYear() === year && slava.getMonth() + 1 === month &&
+        slava.getDate() === slavaParts[2]) {
+      output.slavaDate = dateKey_(slava);
+    }
+  }
+  if (!user.vacationStart || !user.vacationWeeks) return output;
+
+  const vacationStart = parseDateKey_(user.vacationStart);
+  const vacationEnd = new Date(vacationStart);
+  vacationEnd.setDate(
+    vacationEnd.getDate() + Number(user.vacationWeeks) * 7 - 1
+  );
+  const daysInMonth = new Date(year, month, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(year, month - 1, day, 12);
+    if (date < vacationStart || date > vacationEnd) continue;
+    output.weekOverrides[String(mondayWeekIndex_(date))] = 'off';
+  }
+  return output;
 }
 
 function normalizeRole_(role) {
@@ -1469,6 +1554,7 @@ function tryBuildCyclePhased_(
   const states = {};
   const targetUsers = {};
   const cyclePositions = {};
+  const monthStartShifts = {};
   targetWorkers.forEach(function (person, index) {
     targetUsers[person.user] = true;
     const fallbackPosition = initialStates[person.user].hasPrevious
@@ -1476,6 +1562,9 @@ function tryBuildCyclePhased_(
       : (index + attempt) % cycle.length;
     cyclePositions[person.user] = cyclePositionFromRecentHistory_(
       cycle, initialStates[person.user], fallbackPosition
+    );
+    monthStartShifts[person.user] = monthStartShiftsFromRecentHistory_(
+      initialStates[person.user]
     );
   });
   configs.forEach(function (person) {
@@ -1548,8 +1637,14 @@ function tryBuildCyclePhased_(
     }
     targetWorkers.forEach(function (person) {
       if (isAssigned_(assignments[key], person.user)) return;
+      if (day <= Number(initialStates[person.user].restRemaining || 0)) {
+        return;
+      }
       const position = (cyclePositions[person.user] + day - 1) % cycle.length;
-      const shift = cycle[position];
+      const boundaryShifts = monthStartShifts[person.user];
+      const shift = day <= 4 && boundaryShifts
+        ? boundaryShifts[day - 1]
+        : cycle[position];
       if (!shift || counts[person.user] >= fullMonthTarget) return;
       assignments[key][shift].push({ person: person, duty: 'Zaposleni' });
       counts[person.user] += 1;
@@ -1639,6 +1734,12 @@ function tryBuildCyclePhased_(
   removeSecondToFirstTransitions_(
     year, month, daysInMonth, assignments, initialStates, attempt
   );
+  removeMonthStartNightRest_(
+    year, month, assignments, targetWorkers, counts, initialStates
+  );
+  removeAllPlannedAbsences_(
+    year, month, daysInMonth, assignments, configs, counts
+  );
 
   const warnings = validateAllMinimumCoverage_(
     year, month, daysInMonth, assignments, staffing
@@ -1672,6 +1773,22 @@ function tryBuildCyclePhased_(
     ),
     warnings: finalWarnings
   };
+}
+
+function removeMonthStartNightRest_(
+  year, month, assignments, workers, counts, initialStates
+) {
+  workers.forEach(function (person) {
+    const restDays = Number(
+      initialStates[person.user] &&
+      initialStates[person.user].restRemaining
+    ) || 0;
+    for (let day = 1; day <= restDays; day += 1) {
+      removePersonAssignment_(
+        day, year, month, assignments, person.user, counts
+      );
+    }
+  });
 }
 
 function candidateKeepsTimelineValid_(
@@ -1879,11 +1996,36 @@ function applyWeeklyAbsencesAndReplacements_(
             : 'Zaposleni';
         assignments[key][shift].push({
           person: replacement,
-          duty: duty
+          duty: duty,
+          replacementFor: absent.user
         });
         counts[replacement.user] += 1;
       }
     });
+  }
+}
+
+function removeAllPlannedAbsences_(
+  year, month, daysInMonth, assignments, configs, counts
+) {
+  const byUser = {};
+  configs.forEach(function (person) {
+    byUser[person.user] = person;
+  });
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(year, month - 1, day, 12);
+    const key = dateKey_(date);
+    const weekIndex = mondayWeekIndex_(date);
+    for (let shift = 1; shift <= 3; shift += 1) {
+      assignments[key][shift] = assignments[key][shift].filter(function (item) {
+        const person = byUser[item.person.user];
+        if (!person || effectiveDuty_(person, weekIndex) !== 'off') {
+          return true;
+        }
+        counts[item.person.user] -= 1;
+        return false;
+      });
+    }
   }
 }
 
@@ -1902,7 +2044,8 @@ function trimReplacementOvertime_(
           const list = assignments[key][shift];
           const index = list.findIndex(function (item) {
             return item.person.user === person.user &&
-              item.duty === 'Zaposleni';
+              item.duty === 'Zaposleni' &&
+              !item.replacementFor;
           });
           if (index < 0 ||
               workerCount_(list) <= requiredCoverageMinimum_(
@@ -1952,7 +2095,9 @@ function trimReplacementRestConflicts_(
       const item = assignedItemOnDay_(
         day, year, month, assignments, person.user
       );
-      const fixedNight = item && item.duty !== 'Zaposleni';
+      const fixedNight = item && (
+        item.duty !== 'Zaposleni' || item.replacementFor
+      );
       for (let offset = 1; offset <= 2; offset += 1) {
         const nextDay = day + offset;
         if (nextDay > daysInMonth) continue;
@@ -1960,7 +2105,13 @@ function trimReplacementRestConflicts_(
           nextDay, year, month, assignments, person.user
         );
         if (!nextItem) continue;
-        if (nextItem.duty === 'Zaposleni') {
+        if (nextItem.replacementFor && !fixedNight) {
+          removePersonAssignment_(
+            day, year, month, assignments, person.user, counts
+          );
+          break;
+        }
+        if (nextItem.duty === 'Zaposleni' && !nextItem.replacementFor) {
           removePersonAssignment_(
             nextDay, year, month, assignments, person.user, counts
           );
@@ -2088,11 +2239,11 @@ function getCycleTemplate_(staffing) {
 function cyclePositionFromRecentHistory_(cycle, initialState, fallbackPosition) {
   const recent = initialState && initialState.recentShifts;
   if (!initialState || !initialState.hasPrevious ||
-      !Array.isArray(recent) || recent.length !== 3) {
+      !Array.isArray(recent) || recent.length !== 4) {
     return fallbackPosition;
   }
 
-  const weights = [1, 4, 16];
+  const weights = [1, 4, 16, 64];
   const candidates = cycle.map(function (_, position) {
     let score = 0;
     let matches = 0;
@@ -2130,6 +2281,40 @@ function cyclePositionFromRecentHistory_(cycle, initialState, fallbackPosition) 
   return candidates[0].validStart
     ? candidates[0].position
     : fallbackPosition;
+}
+
+function monthStartShiftsFromRecentHistory_(initialState) {
+  const recent = initialState && initialState.recentShifts;
+  if (!initialState || !initialState.hasPrevious ||
+      !Array.isArray(recent) || recent.length !== 4) {
+    return null;
+  }
+
+  const transitions = {
+    '1-1-1-1': [3, 0, 0, 2],
+    '0-1-1-1': [3, 3, 0, 0],
+    '0-0-1-1': [1, 3, 3, 0],
+    '3-0-0-1': [1, 1, 3, 3],
+    '2-0-0-1': [1, 1, 3, 3],
+    '2-0-1-1': [1, 3, 3, 0],
+    '2-2-0-1': [1, 1, 3, 0],
+    '2-2-2-2': [3, 0, 0, 1],
+    '0-2-2-2': [3, 3, 0, 0],
+    '0-0-2-2': [3, 3, 0, 0],
+    '1-0-0-2': [2, 2, 3, 3],
+    '1-1-0-2': [2, 3, 3, 0],
+    '1-1-3-3': [0, 0, 2, 2],
+    '2-2-3-3': [0, 0, 1, 1],
+    '1-1-1-3': [3, 0, 0, 2],
+    '2-2-2-3': [0, 0, 1, 1],
+    '0-1-1-3': [3, 0, 0, 2],
+    '0-2-2-3': [3, 0, 0, 1],
+    '0-0-1-3': [3, 0, 0, 2],
+    '0-0-2-3': [3, 0, 0, 1],
+    '0-0-3-3': [0, 0, 1, 1]
+  };
+  const match = transitions[recent.map(Number).join('-')];
+  return match ? match.slice() : null;
 }
 
 function cycleStartValid_(cycle, position, initialState) {
@@ -3535,6 +3720,7 @@ function workerTimelineValid_(
       if ((!ignorePlannedAbsences && isFreeDate_(person, key)) ||
           (!ignorePlannedAbsences &&
             !canWorkSpecialBoundary_(person, date, shift)) ||
+          state.restRemaining > 0 ||
           (!fixedDuty && !canAssignShift_(state, shift))) {
         return false;
       }
@@ -3885,15 +4071,31 @@ function getPreviousState_(user, year, month, index, scheduleRows) {
     }
   }
   state.recentShifts = [];
-  for (let day = Math.max(1, previousDays - 2);
+  for (let day = Math.max(1, previousDays - 3);
        day <= previousDays;
        day += 1) {
     const key = dateKey_(new Date(previousYear, previousMonth - 1, day, 12));
     state.recentShifts.push(Number(byDate[key]) || 0);
   }
-  while (state.recentShifts.length < 3) state.recentShifts.unshift(0);
+  while (state.recentShifts.length < 4) state.recentShifts.unshift(0);
+  state.restRemaining = monthBoundaryNightRestDays_(state.recentShifts);
   state.cycleIndex = savedCycleIndex;
   return state;
+}
+
+function monthBoundaryNightRestDays_(recentShifts) {
+  const recent = Array.isArray(recentShifts)
+    ? recentShifts.map(Number)
+    : [];
+  let daysOff = 0;
+  for (let index = recent.length - 1; index >= 0; index -= 1) {
+    if (recent[index] === 0) {
+      daysOff += 1;
+      continue;
+    }
+    return recent[index] === 3 ? Math.max(0, 2 - daysOff) : 0;
+  }
+  return 0;
 }
 
 function monthStartState_(previousState) {
@@ -3906,8 +4108,8 @@ function monthStartState_(previousState) {
     lastShift: Number(previousState && previousState.lastShift) || 0,
     recentShifts: previousState &&
       Array.isArray(previousState.recentShifts)
-      ? previousState.recentShifts.slice(-3)
-      : [0, 0, 0]
+      ? previousState.recentShifts.slice(-4)
+      : [0, 0, 0, 0]
   };
 }
 
