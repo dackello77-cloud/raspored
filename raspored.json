@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-06-16T11:48:37.693Z",
+  "exportedAt": "2026-06-16T21:09:54.177Z",
   "today": "2026-06-16",
   "appName": "Raspored App",
   "shifts": [
@@ -3077,14 +3077,6 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
             "name": "IVANA",
             "user": "ivana",
             "duty": "Zaposleni",
@@ -3095,6 +3087,14 @@
           {
             "name": "UROS",
             "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3119,16 +3119,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3161,8 +3161,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3209,16 +3209,16 @@
             "mine": false
           },
           {
-            "name": "UROS",
-            "user": "uros",
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "DIMITRIJE",
-            "user": "dimitrije",
+            "name": "UROS",
+            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3243,8 +3243,8 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3277,14 +3277,6 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
             "name": "IVANA",
             "user": "ivana",
             "duty": "Zaposleni",
@@ -3301,8 +3293,8 @@
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3347,6 +3339,14 @@
             "replacedUser": "",
             "replacedName": "",
             "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
           }
         ],
         "2": [
@@ -3367,16 +3367,16 @@
             "mine": false
           },
           {
-            "name": "DIMITRIJE",
-            "user": "dimitrije",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "VUKASIN",
-            "user": "vukasin",
+            "name": "DIMITRIJE",
+            "user": "dimitrije",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3401,16 +3401,8 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "ANDJELA",
-            "user": "andjela",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3425,8 +3417,16 @@
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3441,8 +3441,8 @@
       "shifts": {
         "1": [
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3477,8 +3477,8 @@
         ],
         "3": [
           {
-            "name": "UROS",
-            "user": "uros",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3501,8 +3501,8 @@
       "shifts": {
         "1": [
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3515,7 +3515,9 @@
             "replacedUser": "",
             "replacedName": "",
             "mine": false
-          },
+          }
+        ],
+        "2": [
           {
             "name": "DANIEL",
             "user": "daniel",
@@ -3523,9 +3525,7 @@
             "replacedUser": "",
             "replacedName": "",
             "mine": false
-          }
-        ],
-        "2": [
+          },
           {
             "name": "JELENA D",
             "user": "jecad",
@@ -3553,8 +3553,16 @@
             "mine": false
           },
           {
-            "name": "UROS",
-            "user": "uros",
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3585,24 +3593,16 @@
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
+            "replacedUser": "dimitrije",
+            "replacedName": "DIMITRIJE",
             "mine": false
           },
           {
             "name": "NIKOLA",
             "user": "nikola",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "IVANA",
-            "user": "ivana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3627,11 +3627,11 @@
             "mine": false
           },
           {
-            "name": "OLGA",
-            "user": "olga",
+            "name": "IVANA",
+            "user": "ivana",
             "duty": "Zaposleni",
-            "replacedUser": "dimitrije",
-            "replacedName": "DIMITRIJE",
+            "replacedUser": "",
+            "replacedName": "",
             "mine": false
           },
           {
@@ -3643,8 +3643,8 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3683,6 +3683,14 @@
             "replacedUser": "",
             "replacedName": "",
             "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
           }
         ]
       }
@@ -3709,16 +3717,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
+            "replacedUser": "dimitrije",
+            "replacedName": "DIMITRIJE",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "UROS",
+            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3751,14 +3759,6 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
             "name": "IVANA",
             "user": "ivana",
             "duty": "Zaposleni",
@@ -3767,11 +3767,11 @@
             "mine": false
           },
           {
-            "name": "OLGA",
-            "user": "olga",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
-            "replacedUser": "dimitrije",
-            "replacedName": "DIMITRIJE",
+            "replacedUser": "",
+            "replacedName": "",
             "mine": false
           }
         ],
@@ -3793,8 +3793,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3849,16 +3849,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "UROS",
+            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3891,16 +3891,16 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "UROS",
-            "user": "uros",
+            "name": "IVANA",
+            "user": "ivana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -3925,8 +3925,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4015,16 +4015,16 @@
             "mine": false
           },
           {
-            "name": "UROS",
-            "user": "uros",
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "IVANA",
-            "user": "ivana",
+            "name": "UROS",
+            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4049,8 +4049,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4059,14 +4067,6 @@
           {
             "name": "ANDJELA",
             "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "NEDA",
-            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4131,8 +4131,8 @@
             "mine": false
           },
           {
-            "name": "IVANA",
-            "user": "ivana",
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4165,16 +4165,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4213,8 +4213,8 @@
             "mine": false
           },
           {
-            "name": "NEVENA D",
-            "user": "dinic",
+            "name": "NIKOLA",
+            "user": "nikola",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4223,8 +4223,16 @@
         ],
         "2": [
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4233,14 +4241,6 @@
           {
             "name": "JELENA D",
             "user": "jecad",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "NIKOLA",
-            "user": "nikola",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4289,16 +4289,8 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "DANIEL",
-            "user": "daniel",
+            "name": "NIKOLA",
+            "user": "nikola",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4307,8 +4299,8 @@
         ],
         "2": [
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4323,8 +4315,8 @@
             "mine": false
           },
           {
-            "name": "NIKOLA",
-            "user": "nikola",
+            "name": "JELENA D",
+            "user": "jecad",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4333,19 +4325,19 @@
         ],
         "3": [
           {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
             "name": "OLGA",
             "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "dimitrije",
             "replacedName": "DIMITRIJE",
-            "mine": false
-          },
-          {
-            "name": "JELENA D",
-            "user": "jecad",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
             "mine": false
           }
         ]
@@ -4381,16 +4373,8 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "DANIEL",
-            "user": "daniel",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4423,11 +4407,11 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "SASKA",
+            "user": "saska",
             "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
+            "replacedUser": "nikola",
+            "replacedName": "NIKOLA",
             "mine": false
           }
         ],
@@ -4449,6 +4433,14 @@
             "mine": false
           },
           {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
             "name": "JELENA D",
             "user": "jecad",
             "duty": "Zaposleni",
@@ -4457,16 +4449,8 @@
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
-            "duty": "Zaposleni",
-            "replacedUser": "dimitrije",
-            "replacedName": "DIMITRIJE",
-            "mine": false
-          },
-          {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4497,16 +4481,16 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
+            "name": "UROS",
+            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "UROS",
-            "user": "uros",
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4531,16 +4515,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "VUKASIN",
+            "user": "vukasin",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4573,8 +4557,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4586,6 +4570,14 @@
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "nikola",
+            "replacedName": "NIKOLA",
             "mine": false
           }
         ]
@@ -4613,6 +4605,14 @@
             "mine": false
           },
           {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
             "name": "UROS",
             "user": "uros",
             "duty": "Zaposleni",
@@ -4621,11 +4621,11 @@
             "mine": false
           },
           {
-            "name": "VUKASIN",
-            "user": "vukasin",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
+            "replacedUser": "dimitrije",
+            "replacedName": "DIMITRIJE",
             "mine": false
           }
         ],
@@ -4647,16 +4647,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "VUKASIN",
+            "user": "vukasin",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4681,14 +4681,6 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
             "name": "IVANA",
             "user": "ivana",
             "duty": "Zaposleni",
@@ -4697,11 +4689,27 @@
             "mine": false
           },
           {
-            "name": "OLGA",
-            "user": "olga",
+            "name": "SASKA",
+            "user": "saska",
             "duty": "Zaposleni",
             "replacedUser": "nikola",
             "replacedName": "NIKOLA",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
             "mine": false
           }
         ]
@@ -4724,6 +4732,14 @@
             "name": "MATIJA",
             "user": "matija",
             "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -4763,16 +4779,16 @@
             "mine": false
           },
           {
-            "name": "VUKASIN",
-            "user": "vukasin",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "dimitrije",
             "replacedName": "DIMITRIJE",
@@ -4797,24 +4813,8 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4823,6 +4823,14 @@
           {
             "name": "UROS",
             "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4853,16 +4861,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "NEVENA D",
-            "user": "dinic",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4903,8 +4903,8 @@
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "dimitrije",
             "replacedName": "DIMITRIJE",
@@ -4929,16 +4929,8 @@
             "mine": false
           },
           {
-            "name": "UROS",
-            "user": "uros",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "VUKASIN",
-            "user": "vukasin",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4953,8 +4945,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -4969,27 +4969,19 @@
       "shifts": {
         "1": [
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "OLGA",
-            "user": "olga",
+            "name": "SASKA",
+            "user": "saska",
             "duty": "Zaposleni",
             "replacedUser": "nikola",
             "replacedName": "NIKOLA",
-            "mine": false
-          },
-          {
-            "name": "JELENA D",
-            "user": "jecad",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
             "mine": false
           }
         ],
@@ -4997,6 +4989,14 @@
           {
             "name": "DANIEL",
             "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5013,19 +5013,19 @@
         ],
         "3": [
           {
-            "name": "SASKA",
-            "user": "saska",
-            "duty": "Zaposleni",
-            "replacedUser": "dimitrije",
-            "replacedName": "DIMITRIJE",
-            "mine": false
-          },
-          {
-            "name": "VUKASIN",
-            "user": "vukasin",
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "dimitrije",
+            "replacedName": "DIMITRIJE",
             "mine": false
           }
         ]
@@ -5037,8 +5037,8 @@
       "shifts": {
         "1": [
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5047,14 +5047,6 @@
           {
             "name": "NEVENA D",
             "user": "dinic",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "OLGA",
-            "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5071,8 +5063,16 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "nikola",
+            "replacedName": "NIKOLA",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5113,24 +5113,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "OLGA",
-            "user": "olga",
+            "name": "UROS",
+            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5163,16 +5155,8 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "UROS",
-            "user": "uros",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5197,8 +5181,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5219,6 +5203,14 @@
             "replacedUser": "",
             "replacedName": "",
             "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "nikola",
+            "replacedName": "NIKOLA",
+            "mine": false
           }
         ]
       }
@@ -5237,24 +5229,24 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "UROS",
+            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "vukasin",
             "replacedName": "VUKASIN",
@@ -5279,8 +5271,132 @@
             "mine": false
           },
           {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLINA",
+            "user": "nikolina",
+            "duty": "Monitoring III",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "nikola",
+            "replacedName": "NIKOLA",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-07-22",
+      "day": "Sreda",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
             "name": "ANDJELA",
             "user": "andjela",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DIMITRIJE",
+            "user": "dimitrije",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "vukasin",
+            "replacedName": "VUKASIN",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5321,124 +5437,16 @@
             "mine": false
           },
           {
-            "name": "NEVENA D",
-            "user": "dinic",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "OLGA",
-            "user": "olga",
-            "duty": "Zaposleni",
-            "replacedUser": "nikola",
-            "replacedName": "NIKOLA",
-            "mine": false
-          }
-        ]
-      }
-    },
-    {
-      "date": "2026-07-22",
-      "day": "Sreda",
-      "shifts": {
-        "1": [
-          {
-            "name": "MIHAJLO",
-            "user": "mihajlo",
-            "duty": "Shift lider",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "DIMITRIJE",
-            "user": "dimitrije",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
             "name": "SASKA",
             "user": "saska",
             "duty": "Zaposleni",
-            "replacedUser": "vukasin",
-            "replacedName": "VUKASIN",
-            "mine": false
-          }
-        ],
-        "2": [
-          {
-            "name": "NEVENA A",
-            "user": "nena",
-            "duty": "Shift lider",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "ACA",
-            "user": "aca",
-            "duty": "Monitoring II",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "UROS",
-            "user": "uros",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
+            "replacedUser": "nikola",
+            "replacedName": "NIKOLA",
             "mine": false
           },
           {
             "name": "IVANA",
             "user": "ivana",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          }
-        ],
-        "3": [
-          {
-            "name": "MILOŠ",
-            "user": "milos",
-            "duty": "Shift lider",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "NIKOLINA",
-            "user": "nikolina",
-            "duty": "Monitoring III",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "JELENA C",
-            "user": "jecac",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "NEDA",
-            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5495,8 +5503,8 @@
             "mine": false
           },
           {
-            "name": "IVANA",
-            "user": "ivana",
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5529,16 +5537,16 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5553,8 +5561,8 @@
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "vukasin",
             "replacedName": "VUKASIN",
@@ -5579,14 +5587,6 @@
           {
             "name": "DANIEL",
             "user": "daniel",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "ANA",
-            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5619,8 +5619,8 @@
             "mine": false
           },
           {
-            "name": "IVANA",
-            "user": "ivana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5632,14 +5632,6 @@
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "OLGA",
-            "user": "olga",
-            "duty": "Zaposleni",
-            "replacedUser": "nikola",
-            "replacedName": "NIKOLA",
             "mine": false
           }
         ],
@@ -5661,6 +5653,14 @@
             "mine": false
           },
           {
+            "name": "ANDJELA",
+            "user": "andjela",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
             "name": "DIMITRIJE",
             "user": "dimitrije",
             "duty": "Zaposleni",
@@ -5669,16 +5669,16 @@
             "mine": false
           },
           {
-            "name": "UROS",
-            "user": "uros",
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "vukasin",
             "replacedName": "VUKASIN",
@@ -5693,16 +5693,26 @@
       "shifts": {
         "1": [
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "IVANA",
+            "user": "ivana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "nikola",
+            "replacedName": "NIKOLA",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5715,23 +5725,13 @@
             "replacedUser": "",
             "replacedName": "",
             "mine": false
-          }
-        ],
-        "2": [
+          },
           {
-            "name": "IVANA",
-            "user": "ivana",
+            "name": "JELENA D",
+            "user": "jecad",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "OLGA",
-            "user": "olga",
-            "duty": "Zaposleni",
-            "replacedUser": "nikola",
-            "replacedName": "NIKOLA",
             "mine": false
           }
         ],
@@ -5751,6 +5751,14 @@
             "replacedUser": "",
             "replacedName": "",
             "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
           }
         ]
       }
@@ -5761,16 +5769,24 @@
       "shifts": {
         "1": [
           {
-            "name": "ANDJELA",
-            "user": "andjela",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5779,8 +5795,8 @@
         ],
         "2": [
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5795,8 +5811,8 @@
             "mine": false
           },
           {
-            "name": "OLGA",
-            "user": "olga",
+            "name": "SASKA",
+            "user": "saska",
             "duty": "Zaposleni",
             "replacedUser": "nikola",
             "replacedName": "NIKOLA",
@@ -5837,14 +5853,6 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
             "name": "UROS",
             "user": "uros",
             "duty": "Zaposleni",
@@ -5853,8 +5861,8 @@
             "mine": false
           },
           {
-            "name": "NIKOLA",
-            "user": "nikola",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -5887,16 +5895,16 @@
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "vukasin",
             "replacedName": "VUKASIN",
@@ -5929,8 +5937,16 @@
             "mine": false
           },
           {
-            "name": "OLGA",
-            "user": "olga",
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
             "duty": "Zaposleni",
             "replacedUser": "daniel",
             "replacedName": "DANIEL",
@@ -5961,6 +5977,14 @@
             "mine": false
           },
           {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
             "name": "UROS",
             "user": "uros",
             "duty": "Zaposleni",
@@ -5969,24 +5993,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
             "name": "NEVENA D",
             "user": "dinic",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "DIMITRIJE",
-            "user": "dimitrije",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -6011,27 +6019,27 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "vukasin",
             "replacedName": "VUKASIN",
+            "mine": false
+          },
+          {
+            "name": "DIMITRIJE",
+            "user": "dimitrije",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
             "mine": false
           }
         ],
@@ -6053,14 +6061,6 @@
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
             "name": "IVANA",
             "user": "ivana",
             "duty": "Zaposleni",
@@ -6069,8 +6069,24 @@
             "mine": false
           },
           {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
             "name": "NIKOLA",
             "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -6093,8 +6109,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -6103,14 +6119,6 @@
           {
             "name": "NEVENA D",
             "user": "dinic",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "UROS",
-            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -6135,19 +6143,19 @@
             "mine": false
           },
           {
-            "name": "DIMITRIJE",
-            "user": "dimitrije",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "DIMITRIJE",
+            "user": "dimitrije",
             "duty": "Zaposleni",
-            "replacedUser": "vukasin",
-            "replacedName": "VUKASIN",
+            "replacedUser": "",
+            "replacedName": "",
             "mine": false
           }
         ],
@@ -6169,27 +6177,27 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANA",
+            "user": "ana",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "ANDJELA",
-            "user": "andjela",
+            "name": "UROS",
+            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
           },
           {
-            "name": "NEDA",
-            "user": "neda",
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
+            "replacedUser": "vukasin",
+            "replacedName": "VUKASIN",
             "mine": false
           }
         ]
@@ -6217,16 +6225,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "UROS",
-            "user": "uros",
+            "name": "JELENA D",
+            "user": "jecad",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -6259,16 +6259,8 @@
             "mine": false
           },
           {
-            "name": "JELENA D",
-            "user": "jecad",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "OLGA",
-            "user": "olga",
+            "name": "SASKA",
+            "user": "saska",
             "duty": "Zaposleni",
             "replacedUser": "daniel",
             "replacedName": "DANIEL",
@@ -6293,8 +6285,8 @@
             "mine": false
           },
           {
-            "name": "JELENA C",
-            "user": "jecac",
+            "name": "ANDJELA",
+            "user": "andjela",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -6309,8 +6301,16 @@
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
             "duty": "Zaposleni",
             "replacedUser": "vukasin",
             "replacedName": "VUKASIN",
@@ -6333,8 +6333,8 @@
             "mine": false
           },
           {
-            "name": "ANA",
-            "user": "ana",
+            "name": "JELENA C",
+            "user": "jecac",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
@@ -6383,8 +6383,8 @@
             "mine": false
           },
           {
-            "name": "OLGA",
-            "user": "olga",
+            "name": "SASKA",
+            "user": "saska",
             "duty": "Zaposleni",
             "replacedUser": "daniel",
             "replacedName": "DANIEL",
@@ -6417,11 +6417,19 @@
             "mine": false
           },
           {
-            "name": "SASKA",
-            "user": "saska",
+            "name": "NEDA",
+            "user": "neda",
             "duty": "Zaposleni",
-            "replacedUser": "vukasin",
-            "replacedName": "VUKASIN",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANDJELA",
+            "user": "andjela",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
             "mine": false
           },
           {

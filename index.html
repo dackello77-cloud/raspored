@@ -563,7 +563,7 @@
     .admin-layout .full { grid-column: 1 / -1; }
     #adminView {
       width: 100%;
-      max-width: 1280px;
+      max-width: none;
       margin-inline: auto;
       font-size: 13px;
     }
@@ -801,11 +801,30 @@
       font-size: 12px;
       font-weight: 850;
     }
-    .monthly-plan table { min-width: 900px; }
+    .monthly-plan {
+      padding-bottom: 8px;
+    }
+    .monthly-plan table {
+      min-width: 1320px;
+      table-layout: fixed;
+    }
     .monthly-plan th, .monthly-plan td { padding: 5px 4px; }
     .monthly-plan th { white-space: nowrap; vertical-align: bottom; text-align: center; }
     .monthly-plan th:first-child, .monthly-plan td:first-child { text-align: left; }
-    .monthly-plan select { min-width: 88px; padding: 5px 4px; font-size: 12px; }
+    .monthly-plan th:nth-child(1), .monthly-plan td:nth-child(1) { width: 174px; }
+    .monthly-plan th:nth-child(2), .monthly-plan td:nth-child(2) { width: 108px; }
+    .monthly-plan th:nth-child(3), .monthly-plan td:nth-child(3) { width: 136px; }
+    .monthly-plan th:nth-child(4), .monthly-plan td:nth-child(4) { width: 148px; }
+    .monthly-plan th:nth-child(5), .monthly-plan td:nth-child(5) { width: 92px; }
+    .monthly-plan th:nth-child(6), .monthly-plan td:nth-child(6) { width: 46px; }
+    .monthly-plan th:nth-child(n + 7), .monthly-plan td:nth-child(n + 7) { width: 102px; }
+    .monthly-plan input,
+    .monthly-plan select {
+      width: 100%;
+      min-width: 0;
+      padding: 5px 6px;
+      font-size: 12px;
+    }
     .week-range { display: block; margin-top: 3px; color: var(--ink); font-size: 10px; text-transform: none; }
     .replacement-note { display: block; margin-top: 4px; color: #17643b; font-size: 10px; font-weight: 700; }
     .plan-replacement-choice {

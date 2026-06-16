@@ -1700,9 +1700,13 @@ function tryBuildCyclePhased_(
     year, month, daysInMonth, assignments, staffing, counts
   );
 
-  // Faza 3: minimum se dopunjava kao da zamene ne postoje. Prvo se koristi
-  // treći slobodan dan uz narednu I/II smenu ili uz prethodnu III smenu.
+  // Faza 3: prvo se minimum dopunjava kao da zamene ne postoje, zatim se
+  // uvek dodaje validna smena iz obrasca tri slobodna dana ako ima kapaciteta.
   fillMinimumFromThreeDayRest_(
+    year, month, daysInMonth, assignments, targetWorkers, staffing,
+    counts, target, initialStates, attempt, true
+  );
+  fillThreeDayRestPatternCorrections_(
     year, month, daysInMonth, assignments, targetWorkers, staffing,
     counts, target, initialStates, attempt, true
   );
@@ -1868,6 +1872,60 @@ function candidateKeepsTimelineValid_(
   return valid;
 }
 
+function fillThreeDayRestPatternCorrections_(
+  year, month, daysInMonth, assignments, workers, staffing,
+  counts, target, initialStates, attempt, ignorePlannedAbsences
+) {
+  workers.slice().sort(function (a, b) {
+    return (targetFor_(b, target) - counts[b.user]) -
+      (targetFor_(a, target) - counts[a.user]) ||
+      pseudoRandom_(a.user + '|three-day-rest|' + attempt) -
+      pseudoRandom_(b.user + '|three-day-rest|' + attempt);
+  }).forEach(function (person) {
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = new Date(year, month - 1, day, 12);
+      const key = dateKey_(date);
+      const weekIndex = mondayWeekIndex_(date);
+      if ((!ignorePlannedAbsences &&
+            effectiveDuty_(person, weekIndex) !== 'radnik') ||
+          (!ignorePlannedAbsences && isFreeDate_(person, key)) ||
+          isAssigned_(assignments[key], person.user) ||
+          counts[person.user] >= targetFor_(person, target)) {
+        continue;
+      }
+
+      const correctionShifts = [3, 1, 2].filter(function (shift) {
+        return matchesThreeDayRestRule_(
+          day, shift, year, month, daysInMonth, assignments, person.user
+        );
+      });
+      for (let index = 0; index < correctionShifts.length; index += 1) {
+        const shift = correctionShifts[index];
+        if ((!ignorePlannedAbsences &&
+              !canWorkSpecialBoundary_(person, date, shift)) ||
+            workerCount_(assignments[key][shift]) >=
+              allowedCoverageMaximum_(
+                date, shift, staffing, assignments[key]
+              )) {
+          continue;
+        }
+        if (!candidateKeepsTimelineValid_(
+          year, month, daysInMonth, assignments, person, key, shift,
+          initialStates[person.user], ignorePlannedAbsences
+        )) {
+          continue;
+        }
+        assignments[key][shift].push({
+          person: person,
+          duty: 'Zaposleni'
+        });
+        counts[person.user] += 1;
+        break;
+      }
+    }
+  });
+}
+
 function fillMinimumFromThreeDayRest_(
   year, month, daysInMonth, assignments, workers, staffing,
   counts, target, initialStates, attempt, ignorePlannedAbsences
@@ -1932,12 +1990,14 @@ function matchesThreeDayRestRule_(
     return [day - 2, day - 1, day].every(function (checkDay) {
       return checkDay >= 1 &&
         assignedShiftOnDay_(checkDay, year, month, assignments, user) === 0;
-    });
+    }) && countAssignedShiftBlockEndingAt_(
+      day - 3, year, month, assignments, user, 3
+    ) >= 2;
   }
   if (day <= 1 || day + 2 > daysInMonth) return false;
-  if (assignedShiftOnDay_(
-    day - 1, year, month, assignments, user
-  ) !== 3) {
+  if (countAssignedShiftBlockEndingAt_(
+    day - 1, year, month, assignments, user, 3
+  ) !== 1) {
     return false;
   }
   return [day, day + 1, day + 2].every(function (checkDay) {
@@ -1945,6 +2005,19 @@ function matchesThreeDayRestRule_(
       checkDay, year, month, assignments, user
     ) === 0;
   });
+}
+
+function countAssignedShiftBlockEndingAt_(
+  endDay, year, month, assignments, user, shift
+) {
+  let count = 0;
+  for (let day = endDay; day >= 1; day -= 1) {
+    if (assignedShiftOnDay_(day, year, month, assignments, user) !== shift) {
+      break;
+    }
+    count += 1;
+  }
+  return count;
 }
 
 function assignedShiftOnDay_(day, year, month, assignments, user) {
