@@ -1610,7 +1610,7 @@ function tryBuildCyclePhased_(
       cycle, initialStates[person.user], fallbackPosition
     );
     monthStartShifts[person.user] = monthStartShiftsFromRecentHistory_(
-      initialStates[person.user]
+      initialStates[person.user], cycle
     );
   });
   configs.forEach(function (person) {
@@ -1769,6 +1769,10 @@ function tryBuildCyclePhased_(
     year, month, daysInMonth, assignments, targetWorkers, staffing,
     counts, initialStates, attempt
   );
+  fillAllMinimumCoverage_(
+    year, month, daysInMonth, assignments, targetWorkers, staffing,
+    counts, target, initialStates, attempt, false
+  );
   fillQuotaTolerance_(
     year, month, daysInMonth, assignments, targetWorkers, staffing,
     counts, target, initialStates, attempt
@@ -1776,6 +1780,14 @@ function tryBuildCyclePhased_(
   rebalanceQuotaDeficits_(
     year, month, daysInMonth, assignments, targetWorkers, counts,
     target, initialStates
+  );
+  repairNightRestForAllWorkers_(
+    year, month, daysInMonth, assignments, targetWorkers, staffing,
+    counts, initialStates, attempt + 17
+  );
+  fillAllMinimumCoverage_(
+    year, month, daysInMonth, assignments, targetWorkers, staffing,
+    counts, target, initialStates, attempt + 17, false
   );
   removeSecondToFirstTransitions_(
     year, month, daysInMonth, assignments, initialStates, attempt
@@ -1785,6 +1797,10 @@ function tryBuildCyclePhased_(
   );
   removeAllPlannedAbsences_(
     year, month, daysInMonth, assignments, configs, counts
+  );
+  repairNightRestForAllWorkers_(
+    year, month, daysInMonth, assignments, targetWorkers, staffing,
+    counts, initialStates, attempt + 31
   );
 
   const warnings = validateAllMinimumCoverage_(
@@ -2280,8 +2296,8 @@ function getCycleTemplate_(staffing) {
   if (thirdMinimum >= 3) {
     return [1, 1, 3, 3, 0, 0, 0, 2, 2, 3, 0, 0, 0];
   }
-  // 2 PRVA, 2 TREĆA, 3 SLOBODNA, 2 DRUGA, 2 SLOBODNA.
-  return [1, 1, 3, 3, 0, 0, 0, 2, 2, 0, 0];
+  // 2 PRVA, 1 TREĆA, 3 SLOBODNA, 2 DRUGA, 1 TREĆA, 3 SLOBODNA.
+  return [1, 1, 3, 0, 0, 0, 2, 2, 3, 0, 0, 0];
 }
 
 function cyclePositionFromRecentHistory_(cycle, initialState, fallbackPosition) {
@@ -2331,11 +2347,16 @@ function cyclePositionFromRecentHistory_(cycle, initialState, fallbackPosition) 
     : fallbackPosition;
 }
 
-function monthStartShiftsFromRecentHistory_(initialState) {
+function monthStartShiftsFromRecentHistory_(initialState, cycle) {
   const recent = initialState && initialState.recentShifts;
   if (!initialState || !initialState.hasPrevious ||
       !Array.isArray(recent) || recent.length !== 4) {
     return null;
+  }
+
+  const simpleCycle = [1, 1, 3, 0, 0, 0, 2, 2, 3, 0, 0, 0];
+  if (cycleMatchesTemplate_(cycle, simpleCycle)) {
+    return nextCycleShiftsFromRecent_(cycle, recent);
   }
 
   const transitions = {
@@ -2363,6 +2384,44 @@ function monthStartShiftsFromRecentHistory_(initialState) {
   };
   const match = transitions[recent.map(Number).join('-')];
   return match ? match.slice() : null;
+}
+
+function cycleMatchesTemplate_(cycle, template) {
+  return Array.isArray(cycle) &&
+    cycle.length === template.length &&
+    cycle.every(function (shift, index) {
+      return Number(shift) === template[index];
+    });
+}
+
+function nextCycleShiftsFromRecent_(cycle, recent) {
+  const weights = [1, 4, 16, 64];
+  const candidates = cycle.map(function (_, position) {
+    let score = 0;
+    let matches = 0;
+    recent.forEach(function (shift, index) {
+      const cycleShift = cycle[
+        (position - recent.length + index + cycle.length) % cycle.length
+      ];
+      if (cycleShift === Number(shift)) {
+        score += weights[index];
+        matches += 1;
+      }
+    });
+    return {
+      position: position,
+      score: score,
+      matches: matches
+    };
+  }).sort(function (a, b) {
+    return b.score - a.score ||
+      b.matches - a.matches ||
+      a.position - b.position;
+  });
+  if (!candidates.length || candidates[0].matches < 2) return null;
+  return [0, 1, 2, 3].map(function (offset) {
+    return cycle[(candidates[0].position + offset) % cycle.length];
+  });
 }
 
 function cycleStartValid_(cycle, position, initialState) {
@@ -2639,52 +2698,109 @@ function repairNightRestForAllWorkers_(
     let corrections = 0;
     while (changed && corrections < daysInMonth * 2) {
       changed = false;
-      for (let day = 1; day <= daysInMonth && !changed; day += 1) {
-        if (assignedShiftOnDay_(
-          day, year, month, assignments, person.user
-        ) !== 3 || assignedShiftOnDay_(
-          day + 1, year, month, assignments, person.user
-        ) === 3) {
-          continue;
-        }
-        for (let offset = 1; offset <= 2 && !changed; offset += 1) {
-          const conflictDay = day + offset;
-          if (conflictDay > daysInMonth) continue;
-          const conflictItem = assignedItemOnDay_(
-            conflictDay, year, month, assignments, person.user
-          );
-          if (!conflictItem) continue;
+      const conflict = nightRestConflict_(year, month, daysInMonth, assignments, person.user);
+      if (!conflict) continue;
 
-          if (conflictItem.duty === 'Zaposleni') {
-            removePersonAssignment_(
-              conflictDay, year, month, assignments, person.user, counts
-            );
-            relocateRegularAssignment_(
-              year, month, daysInMonth, assignments, person, staffing,
-              counts, initialStates[person.user], attempt, conflictDay
-            );
-            changed = true;
-            corrections += 1;
-          } else {
-            const nightItem = assignedItemOnDay_(
-              day, year, month, assignments, person.user
-            );
-            if (nightItem && nightItem.duty === 'Zaposleni') {
-              removePersonAssignment_(
-                day, year, month, assignments, person.user, counts
-              );
-              relocateRegularAssignment_(
-                year, month, daysInMonth, assignments, person, staffing,
-                counts, initialStates[person.user], attempt, day
-              );
-              changed = true;
-              corrections += 1;
-            }
-          }
+      if (conflict.excessStart) {
+        for (let day = conflict.excessStart; day <= conflict.endNight; day += 1) {
+          const nightItem = assignedItemOnDay_(
+            day, year, month, assignments, person.user
+          );
+          if (!nightItem || nightItem.duty !== 'Zaposleni') continue;
+          removePersonAssignment_(
+            day, year, month, assignments, person.user, counts
+          );
+          relocateRegularAssignment_(
+            year, month, daysInMonth, assignments, person, staffing,
+            counts, initialStates[person.user], attempt, day
+          );
+          changed = true;
+          corrections += 1;
+          break;
         }
+        continue;
+      }
+
+      const conflictItem = assignedItemOnDay_(
+        conflict.conflictDay, year, month, assignments, person.user
+      );
+      if (conflictItem && conflictItem.duty === 'Zaposleni') {
+        removePersonAssignment_(
+          conflict.conflictDay, year, month, assignments, person.user, counts
+        );
+        relocateRegularAssignment_(
+          year, month, daysInMonth, assignments, person, staffing,
+          counts, initialStates[person.user], attempt, conflict.conflictDay
+        );
+        changed = true;
+        corrections += 1;
+        continue;
+      }
+
+      for (let day = conflict.endNight; day >= conflict.startNight; day -= 1) {
+        const nightItem = assignedItemOnDay_(
+          day, year, month, assignments, person.user
+        );
+        if (!nightItem || nightItem.duty !== 'Zaposleni') continue;
+        removePersonAssignment_(
+          day, year, month, assignments, person.user, counts
+        );
+        relocateRegularAssignment_(
+          year, month, daysInMonth, assignments, person, staffing,
+          counts, initialStates[person.user], attempt, day
+        );
+        changed = true;
+        corrections += 1;
+        break;
       }
     }
   });
+}
+
+function nightRestConflict_(
+  year, month, daysInMonth, assignments, user
+) {
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    if (assignedShiftOnDay_(
+      day, year, month, assignments, user
+    ) !== 3) {
+      continue;
+    }
+
+    const startNight = day;
+    let endNight = day;
+    while (endNight + 1 <= daysInMonth &&
+        assignedShiftOnDay_(
+          endNight + 1, year, month, assignments, user
+        ) === 3) {
+      endNight += 1;
+    }
+
+    if (endNight - startNight + 1 > 2) {
+      return {
+        startNight: startNight,
+        endNight: endNight,
+        excessStart: startNight + 2
+      };
+    }
+
+    for (let offset = 1; offset <= 2; offset += 1) {
+      const conflictDay = endNight + offset;
+      if (conflictDay > daysInMonth) continue;
+      if (assignedShiftOnDay_(
+        conflictDay, year, month, assignments, user
+      )) {
+        return {
+          startNight: startNight,
+          endNight: endNight,
+          conflictDay: conflictDay
+        };
+      }
+    }
+
+    day = endNight;
+  }
+  return null;
 }
 
 function relocateRegularAssignment_(
@@ -2930,7 +3046,7 @@ function fillExactQuota_(
               key: key,
               shift: shift,
               load: workerCount_(assignments[key][shift]),
-              planned: Boolean(plannedShift),
+              planned: plannedShift === shift,
               correction: correctionShift === shift,
               stablePenalty: stablePenaltyIfAssigned_(
                 year, month, daysInMonth, assignments, key, shift, person,
@@ -2948,11 +3064,11 @@ function fillExactQuota_(
       }
       options.sort(function (a, b) {
         return Number(b.coverageNeeded) - Number(a.coverageNeeded) ||
+          Number(b.correction) - Number(a.correction) ||
           a.stablePenalty - b.stablePenalty ||
-          a.quotaPriority - b.quotaPriority ||
           Number(b.planned) - Number(a.planned) ||
+          a.quotaPriority - b.quotaPriority ||
           a.load - b.load ||
-          Number(a.correction) - Number(b.correction) ||
           a.score - b.score;
       });
       if (options.length) {
@@ -3832,18 +3948,26 @@ function workerNightRestValid_(
   for (let day = 1; day <= daysInMonth; day += 1) {
     if (assignedShiftOnDay_(
       day, year, month, assignments, user
-    ) !== 3 || assignedShiftOnDay_(
-      day + 1, year, month, assignments, user
-    ) === 3) {
+    ) !== 3) {
       continue;
     }
+    const startNight = day;
+    let endNight = day;
+    while (endNight + 1 <= daysInMonth &&
+        assignedShiftOnDay_(
+          endNight + 1, year, month, assignments, user
+        ) === 3) {
+      endNight += 1;
+    }
+    if (endNight - startNight + 1 > 2) return false;
     if (assignedShiftOnDay_(
-      day + 1, year, month, assignments, user
+      endNight + 1, year, month, assignments, user
     ) || assignedShiftOnDay_(
-      day + 2, year, month, assignments, user
+      endNight + 2, year, month, assignments, user
     )) {
       return false;
     }
+    day = endNight;
   }
   return true;
 }
@@ -3937,7 +4061,7 @@ function workerStableStartStats_(
     if (!blockCount) {
       blockShift = shift;
       blockCount = 1;
-      stableTarget = offStreak >= 2 && (shift === 1 || shift === 2) ? 2 : 0;
+      stableTarget = offStreak >= 2 && shift === 2 ? 2 : 0;
       if (stableTarget) starts += 1;
       offStreak = 0;
       continue;
