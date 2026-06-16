@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-06-16T07:11:17.396Z",
+  "exportedAt": "2026-06-16T08:05:39.359Z",
   "today": "2026-06-16",
   "appName": "Raspored App",
   "shifts": [
@@ -2165,7 +2165,7 @@
           {
             "name": "OLGA",
             "user": "olga",
-            "duty": "Zaposleni",
+            "duty": "Shift lider",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3343,7 +3343,7 @@
           {
             "name": "NEDA",
             "user": "neda",
-            "duty": "Zaposleni",
+            "duty": "Međusmena",
             "replacedUser": "",
             "replacedName": "",
             "mine": false
@@ -3711,7 +3711,7 @@
           {
             "name": "ANDJELA",
             "user": "andjela",
-            "duty": "Zaposleni",
+            "duty": "Međusmena",
             "replacedUser": "",
             "replacedName": "",
             "mine": false

@@ -1924,7 +1924,7 @@
 
     function publicVisibleSchedule() {
       if (state.publicArchiveKey) return publicDisplayedSchedule();
-      const currentMonth = dateKey(new Date()).slice(0, 7);
+      const currentMonth = serbiaTodayKey().slice(0, 7);
       return state.schedule.filter(day => {
         const month = day.date.slice(0, 7);
         if (month < currentMonth) return false;
@@ -1954,7 +1954,7 @@
       const current = getCurrentShift();
       const adminMode = grid.id === 'adminScheduleGrid';
       const archiveMode = !adminMode && Boolean(state.publicArchiveKey);
-      const today = dateKey(new Date());
+      const today = serbiaTodayKey();
       const currentMonth = today.slice(0, 7);
       const grouped = {};
       schedule.forEach(day => {
@@ -2022,7 +2022,7 @@
     }
 
     function renderDayRow(day, current, adminMode) {
-        const isToday = day.date === dateKey(new Date());
+        const isToday = day.date === serbiaTodayKey();
         const date = parseDateKey(day.date);
         const isWeekend = date.getDay() === 0 || date.getDay() === 6;
         const holiday = holidayName(day.date);
@@ -2215,9 +2215,12 @@
         ? 'Zamena za ' + person.replacedName
         : shortDuty(person.duty);
       const midShiftTime = midShiftLabel(options.shift);
+      const midShiftText = person.duty === 'Međusmena' && midShiftTime
+        ? ' (Međusmena ' + midShiftTime + ')'
+        : '';
       return `<div class="person ${dutyDisplayClass(person.duty)} ${person.mine ? 'mine' : ''} ${options.highlighted ? 'highlighted' : ''} ${replacementClass}" 
         title="${escapeAttr(roleTitle)}">
-        <span>${escapeHtml(person.name)}${person.duty === 'Međusmena' && midShiftTime ? ` (${midShiftTime})` : ''}</span>
+        <span>${escapeHtml(person.name + midShiftText)}</span>
         ${options.canAssignLeader ? `<button class="person-assign-leader" type="button"
           title="Postavi za shift lidera u ovoj smeni"
           onclick="assignShiftLeader('${escapeAttr(options.date)}', ${options.shift}, '${escapeAttr(person.user)}')">Postavi lidera</button>` : ''}
@@ -2345,7 +2348,7 @@
     }
 
     function adminVisibleSchedule() {
-      const todayMonth = dateKey(new Date()).slice(0, 7);
+      const todayMonth = serbiaTodayKey().slice(0, 7);
       return state.adminSchedule.filter(day => {
         const month = day.date.slice(0, 7);
         const sectionKey = 'adminScheduleGrid|' + month;
@@ -2513,19 +2516,17 @@
         <p class="eyebrow">Trenutno radi</p>
         <h2>${shift ? escapeHtml(shift.name) : current.shift + '. smena'}</h2>
         <p style="opacity:.72">${formatDate(current.date)} · ${shift ? escapeHtml(shift.start + '–' + shift.end) : ''}</p>
-        ${people.length ? people.map(personHtml).join('') : '<div class="empty">Za ovu smenu nema unosa.</div>'}`;
+        ${people.length ? people.map(person => personHtml(person, { shift: current.shift })).join('') : '<div class="empty">Za ovu smenu nema unosa.</div>'}`;
     }
 
     function renderMobileUpcoming() {
       const box = $('#mobileUpcoming');
-      const today = new Date();
+      const today = serbiaTodayKey();
       const employeeMode = state.user && state.user.role === 'zaposleni';
       const upcomingDays = employeeMode ? 30 : 14;
       const current = getCurrentShift();
       const dates = Array.from({ length: upcomingDays }, (_, index) => {
-        const date = new Date(today);
-        date.setDate(date.getDate() + index);
-        return dateKey(date);
+        return addDaysToKey(today, index);
       });
       const days = dates
         .map(key => state.schedule.find(day => day.date === key))
@@ -2559,10 +2560,11 @@
     function renderMobileDay(day, current) {
       const date = parseDateKey(day.date);
       const holiday = holidayName(day.date);
+      const today = serbiaTodayKey();
       return `
-        <article class="mobile-day ${day.date === dateKey(new Date()) ? 'today' : ''}">
+        <article class="mobile-day ${day.date === today ? 'today' : ''}">
           <div class="mobile-day-head">
-            <strong>${escapeHtml(shortDay(date))}${day.date === dateKey(new Date()) ? ' · Danas' : ''}</strong>
+            <strong>${escapeHtml(shortDay(date))}${day.date === today ? ' · Danas' : ''}</strong>
             <span>${formatDate(day.date)}</span>
           </div>
           ${holiday ? `<div class="holiday-name">${escapeHtml(holiday)}</div>` : ''}
@@ -2584,7 +2586,7 @@
                     <span>${escapeHtml(shift.start)}–${escapeHtml(shift.end)}</span>
                   </div>
                   <div class="shift-people">
-                    ${people.length ? people.map(personHtml).join('') :
+                    ${people.length ? people.map(person => personHtml(person, { shift: shiftId })).join('') :
                       '<div class="empty">Nema unosa</div>'}
                   </div>
                 </div>`;
@@ -2601,16 +2603,13 @@
         return;
       }
 
-      const today = dateKey(new Date());
-      const tomorrowDate = new Date();
-      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-      const tomorrow = dateKey(tomorrowDate);
+      const today = serbiaTodayKey();
+      const tomorrow = addDaysToKey(today, 1);
       const todayStatus = personalStatus(today);
       const tomorrowStatus = personalStatus(tomorrow);
       const week = Array.from({ length: 7 }, (_, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() + index);
-        const key = dateKey(date);
+        const key = addDaysToKey(today, index);
+        const date = parseDateKey(key);
         const status = personalStatus(key);
         return `<div class="week-day">
           <strong>${index === 0 ? 'Danas' : shortDay(date)}</strong>
@@ -2646,6 +2645,13 @@
         const mine = people.find(person => person.user === state.user.user || person.mine);
         if (mine) {
           const shift = state.shifts.find(item => Number(item.id) === shiftId);
+          if (mine.duty === 'Međusmena') {
+            const midShiftTime = midShiftLabel(shiftId);
+            return {
+              title: midShiftTime ? 'Međusmena ' + midShiftTime : 'Međusmena',
+              detail: midShiftTime || 'Međusmena'
+            };
+          }
           return {
             title: shift ? shift.name : shiftId + '. smena',
             detail: shift ? shift.start + '–' + shift.end + ' · ' + mine.duty : mine.duty
@@ -2814,7 +2820,7 @@
       if (days.some(day => day.date === previous)) {
         dateSelect.value = previous;
       } else {
-        const today = dateKey(new Date());
+        const today = serbiaTodayKey();
         const nextDay = days.find(day => day.date >= today) || days[0];
         dateSelect.value = nextDay ? nextDay.date : '';
       }
@@ -3820,22 +3826,32 @@
 
     function getCurrentShift() {
       const now = new Date();
-      const minutes = now.getHours() * 60 + now.getMinutes();
+      const serbiaNow = serbiaDateParts(now);
+      const minutes = serbiaNow.hour * 60 + serbiaNow.minute;
       let shift = 1;
-      const scheduleDate = new Date(now);
+      let scheduleDate = serbiaNow.key;
       if (minutes >= 6 * 60 && minutes < 14 * 60) shift = 1;
       else if (minutes >= 14 * 60 && minutes < 22 * 60) shift = 2;
       else {
         shift = 3;
-        if (minutes < 6 * 60) scheduleDate.setDate(scheduleDate.getDate() - 1);
+        if (minutes < 6 * 60) scheduleDate = addDaysToKey(scheduleDate, -1);
       }
-      return { shift, date: dateKey(scheduleDate) };
+      return { shift, date: scheduleDate };
     }
 
     function updateClock() {
       const now = new Date();
-      $('#clock').textContent = now.toLocaleTimeString('sr-RS', { hour: '2-digit', minute: '2-digit' });
-      $('#dateLabel').textContent = now.toLocaleDateString('sr-RS', { weekday: 'long', day: 'numeric', month: 'long' });
+      $('#clock').textContent = now.toLocaleTimeString('sr-RS', {
+        timeZone: 'Europe/Belgrade',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      $('#dateLabel').textContent = now.toLocaleDateString('sr-RS', {
+        timeZone: 'Europe/Belgrade',
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
       if (state.shifts.length) {
         updateCurrentPill();
         renderMobileCurrent();
@@ -3872,6 +3888,37 @@
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
+    }
+
+    function serbiaDateParts(date = new Date()) {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Belgrade',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+      }).formatToParts(date).reduce((result, part) => {
+        result[part.type] = part.value;
+        return result;
+      }, {});
+      const key = `${parts.year}-${parts.month}-${parts.day}`;
+      return {
+        key,
+        hour: Number(parts.hour),
+        minute: Number(parts.minute)
+      };
+    }
+
+    function serbiaTodayKey() {
+      return serbiaDateParts().key;
+    }
+
+    function addDaysToKey(key, days) {
+      const date = parseDateKey(key);
+      date.setDate(date.getDate() + days);
+      return dateKey(date);
     }
 
     function parseDateKey(key) {
