@@ -417,7 +417,7 @@ function saveUsers(token, users) {
     const slavaDate = normalizeOptionalDateKey_(item.slavaDate);
     const vacationStart = normalizeVacationStart_(item.vacationStart);
     const vacationWeeks = vacationStart
-      ? Math.max(1, Math.min(2, Number(item.vacationWeeks) || 1))
+      ? Math.max(1, Math.min(2, Number(item.vacationWeeks) || 2))
       : 0;
     if (!name || !user) throw new Error('Svaki korisnik mora imati ime i user.');
     if (!role) throw new Error('Nepoznata rola za korisnika ' + user + '.');
@@ -624,6 +624,7 @@ function editSchedule(token, request) {
   const rows = readRawSchedule_();
   const dateKey = dateKey_(date);
   let changedPerson = null;
+  let changedPeople = null;
   if (action === 'remove') {
     const matchingRows = rows.filter(function (row) {
       return dateKey_(row.date) === dateKey &&
@@ -706,6 +707,50 @@ function editSchedule(token, request) {
       user: matchingRow.user,
       duty: 'Shift lider'
     };
+  } else if (action === 'assignMidShift') {
+    if (shift !== 1 && shift !== 2) {
+      throw new Error('Međusmena može biti postavljena samo u I ili II smeni.');
+    }
+    const shiftRows = rows.filter(function (row) {
+      return dateKey_(row.date) === dateKey && row.shift === shift;
+    });
+    const matchingRow = shiftRows.find(function (row) {
+      return row.user.toLowerCase() === userKey;
+    });
+    if (!matchingRow) {
+      throw new Error('Zaposleni nije pronađen u izabranoj smeni.');
+    }
+    if (matchingRow.duty !== 'Zaposleni' && matchingRow.duty !== 'Međusmena') {
+      throw new Error('Za međusmenu može biti postavljen samo redovni zaposleni.');
+    }
+    const activating = matchingRow.duty !== 'Međusmena';
+    changedPeople = [];
+    shiftRows.forEach(function (row) {
+      if (row.duty !== 'Međusmena' && row.user.toLowerCase() !== userKey) {
+        return;
+      }
+      const nextDuty = row.user.toLowerCase() === userKey && activating
+        ? 'Međusmena'
+        : 'Zaposleni';
+      if (row.duty === nextDuty) return;
+      const range = sheet.getRange(
+        row.rowIndex + 2, 1, 1, APP.scheduleHeaders.length
+      );
+      const values = range.getValues()[0];
+      values[7] = nextDuty;
+      values[10] = new Date();
+      range.setValues([values]);
+      changedPeople.push({
+        name: row.name,
+        user: row.user,
+        duty: nextDuty
+      });
+    });
+    changedPerson = {
+      name: matchingRow.name,
+      user: matchingRow.user,
+      duty: activating ? 'Međusmena' : 'Zaposleni'
+    };
   } else {
     throw new Error('Nepoznata ručna izmena rasporeda.');
   }
@@ -715,7 +760,8 @@ function editSchedule(token, request) {
       action: action,
       date: dateKey,
       shift: shift,
-      person: changedPerson
+      person: changedPerson,
+      people: changedPeople
     }
   };
 }
@@ -1067,7 +1113,7 @@ function getUsers_() {
         slavaDate: normalizeOptionalDateKey_(row[6]),
         vacationStart: normalizeVacationStart_(row[7]),
         vacationWeeks: row[7]
-          ? Math.max(1, Math.min(2, Number(row[8]) || 1))
+          ? Math.max(1, Math.min(2, Number(row[8]) || 2))
           : 0
       };
     });
@@ -1725,7 +1771,7 @@ function tryBuildCyclePhased_(
   );
   fillQuotaTolerance_(
     year, month, daysInMonth, assignments, targetWorkers, staffing,
-    counts, target, attempt
+    counts, target, initialStates, attempt
   );
   rebalanceQuotaDeficits_(
     year, month, daysInMonth, assignments, targetWorkers, counts,
@@ -1763,7 +1809,9 @@ function tryBuildCyclePhased_(
     return warning.indexOf('ispod minimuma') >= 0 ||
       warning.indexOf('jer nije pronađena dostupna zamena') >= 0 ||
       warning.indexOf('planirani fond') >= 0 ||
-      warning.indexOf('tačan fond') >= 0;
+      warning.indexOf('tačan fond') >= 0 ||
+      warning.indexOf('nema dva slobodna dana posle') >= 0 ||
+      warning.indexOf('Manje od 80% početaka') >= 0;
   });
   return {
     ok: true,
@@ -2673,6 +2721,10 @@ function relocateRegularAssignment_(
       options.push({
         key: key,
         shift: shift,
+        stablePenalty: stablePenaltyIfAssigned_(
+          year, month, daysInMonth, assignments, key, shift, person,
+          initialState
+        ),
         coverageNeeded: workerCount_(assignments[key][shift]) <
           requiredCoverageMinimum_(
             date, shift, staffing, assignments[key]
@@ -2686,6 +2738,7 @@ function relocateRegularAssignment_(
   }
   options.sort(function (a, b) {
     return Number(b.coverageNeeded) - Number(a.coverageNeeded) ||
+      a.stablePenalty - b.stablePenalty ||
       a.distance - b.distance || a.score - b.score;
   });
   if (!options.length) return false;
@@ -2723,7 +2776,14 @@ function extraRestCandidates_(
     assignments[key][shift].pop();
     return valid;
   }).sort(function (a, b) {
-    return counts[a.user] - counts[b.user] ||
+    return stablePenaltyIfAssigned_(
+        year, month, daysInMonth, assignments, key, shift, a,
+        initialStates[a.user]
+      ) - stablePenaltyIfAssigned_(
+        year, month, daysInMonth, assignments, key, shift, b,
+        initialStates[b.user]
+      ) ||
+      counts[a.user] - counts[b.user] ||
       pseudoRandom_(a.user + '|' + key + '|' + shift + '|' + attempt) -
       pseudoRandom_(b.user + '|' + key + '|' + shift + '|' + attempt);
   });
@@ -2765,6 +2825,13 @@ function fillAllMinimumCoverage_(
           const aDeficit = targetFor_(a, target) - counts[a.user];
           const bDeficit = targetFor_(b, target) - counts[b.user];
           return bDeficit - aDeficit ||
+            stablePenaltyIfAssigned_(
+              year, month, daysInMonth, assignments, key, shift, a,
+              initialStates[a.user]
+            ) - stablePenaltyIfAssigned_(
+              year, month, daysInMonth, assignments, key, shift, b,
+              initialStates[b.user]
+            ) ||
             pseudoRandom_(a.user + '|' + key + '|' + shift + '|' + attempt) -
             pseudoRandom_(b.user + '|' + key + '|' + shift + '|' + attempt);
         });
@@ -2865,6 +2932,10 @@ function fillExactQuota_(
               load: workerCount_(assignments[key][shift]),
               planned: Boolean(plannedShift),
               correction: correctionShift === shift,
+              stablePenalty: stablePenaltyIfAssigned_(
+                year, month, daysInMonth, assignments, key, shift, person,
+                initialStates[person.user]
+              ),
               coverageNeeded: workerCount_(assignments[key][shift]) <
                 priorityCoverageTarget_(
                   date, shift, staffing, assignments[key]
@@ -2877,6 +2948,7 @@ function fillExactQuota_(
       }
       options.sort(function (a, b) {
         return Number(b.coverageNeeded) - Number(a.coverageNeeded) ||
+          a.stablePenalty - b.stablePenalty ||
           a.quotaPriority - b.quotaPriority ||
           Number(b.planned) - Number(a.planned) ||
           a.load - b.load ||
@@ -2946,6 +3018,15 @@ function rebalanceQuotaDeficits_(
             const donorValid = workerFinalRulesValid_(
               year, month, daysInMonth, assignments, donor
             );
+            const stablePenalty =
+              workerStableStartViolationCount_(
+                year, month, daysInMonth, assignments, person.user,
+                initialStates[person.user]
+              ) +
+              workerStableStartViolationCount_(
+                year, month, daysInMonth, assignments, donor.user,
+                initialStates[donor.user]
+              );
             assignments[key][shift][itemIndex] = item;
             if (!valid || !donorValid) return;
             candidates.push({
@@ -2954,6 +3035,7 @@ function rebalanceQuotaDeficits_(
               itemIndex: itemIndex,
               donor: donor,
               donorSurplus: counts[donor.user] - targetFor_(donor, target),
+              stablePenalty: stablePenalty,
               score: pseudoRandom_(
                 person.user + '|' + donor.user + '|' + key + '|' + shift
               )
@@ -2962,7 +3044,9 @@ function rebalanceQuotaDeficits_(
         }
       }
       candidates.sort(function (a, b) {
-        return b.donorSurplus - a.donorSurplus || a.score - b.score;
+        return b.donorSurplus - a.donorSurplus ||
+          a.stablePenalty - b.stablePenalty ||
+          a.score - b.score;
       });
       if (!candidates.length) break;
       const selected = candidates[0];
@@ -2978,7 +3062,7 @@ function rebalanceQuotaDeficits_(
 
 function fillQuotaTolerance_(
   year, month, daysInMonth, assignments, workers, staffing,
-  counts, target, attempt
+  counts, target, initialStates, attempt
 ) {
   workers.slice().sort(function (a, b) {
     return (counts[a.user] - targetFor_(a, target)) -
@@ -3016,6 +3100,10 @@ function fillQuotaTolerance_(
           options.push({
             key: key,
             shift: shift,
+            stablePenalty: stablePenaltyIfAssigned_(
+              year, month, daysInMonth, assignments, key, shift, person,
+              initialStates[person.user]
+            ),
             coverageNeeded: workerCount_(assignments[key][shift]) <
               requiredCoverageMinimum_(
                 date, shift, staffing, assignments[key]
@@ -3029,6 +3117,7 @@ function fillQuotaTolerance_(
       }
       options.sort(function (a, b) {
         return Number(b.coverageNeeded) - Number(a.coverageNeeded) ||
+          a.stablePenalty - b.stablePenalty ||
           a.load - b.load || a.score - b.score;
       });
       if (!options.length) break;
@@ -3789,6 +3878,83 @@ function workerFinalRulesValid_(
   );
 }
 
+function workerStableStartValid_(
+  year, month, daysInMonth, assignments, user, initialState
+) {
+  return workerStableStartViolationCount_(
+    year, month, daysInMonth, assignments, user, initialState
+  ) === 0;
+}
+
+function stablePenaltyIfAssigned_(
+  year, month, daysInMonth, assignments, key, shift, person, initialState
+) {
+  assignments[key][shift].push({ person: person, duty: 'Zaposleni' });
+  const penalty = workerStableStartViolationCount_(
+    year, month, daysInMonth, assignments, person.user, initialState
+  );
+  assignments[key][shift].pop();
+  return penalty;
+}
+
+function workerStableStartViolationCount_(
+  year, month, daysInMonth, assignments, user, initialState
+) {
+  return workerStableStartStats_(
+    year, month, daysInMonth, assignments, user, initialState
+  ).violations;
+}
+
+function workerStableStartStats_(
+  year, month, daysInMonth, assignments, user, initialState
+) {
+  const recent = initialState && Array.isArray(initialState.recentShifts)
+    ? initialState.recentShifts
+    : [];
+  let offStreak = 0;
+  for (let index = recent.length - 1; index >= 0; index -= 1) {
+    if (Number(recent[index]) !== 0) break;
+    offStreak += 1;
+  }
+
+  let blockShift = 0;
+  let blockCount = 0;
+  let stableTarget = 0;
+  let starts = 0;
+  let violations = 0;
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const shift = assignedShiftOnDay_(
+      day, year, month, assignments, user
+    );
+    if (!shift) {
+      offStreak += 1;
+      blockShift = 0;
+      blockCount = 0;
+      stableTarget = 0;
+      continue;
+    }
+
+    if (!blockCount) {
+      blockShift = shift;
+      blockCount = 1;
+      stableTarget = offStreak >= 2 && (shift === 1 || shift === 2) ? 2 : 0;
+      if (stableTarget) starts += 1;
+      offStreak = 0;
+      continue;
+    }
+
+    if (stableTarget && blockCount < stableTarget && shift !== blockShift) {
+      violations += 1;
+    }
+    blockCount += 1;
+    offStreak = 0;
+  }
+  return {
+    starts: starts,
+    violations: violations
+  };
+}
+
 function buildFutureSpecial_(year, month, daysInMonth, workers) {
   const output = {};
   workers.forEach(function (person) {
@@ -3817,6 +3983,7 @@ function validateScheduleWithWarnings_(
   const counts = {};
   const workByUser = {};
   const regularWorkByUser = {};
+  const stableStats = { starts: 0, violations: 0 };
   workers.forEach(function (person) {
     counts[person.user] = 0;
     workByUser[person.user] = {};
@@ -3902,21 +4069,17 @@ function validateScheduleWithWarnings_(
     if (!workerNightRestValid_(
       year, month, daysInMonth, assignments, person.user
     )) {
-      return {
-        error: person.name +
-          ' nema dva slobodna dana posle poslednje treće smene.',
-        warnings: warnings
-      };
+      warnings.push(
+        person.name +
+          ' nema dva slobodna dana posle poslednje treće smene.'
+      );
     }
     if (isReplacementWorker_(person)) {
       const replacementRestError = replacementNightRestError_(
         person, workByUser[person.user], daysInMonth
       );
       if (replacementRestError) {
-        return {
-          error: replacementRestError,
-          warnings: warnings
-        };
+        warnings.push(replacementRestError);
       }
       continue;
     }
@@ -3926,13 +4089,21 @@ function validateScheduleWithWarnings_(
       const endNight = secondNight ? day + 1 : day;
       if (workByUser[person.user][endNight + 1] ||
           workByUser[person.user][endNight + 2]) {
-        return {
-          error: person.name + ' nema dva slobodna dana posle treće smene.',
-          warnings: warnings
-        };
+        warnings.push(person.name + ' nema dva slobodna dana posle treće smene.');
       }
       if (secondNight) day += 1;
     }
+    const personStableStats = workerStableStartStats_(
+      year, month, daysInMonth, assignments, person.user, null
+    );
+    stableStats.starts += personStableStats.starts;
+    stableStats.violations += personStableStats.violations;
+  }
+  if (stableStats.starts > 0 &&
+      (stableStats.starts - stableStats.violations) / stableStats.starts < 0.8) {
+    warnings.push(
+      'Manje od 80% početaka posle dva slobodna dana nastavlja istu smenu.'
+    );
   }
   return { error: '', warnings: warnings };
 }
