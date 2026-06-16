@@ -2216,7 +2216,7 @@
         : shortDuty(person.duty);
       const midShiftTime = midShiftLabel(options.shift);
       const midShiftText = person.duty === 'Međusmena' && midShiftTime
-        ? ' (Međusmena ' + midShiftTime + ')'
+        ? '(' + midShiftTime + ')'
         : '';
       return `<div class="person ${dutyDisplayClass(person.duty)} ${person.mine ? 'mine' : ''} ${options.highlighted ? 'highlighted' : ''} ${replacementClass}" 
         title="${escapeAttr(roleTitle)}">
@@ -2648,7 +2648,7 @@
           if (mine.duty === 'Međusmena') {
             const midShiftTime = midShiftLabel(shiftId);
             return {
-              title: midShiftTime ? 'Međusmena ' + midShiftTime : 'Međusmena',
+              title: midShiftTime ? 'Međusmena (' + midShiftTime + ')' : 'Međusmena',
               detail: midShiftTime || 'Međusmena'
             };
           }
