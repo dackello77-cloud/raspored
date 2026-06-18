@@ -817,7 +817,8 @@
     .monthly-plan th:nth-child(4), .monthly-plan td:nth-child(4) { width: 148px; }
     .monthly-plan th:nth-child(5), .monthly-plan td:nth-child(5) { width: 92px; }
     .monthly-plan th:nth-child(6), .monthly-plan td:nth-child(6) { width: 46px; }
-    .monthly-plan th:nth-child(n + 7), .monthly-plan td:nth-child(n + 7) { width: 102px; }
+    .monthly-plan th:nth-child(7), .monthly-plan td:nth-child(7) { width: 92px; }
+    .monthly-plan th:nth-child(n + 8), .monthly-plan td:nth-child(n + 8) { width: 102px; }
     .monthly-plan input,
     .monthly-plan select {
       width: 100%;
@@ -858,6 +859,21 @@
       color: var(--muted);
       font-size: 10px;
       font-weight: 500;
+    }
+    .plan-no-together {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      margin: 0;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .plan-no-together input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
     }
     .group-row td {
       padding: 7px 9px;
@@ -3178,7 +3194,10 @@
           freeDates: $('.plan-free-date', row).value
             ? [$('.plan-free-date', row).value]
             : [],
-          freeDayType: $('.plan-free-type', row).value
+          freeDayType: $('.plan-free-type', row).value,
+          noTogether: $('.plan-no-together-check', row)
+            ? $('.plan-no-together-check', row).checked
+            : false
         };
       });
     }
@@ -3322,6 +3341,7 @@
         <th>Obavezno slobodan</th>
         <th>Tip</th>
         <th>Fond</th>
+        <th>Ne zajedno</th>
         ${weeks.map((week, index) => `<th>
           Nedelja ${index + 1}
           <span class="week-range">${weekRangeLabel(month, week)}</span>
@@ -3337,7 +3357,7 @@
           user, year, month, weeks
         );
         const group = user.duty !== lastDuty
-          ? `<tr class="group-row"><td colspan="${6 + weeks.length}">${dutyGroupLabel(user.duty)}</td></tr>`
+          ? `<tr class="group-row"><td colspan="${7 + weeks.length}">${dutyGroupLabel(user.duty)}</td></tr>`
           : '';
         lastDuty = user.duty;
         return group + `<tr data-user="${escapeAttr(user.user)}" data-duty="${escapeAttr(user.duty)}">
@@ -3367,6 +3387,12 @@
             <option value="slava" ${automaticSlavaDate ? 'selected' : ''}>Slava</option>
           </select></td>
           <td><strong class="plan-target">-</strong></td>
+          <td>${user.duty === 'radnik'
+            ? `<label class="plan-no-together" title="Generator pokušava da izabrani radnici ne rade istog dana">
+                <input class="plan-no-together-check" type="checkbox">
+                <span>Da</span>
+              </label>`
+            : ''}</td>
           ${weeks.map(week => {
             const vacation = automaticVacationWeeks.has(week.index);
             return `<td class="${vacation ? 'plan-vacation-cell' : ''}"><select class="plan-week-duty"
@@ -3383,8 +3409,20 @@
         .forEach(control => control.addEventListener('change', handleWeekDutyChange));
       $$('.plan-eligible-replacement', $('#monthPlanBody'))
         .forEach(control => control.addEventListener('change', reconcileWeekReplacements));
+      $$('.plan-no-together-check', $('#monthPlanBody'))
+        .forEach(control => control.addEventListener('change', handleNoTogetherChange));
       updateStaffingSuggestion();
       reconcileWeekReplacements();
+    }
+
+    function handleNoTogetherChange(event) {
+      const selected = $$('.plan-no-together-check:checked');
+      if (selected.length <= 3) return;
+      event.target.checked = false;
+      showToast(
+        'Izabran je maksimalan broj radnika za opciju Ne zajedno.',
+        true
+      );
     }
 
     function monthlyDutyOptions(selected, baseDuty) {
@@ -3514,6 +3552,19 @@
     }
 
     async function generateSchedule() {
+      const noTogether = $$('.plan-no-together-check:checked');
+      if (noTogether.length > 0 && (noTogether.length < 2 || noTogether.length > 3)) {
+        showToast(
+          'Za opciju Ne zajedno izaberite minimum 2, a maksimum 3 radnika.',
+          true
+        );
+        noTogether[0].scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        return;
+      }
+
       const missingReplacement = $$('.plan-week-duty').find(select =>
         select.value === 'off' &&
         select.closest('tr[data-user]')?.dataset.duty !== 'monitoring' &&
