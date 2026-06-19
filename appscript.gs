@@ -1,6 +1,6 @@
 const APP = {
   spreadsheetId: '11R4ScsR11CeQIsqu-LfwMQsZbsU-jUGwJxjbUYOia4g',
-  apiVersion: '1.18.3',
+  apiVersion: '1.18.4',
   sheets: {
     users: 'Login',
     schedule: 'Raspored',
@@ -1914,6 +1914,10 @@ function tryBuildCyclePhased_(
   removeAllPlannedAbsences_(
     year, month, daysInMonth, assignments, configs, counts
   );
+  preserveWholeFreeWeekends_(
+    year, month, daysInMonth, assignments, targetWorkers, staffing, counts,
+    target, initialStates, attempt
+  );
   repairNightRestForAllWorkers_(
     year, month, daysInMonth, assignments, targetWorkers, staffing,
     counts, initialStates, attempt + 31
@@ -1943,6 +1947,7 @@ function tryBuildCyclePhased_(
       warning.indexOf('planirani fond') >= 0 ||
       warning.indexOf('tačan fond') >= 0 ||
       warning.indexOf('nema dva slobodna dana posle') >= 0 ||
+      warning.indexOf('nema potpuno slobodan vikend') >= 0 ||
       warning.indexOf('Ne zajedno je ispoštovano') >= 0 ||
       warning.indexOf('Manje od 80% početaka') >= 0;
   });
@@ -1954,6 +1959,104 @@ function tryBuildCyclePhased_(
     ),
     warnings: finalWarnings
   };
+}
+
+function fullWeekendStarts_(year, month, daysInMonth) {
+  const weekends = [];
+  for (let day = 1; day < daysInMonth; day += 1) {
+    if (new Date(year, month - 1, day, 12).getDay() === 6) {
+      weekends.push(day);
+    }
+  }
+  return weekends;
+}
+
+function wholeFreeWeekendCount_(
+  year, month, daysInMonth, assignments, user
+) {
+  return fullWeekendStarts_(year, month, daysInMonth).filter(function (saturday) {
+    return !assignedShiftOnDay_(
+      saturday, year, month, assignments, user
+    ) && !assignedShiftOnDay_(
+      saturday + 1, year, month, assignments, user
+    );
+  }).length;
+}
+
+function breaksLastWholeFreeWeekend_(
+  date, year, month, daysInMonth, assignments, user
+) {
+  if (date.getDay() !== 0 && date.getDay() !== 6) return 0;
+  const day = date.getDate();
+  const otherDay = date.getDay() === 6 ? day + 1 : day - 1;
+  if (otherDay < 1 || otherDay > daysInMonth ||
+      assignedShiftOnDay_(otherDay, year, month, assignments, user)) {
+    return 0;
+  }
+  return wholeFreeWeekendCount_(
+    year, month, daysInMonth, assignments, user
+  ) <= 1 ? 1 : 0;
+}
+
+function preserveWholeFreeWeekends_(
+  year, month, daysInMonth, assignments, workers, staffing, counts,
+  target, initialStates, attempt
+) {
+  const weekends = fullWeekendStarts_(year, month, daysInMonth);
+  workers.slice().sort(function (a, b) {
+    return counts[b.user] - counts[a.user];
+  }).forEach(function (person) {
+    if (wholeFreeWeekendCount_(
+      year, month, daysInMonth, assignments, person.user
+    )) return;
+
+    const options = weekends.map(function (saturday) {
+      const workedDays = [saturday, saturday + 1].filter(function (day) {
+        return assignedShiftOnDay_(
+          day, year, month, assignments, person.user
+        );
+      });
+      const removable = workedDays.length && workedDays.every(function (day) {
+        const date = new Date(year, month - 1, day, 12);
+        const key = dateKey_(date);
+        const shift = assignedShiftOnDay_(
+          day, year, month, assignments, person.user
+        );
+        const item = assignments[key][shift].find(function (entry) {
+          return entry.person.user === person.user;
+        });
+        return item && item.duty === 'Zaposleni' &&
+          workerCount_(assignments[key][shift]) >
+            requiredCoverageMinimum_(
+              date, shift, staffing, assignments[key]
+            );
+      });
+      return {
+        saturday: saturday,
+        workedDays: workedDays,
+        removable: removable,
+        score: pseudoRandom_(
+          person.user + '|free-weekend|' + saturday + '|' + attempt
+        )
+      };
+    }).filter(function (option) {
+      return option.removable;
+    }).sort(function (a, b) {
+      return a.workedDays.length - b.workedDays.length || a.score - b.score;
+    });
+
+    if (!options.length) return;
+    options[0].workedDays.forEach(function (day) {
+      removePersonAssignment_(
+        day, year, month, assignments, person.user, counts
+      );
+    });
+  });
+
+  fillQuotaTolerance_(
+    year, month, daysInMonth, assignments, workers, staffing,
+    counts, target, initialStates, attempt + 43, true
+  );
 }
 
 function removeMonthStartNightRest_(
@@ -3150,6 +3253,11 @@ function fillAllMinimumCoverage_(
           return noTogetherDayPenalty_(assignments[key], a) -
             noTogetherDayPenalty_(assignments[key], b) ||
             bDeficit - aDeficit ||
+            breaksLastWholeFreeWeekend_(
+              date, year, month, daysInMonth, assignments, a.user
+            ) - breaksLastWholeFreeWeekend_(
+              date, year, month, daysInMonth, assignments, b.user
+            ) ||
             stablePenaltyIfAssigned_(
               year, month, daysInMonth, assignments, key, shift, a,
               initialStates[a.user]
@@ -3254,6 +3362,9 @@ function fillExactQuota_(
             options.push({
               key: key,
               shift: shift,
+              weekendPenalty: breaksLastWholeFreeWeekend_(
+                date, year, month, daysInMonth, assignments, person.user
+              ),
               load: workerCount_(assignments[key][shift]),
               planned: plannedShift === shift,
               correction: correctionShift === shift,
@@ -3276,6 +3387,7 @@ function fillExactQuota_(
       }
       options.sort(function (a, b) {
         return Number(b.coverageNeeded) - Number(a.coverageNeeded) ||
+          a.weekendPenalty - b.weekendPenalty ||
           Number(b.correction) - Number(a.correction) ||
           a.noTogetherPenalty - b.noTogetherPenalty ||
           a.stablePenalty - b.stablePenalty ||
@@ -3396,13 +3508,14 @@ function rebalanceQuotaDeficits_(
 
 function fillQuotaTolerance_(
   year, month, daysInMonth, assignments, workers, staffing,
-  counts, target, initialStates, attempt
+  counts, target, initialStates, attempt, fillExactTarget
 ) {
   workers.slice().sort(function (a, b) {
     return (counts[a.user] - targetFor_(a, target)) -
       (counts[b.user] - targetFor_(b, target));
   }).forEach(function (person) {
-    const minimumAccepted = targetFor_(person, target) - 1;
+    const minimumAccepted = targetFor_(person, target) -
+      (fillExactTarget ? 0 : 1);
     while (counts[person.user] < minimumAccepted) {
       const options = [];
       for (let day = 1; day <= daysInMonth; day += 1) {
@@ -3434,6 +3547,9 @@ function fillQuotaTolerance_(
           options.push({
             key: key,
             shift: shift,
+            weekendPenalty: breaksLastWholeFreeWeekend_(
+              date, year, month, daysInMonth, assignments, person.user
+            ),
             stablePenalty: stablePenaltyIfAssigned_(
               year, month, daysInMonth, assignments, key, shift, person,
               initialStates[person.user]
@@ -3452,6 +3568,7 @@ function fillQuotaTolerance_(
       }
       options.sort(function (a, b) {
         return Number(b.coverageNeeded) - Number(a.coverageNeeded) ||
+          a.weekendPenalty - b.weekendPenalty ||
           a.noTogetherPenalty - b.noTogetherPenalty ||
           a.stablePenalty - b.stablePenalty ||
           a.load - b.load || a.score - b.score;
@@ -4378,6 +4495,13 @@ function validateScheduleWithWarnings_(
       warnings.push(
         person.name + ' ima ' + counts[person.user] + ' smena, planirani fond je ' +
         personTarget + ' (dozvoljeno odstupanje je jedna smena).'
+      );
+    }
+    if (!wholeFreeWeekendCount_(
+      year, month, daysInMonth, assignments, person.user
+    )) {
+      warnings.push(
+        person.name + ' nema potpuno slobodan vikend (subota i nedelja).'
       );
     }
     for (let freeIndex = 0; freeIndex < (person.freeDates || []).length; freeIndex += 1) {
