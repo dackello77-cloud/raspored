@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-06-19T10:48:57.844Z",
+  "exportedAt": "2026-06-19T13:05:30.337Z",
   "today": "2026-06-19",
   "appName": "Raspored App",
   "shifts": [
@@ -3203,14 +3203,6 @@
           {
             "name": "UROS",
             "user": "uros",
-            "duty": "Zaposleni",
-            "replacedUser": "",
-            "replacedName": "",
-            "mine": false
-          },
-          {
-            "name": "DANIEL",
-            "user": "daniel",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
