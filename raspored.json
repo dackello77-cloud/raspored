@@ -1,6 +1,6 @@
 {
-  "exportedAt": "2026-07-21T09:55:21.696Z",
-  "today": "2026-07-21",
+  "exportedAt": "2026-08-31T12:20:51.548Z",
+  "today": "2026-08-31",
   "appName": "Raspored App",
   "shifts": [
     {
@@ -9431,6 +9431,3230 @@
           {
             "name": "JELENA C",
             "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-01",
+      "day": "Utorak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "dinic",
+            "replacedName": "NEVENA D",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "ivana",
+            "replacedName": "IVANA",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-02",
+      "day": "Sreda",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "dinic",
+            "replacedName": "NEVENA D",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-03",
+      "day": "Četvrtak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "ivana",
+            "replacedName": "IVANA",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "dinic",
+            "replacedName": "NEVENA D",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-04",
+      "day": "Petak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "ivana",
+            "replacedName": "IVANA",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "dinic",
+            "replacedName": "NEVENA D",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-05",
+      "day": "Subota",
+      "shifts": {
+        "1": [
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "ivana",
+            "replacedName": "IVANA",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-06",
+      "day": "Nedelja",
+      "shifts": {
+        "1": [
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-07",
+      "day": "Ponedeljak",
+      "shifts": {
+        "1": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "jecad",
+            "replacedName": "JELENA D",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-08",
+      "day": "Utorak",
+      "shifts": {
+        "1": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "ivana",
+            "replacedName": "IVANA",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-09",
+      "day": "Sreda",
+      "shifts": {
+        "1": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "jecad",
+            "replacedName": "JELENA D",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "ivana",
+            "replacedName": "IVANA",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-10",
+      "day": "Četvrtak",
+      "shifts": {
+        "1": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "ivana",
+            "replacedName": "IVANA",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "jecad",
+            "replacedName": "JELENA D",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-11",
+      "day": "Petak",
+      "shifts": {
+        "1": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "ivana",
+            "replacedName": "IVANA",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "jecad",
+            "replacedName": "JELENA D",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-12",
+      "day": "Subota",
+      "shifts": {
+        "1": [
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "ivana",
+            "replacedName": "IVANA",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-13",
+      "day": "Nedelja",
+      "shifts": {
+        "1": [
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-14",
+      "day": "Ponedeljak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "jecad",
+            "replacedName": "JELENA D",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-15",
+      "day": "Utorak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "jecad",
+            "replacedName": "JELENA D",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "day": "Sreda",
+      "shifts": {
+        "1": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "jecad",
+            "replacedName": "JELENA D",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-17",
+      "day": "Četvrtak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "jecad",
+            "replacedName": "JELENA D",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "day": "Petak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-19",
+      "day": "Subota",
+      "shifts": {
+        "1": [
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-20",
+      "day": "Nedelja",
+      "shifts": {
+        "1": [
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "jecad",
+            "replacedName": "JELENA D",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "day": "Ponedeljak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "day": "Utorak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "day": "Sreda",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-24",
+      "day": "Četvrtak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-25",
+      "day": "Petak",
+      "shifts": {
+        "1": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-26",
+      "day": "Subota",
+      "shifts": {
+        "1": [
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-27",
+      "day": "Nedelja",
+      "shifts": {
+        "1": [
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "UROS",
+            "user": "uros",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-28",
+      "day": "Ponedeljak",
+      "shifts": {
+        "1": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VELKO",
+            "user": "veljko",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "VUKASIN",
+            "user": "vukasin",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-29",
+      "day": "Utorak",
+      "shifts": {
+        "1": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "DANIEL",
+            "user": "daniel",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "OLGA",
+            "user": "olga",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-30",
+      "day": "Sreda",
+      "shifts": {
+        "1": [
+          {
+            "name": "NEVENA A",
+            "user": "nena",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "MATIJA",
+            "user": "matija",
+            "duty": "Monitoring I",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "BOGDAN",
+            "user": "bogdan",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "IVANA",
+            "user": "ivana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ANA",
+            "user": "ana",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "2": [
+          {
+            "name": "MILOŠ",
+            "user": "milos",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "ACA",
+            "user": "aca",
+            "duty": "Monitoring II",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA C",
+            "user": "jecac",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NIKOLA",
+            "user": "nikola",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "SASKA",
+            "user": "saska",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          }
+        ],
+        "3": [
+          {
+            "name": "MIHAJLO",
+            "user": "mihajlo",
+            "duty": "Shift lider",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "JELENA D",
+            "user": "jecad",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEDA",
+            "user": "neda",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "NEVENA D",
+            "user": "dinic",
+            "duty": "Zaposleni",
+            "replacedUser": "",
+            "replacedName": "",
+            "mine": false
+          },
+          {
+            "name": "UROS",
+            "user": "uros",
             "duty": "Zaposleni",
             "replacedUser": "",
             "replacedName": "",
