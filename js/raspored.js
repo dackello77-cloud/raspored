@@ -223,13 +223,17 @@ function applySearchFilter(term) {
   const chips = document.querySelectorAll(".emp-chip");
   const t = term.trim().toLowerCase();
 
-  // Prijavljeni zaposleni je uvek prvi u svojoj smeni (ispred lidera). Tražena osoba
-  // se samo markira drugom bojom — ostaje na svom mestu.
+  // Prijavljeni zaposleni: on je uvek prvi u svojoj smeni (ispred lidera), a tražena osoba
+  // se samo markira drugom bojom i ostaje na svom mestu.
+  // Bez prijave i za administratora: tražena osoba ide prva u smeni.
+  const workerView = !!RASPORED_ME_EMP;
   document.querySelectorAll(".day-row .shift-cell").forEach(cell => {
     const list = [...cell.querySelectorAll(":scope > .emp-chip")];
     list.sort((a, b) => a.dataset.order - b.dataset.order).forEach(c => cell.appendChild(c));
-    const me = list.find(c => c.classList.contains("is-me"));
-    if (me) cell.prepend(me);
+    const first = workerView
+      ? list.find(c => c.classList.contains("is-me"))
+      : t && list.find(c => c.dataset.name === t);
+    if (first) cell.prepend(first);
   });
   let count = 0;
   chips.forEach(chip => {
