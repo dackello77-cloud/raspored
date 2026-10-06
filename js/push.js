@@ -39,7 +39,8 @@ async function pushSyncExisting() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return;
   const sub = await pushCurrent();
-  if (sub) pushSave(sub);
+  if (sub) await pushSave(sub);
+  pushRefreshButton();
 }
 
 async function pushEnable() {
@@ -63,7 +64,11 @@ async function pushEnable() {
     if (error) {
       alert(/push_subscribe/.test(error.message)
         ? "Obaveštenja još nisu uključena u bazi — treba pokrenuti SQL iz fajla sql/migration_008_push.sql u Supabase."
-        : "Greška: " + error.message);
+        : "Telefon nije sačuvan za obaveštenja. Greška: " + error.message);
+    } else {
+      const { data: { session } } = await sb.auth.getSession();
+      const who = session ? session.user.email.split("@")[0] : "?";
+      alert(`Obaveštenja su uključena na ovom telefonu za korisnika: ${who}`);
     }
   } catch (e) {
     alert("Uključivanje obaveštenja nije uspelo: " + e.message);
@@ -86,12 +91,18 @@ async function pushDisable() {
   pushRefreshButton();
 }
 
+// "Uključena" samo ako telefon ima pretplatu I ona je zapisana u bazi za prijavljenog korisnika.
 async function pushRefreshButton() {
   const btn = document.getElementById("push-btn");
   if (!btn) return;
-  const on = pushSupported && Notification.permission === "granted" && !!(await pushCurrent());
-  btn.dataset.on = on ? "1" : "";
-  btn.textContent = on ? "🔔 Obaveštenja uključena" : "🔕 Uključi obaveštenja";
+  const sub = pushSupported && Notification.permission === "granted" ? await pushCurrent() : null;
+  let saved = false;
+  if (sub) {
+    const { data } = await sb.from("push_subscriptions").select("id").eq("endpoint", sub.endpoint);
+    saved = !!(data && data.length);
+  }
+  btn.dataset.on = saved ? "1" : "";
+  btn.textContent = saved ? "🔔 Obaveštenja uključena" : sub ? "⚠️ Obaveštenja nisu sačuvana — dodirni" : "🔕 Uključi obaveštenja";
 }
 
 document.addEventListener("click", async (e) => {
