@@ -465,20 +465,22 @@ function mobRender() {
     });
     mine.sort((x, y) => x.start - y.start);
 
-    const next = mine.filter(m => m.end > nowM).slice(0, 3);
-    html += `<section class="mob-card"><div class="mob-title">Tvoje naredne smene</div>` +
-      (next.length ? `<div class="mob-next">${next.map(m => {
-        const d = new Date(m.date + "T00:00:00");
-        const when = m.date === today ? "Danas" : m.date === mobIso(mobAddDays(now, 1)) ? "Sutra" : `${DOW_SR[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.`;
-        const running = m.start <= nowM && nowM < m.end;
-        return `<div class="mob-next-item shift-${m.isMS ? "MS" : m.code}" data-day="${m.date}">
-          <div class="d">${when}</div>
+    // Naredna 3 dana: danas, sutra, prekosutra — smena ili S (slobodan).
+    const labels = ["Danas", "Sutra", "Prekosutra"];
+    html += `<section class="mob-card"><div class="mob-title">Tvoja naredna 3 dana</div><div class="mob-next">${labels.map((lbl, i) => {
+      const iso = mobIso(mobAddDays(now, i));
+      const m = mine.find(x => x.date === iso);
+      if (!m) {
+        return `<div class="mob-next-item is-off" data-day="${iso}"><div class="d">${lbl}</div><div class="s">S</div><div class="t">Slobodan</div></div>`;
+      }
+      const running = m.start <= nowM && nowM < m.end;
+      return `<div class="mob-next-item shift-${m.isMS ? "MS" : m.code}" data-day="${iso}">
+          <div class="d">${lbl}</div>
           <div class="s">${m.isMS ? "MS" : m.code}</div>
           <div class="t">${mobTimeLabel(m.code, m.isMS)}</div>
           ${running ? '<span class="now">U toku</span>' : ""}
         </div>`;
-      }).join("")}</div>` : '<div class="mob-empty">Nema zakazanih smena u narednih 20 dana.</div>') +
-      `</section>`;
+    }).join("")}</div></section>`;
   }
 
   // Ko sada radi.
@@ -529,9 +531,43 @@ function mobRender() {
     html += `<section class="mob-card"><div class="mob-title">Tvojih narednih 20 dana</div><div class="mob-days">${days}</div></section>`;
   }
 
+  mobRenderWeek(mine, now);
+
   html += `<button type="button" class="btn btn-ghost mob-full-btn" id="mob-full-btn">${document.body.classList.contains("show-full") ? "Sakrij ceo raspored" : "Prikaži ceo raspored"}</button>`;
   box.innerHTML = html;
 }
+
+// Računar: "Tvojih narednih 7 dana" između "Ko radi danas?" i "Raspored po danima".
+function mobRenderWeek(mine, now) {
+  const box = document.getElementById("my-week");
+  if (!RASPORED_ME_EMP) { box.hidden = true; return; }
+  const today = mobIso(now);
+  let html = "";
+  for (let i = 0; i < 7; i++) {
+    const d = mobAddDays(now, i);
+    const iso = mobIso(d);
+    const m = mine.find(x => x.date === iso);
+    const when = i === 0 ? "Danas" : i === 1 ? "Sutra" : `${DOW_SR[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.`;
+    html += m
+      ? `<div class="wk-day shift-${m.isMS ? "MS" : m.code}${iso === today ? " today" : ""}" data-week-day="${iso}">
+          <div class="d">${when}</div><div class="s">${m.isMS ? "MS" : m.code}</div><div class="t">${mobTimeLabel(m.code, m.isMS)}</div></div>`
+      : `<div class="wk-day is-off${iso === today ? " today" : ""}" data-week-day="${iso}">
+          <div class="d">${when}</div><div class="s">S</div><div class="t">Slobodan</div></div>`;
+  }
+  document.getElementById("my-week-grid").innerHTML = html;
+  box.hidden = false;
+}
+
+// Klik na dan u "7 dana" — skrol do tog dana u tabeli (ako je prikazan).
+document.addEventListener("click", (ev) => {
+  const day = ev.target.closest && ev.target.closest("[data-week-day]");
+  if (!day) return;
+  const row = document.querySelector(`.day-row[data-date="${day.dataset.weekDay}"]`);
+  if (!row) return;
+  row.style.display = "grid"; // i ako je među sakrivenim prethodnim danima
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
+  row.classList.remove("flash"); void row.offsetWidth; row.classList.add("flash");
+});
 
 // Ceo raspored za jedan dan (prozor odozdo).
 function mobOpenDay(date) {

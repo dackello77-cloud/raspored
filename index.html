@@ -237,50 +237,74 @@
     body:not(.show-full) .raspored-card { display: none; }
   }
   .mob-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-sm); padding: 14px; }
-  .mob-title { font-size: 11px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
-  .mob-title .mob-clock { font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--text); font-variant-numeric: tabular-nums; }
+  .mob-title { font-size: 13px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  .mob-title .mob-clock { font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--text); font-variant-numeric: tabular-nums; }
 
   .mob-next { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .mob-next-item { border-radius: 12px; padding: 10px 8px; background: var(--sc-bg); border: 1px solid var(--sc-line); border-top: 3px solid var(--sc); text-align: center; cursor: pointer; }
-  .mob-next-item .d { font-size: 11px; font-weight: 700; color: var(--text-muted); }
-  .mob-next-item .s { font-size: 20px; font-weight: 800; color: var(--sc); line-height: 1.2; margin: 2px 0; }
-  .mob-next-item .t { font-size: 11px; font-weight: 600; }
-  .mob-next-item .now { display: inline-block; margin-top: 4px; font-size: 9px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; background: var(--sc); color: #fff; border-radius: 5px; padding: 1px 6px; }
+  .mob-next-item .d { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+  .mob-next-item .s { font-size: 22px; font-weight: 800; color: var(--sc); line-height: 1.2; margin: 2px 0; }
+  .mob-next-item .t { font-size: 13px; font-weight: 600; }
+  .mob-next-item.is-off { --sc: var(--text-muted); --sc-bg: #fff; --sc-line: var(--line); }
+  .mob-next-item .now { display: inline-block; margin-top: 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; background: var(--sc); color: #fff; border-radius: 5px; padding: 1px 6px; }
 
   .mob-now-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--sc-bg); border-left: 3px solid var(--sc); margin-bottom: 8px; }
-  .mob-now-head .n { font-weight: 800; color: var(--sc); font-size: 15px; }
-  .mob-now-head .t { margin-left: auto; font-weight: 700; font-size: 12px; }
+  .mob-now-head .n { font-weight: 800; color: var(--sc); font-size: 17px; }
+  .mob-now-head .t { margin-left: auto; font-weight: 700; font-size: 14px; }
   .mob-people { display: flex; flex-direction: column; }
-  .mob-person { display: flex; align-items: center; gap: 9px; padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 600; }
+  .mob-person { display: flex; align-items: center; gap: 9px; padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: 16px; font-weight: 600; }
   .mob-person:last-child { border-bottom: none; }
   .mob-person .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-  .mob-person .role { margin-left: auto; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+  .mob-person .role { margin-left: auto; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
   .mob-person.is-me { background: var(--green-darker); color: #fff; border-radius: 10px; padding-left: 10px; padding-right: 10px; border-bottom-color: transparent; }
   .mob-person.is-me .role { color: rgba(255,255,255,0.75); }
-  .mob-sub { font-size: 11px; font-weight: 800; color: var(--sc); margin: 10px 0 2px; }
-  .mob-empty { font-size: 13px; color: var(--text-muted); padding: 6px 2px; }
+  .mob-sub { font-size: 13px; font-weight: 800; color: var(--sc); margin: 10px 0 2px; }
+  .mob-empty { font-size: 15px; color: var(--text-muted); padding: 6px 2px; }
 
   .mob-days { display: flex; flex-direction: column; gap: 6px; }
   .mob-day { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
   .mob-day.weekend { background: #fbf8f0; }
   .mob-day.today { box-shadow: inset 0 0 0 2px var(--green-dark); }
-  .mob-day .dn { font-size: 18px; font-weight: 800; width: 26px; font-variant-numeric: tabular-nums; }
-  .mob-day .dm { font-size: 11px; font-weight: 700; color: var(--text-muted); line-height: 1.2; width: 34px; }
+  .mob-day .dn { font-size: 20px; font-weight: 800; width: 26px; font-variant-numeric: tabular-nums; }
+  .mob-day .dm { font-size: 13px; font-weight: 700; color: var(--text-muted); line-height: 1.2; width: 34px; }
   .mob-day .sh { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-  .mob-day .sh .lbl { font-size: 12px; font-weight: 700; color: var(--sc); }
-  .mob-day .sh .tm { font-size: 11px; color: var(--text-muted); font-weight: 600; }
-  .mob-day .off { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--text-muted); font-style: italic; }
-  .mob-day .chev { color: var(--text-muted); font-size: 16px; }
-  .mob-full-btn { width: 100%; }
+  .mob-day .sh .lbl { font-size: 14px; font-weight: 700; color: var(--sc); }
+  .mob-day .sh .tm { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+  .mob-day .off { margin-left: auto; font-size: 14px; font-weight: 700; color: var(--text-muted); font-style: italic; }
+  .mob-day .chev { color: var(--text-muted); font-size: 18px; }
+  .mob-full-btn { width: 100%; font-size: 15px; padding: 12px; }
+  @media (max-width: 700px) {
+    .zm-inbox h2 { font-size: 17px; }
+    .zm-item .zm-date, .zm-item .zm-swap { font-size: 15px; }
+    .zm-item .zm-reason { font-size: 14.5px; }
+    .zm-item .zm-meta { font-size: 13px; }
+    .zm-item .btn { font-size: 15px; padding: 11px 14px; }
+  }
+
+  /* ---------- Računar: mojih narednih 7 dana ---------- */
+  .my-week { margin-bottom: 12px; padding: 16px 20px; }
+  .my-week[hidden] { display: none; }
+  .my-week h2 { margin: 0 0 12px; font-size: 15px; }
+  .my-week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+  .wk-day { border-radius: 12px; padding: 10px 8px; text-align: center; cursor: pointer; background: var(--sc-bg); border: 1px solid var(--sc-line); border-top: 3px solid var(--sc); transition: transform 0.12s; }
+  .wk-day:hover { transform: translateY(-2px); }
+  .wk-day.is-off { --sc: var(--text-muted); --sc-bg: #fff; --sc-line: var(--line); }
+  .wk-day.today { box-shadow: 0 0 0 2px var(--green-dark); }
+  .wk-day .d { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+  .wk-day .s { font-size: 24px; font-weight: 800; color: var(--sc); line-height: 1.2; margin: 3px 0; }
+  .wk-day .t { font-size: 12px; font-weight: 600; }
+  .day-row.flash { animation: dayflash 1.6s ease; }
+  @keyframes dayflash { 0%, 40% { box-shadow: 0 0 0 3px var(--green-dark); } 100% { box-shadow: none; } }
+  @media (max-width: 700px) { .my-week { display: none; } }
 
   /* Ceo raspored za jedan dan — prozor odozdo */
   .day-sheet-overlay { position: fixed; inset: 0; z-index: 900; background: rgba(20, 30, 25, 0.35); display: flex; align-items: flex-end; justify-content: center; }
   .day-sheet { background: var(--bg, #f4f2ec); width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 16px 14px 24px; }
   .day-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .day-sheet-head h3 { margin: 0; font-size: 16px; }
-  .day-sheet-close { border: none; background: #fff; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; cursor: pointer; }
+  .day-sheet-head h3 { margin: 0; font-size: 18px; }
+  .day-sheet-close { border: none; background: #fff; border-radius: 50%; width: 32px; height: 32px; font-size: 18px; cursor: pointer; }
   .day-sheet .mob-card { margin-bottom: 10px; }
-  .day-sheet .mob-hint { font-size: 11.5px; color: var(--text-muted); margin: 0 2px 10px; }
+  .day-sheet .mob-hint { font-size: 13.5px; color: var(--text-muted); margin: 0 2px 10px; }
   .empty-note { padding: 24px; text-align: center; color: var(--text-muted); }
 </style>
 </head>
@@ -310,6 +334,11 @@
       <div class="zm-list" id="zm-inbox-list"></div>
     </section>
 
+    <section class="card my-week" id="my-week" hidden>
+      <h2>Tvojih narednih 7 dana</h2>
+      <div class="my-week-grid" id="my-week-grid"></div>
+    </section>
+
     <div id="mobile-home"></div>
 
     <section class="card raspored-card">
@@ -336,6 +365,6 @@
   <script src="js/push.js?v=20261006u"></script>
   <script src="js/constants.js?v=20261006t"></script>
   <script src="js/swap-common.js?v=20261006t"></script>
-  <script src="js/raspored.js?v=20261006t"></script>
+  <script src="js/raspored.js?v=20261006v"></script>
 </body>
 </html>
