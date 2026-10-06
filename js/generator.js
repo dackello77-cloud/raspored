@@ -475,26 +475,59 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     }
   });
 
-  // Zamena preuzima TAČNO smene koje bi osoba na odmoru imala tih dana.
+  // Zamena preuzima smene koje bi osoba na odmoru imala tih dana — redom po danima, i samo ako
+  // time ne krši pravila niza (npr. kraj jedne zamene III, a sledeći dan početak druge zamene I).
+  // Takav dan zamena preskače; tu smenu kasnije popunjava neko drugi (korak "rupa ispod minimuma").
+  const handoverItems = [];
   (opts.replacements || []).forEach(({ replacerId, vacationerId, dates }) => {
     if (!scheduleMap[replacerId] || !handoverFor[replacerId]) return;
-    dates.forEach(key => {
-      if (protectedOff[replacerId].has(key)) return; // zamena je i sama slobodna/na odmoru
-      const d = Number(key.slice(8, 10));
-      let value;
-      let counted = true;
-      if (cycleIndex[vacationerId] !== undefined) {
-        value = cycle[(cycleIndex[vacationerId] + d - 1) % N];
-      } else {
-        value = opts.fixedNoVac && opts.fixedNoVac[vacationerId] && opts.fixedNoVac[vacationerId][key];
-        counted = false; // menja lidera/monitoring — ne računa se u radnike po smeni
+    dates.forEach(key => handoverItems.push({ replacerId, vacationerId, key }));
+  });
+  handoverItems.sort((x, y) => x.replacerId.localeCompare(y.replacerId) || x.key.localeCompare(y.key));
+  const handoverState = (id) => (x) => {
+    if (x < 1) return (opts.prevTail && opts.prevTail[id] && opts.prevTail[id][x]) || "OFF";
+    if (x > nDays) return "OFF";
+    return scheduleMap[id][dateKey(year, month, x)];
+  };
+  handoverItems.forEach(({ replacerId, vacationerId, key }) => {
+    if (protectedOff[replacerId].has(key)) return; // zamena je i sama slobodna/na odmoru
+    const d = Number(key.slice(8, 10));
+    let value;
+    let counted = true;
+    if (cycleIndex[vacationerId] !== undefined) {
+      value = cycle[(cycleIndex[vacationerId] + d - 1) % N];
+    } else {
+      value = opts.fixedNoVac && opts.fixedNoVac[vacationerId] && opts.fixedNoVac[vacationerId][key];
+      counted = false; // menja lidera/monitoring — ne računa se u radnike po smeni
+    }
+    if (!isWorkShift(value)) return;
+    const st = handoverState(replacerId);
+    const violations = () => countSeqViolations(st, d - 7, d + 7, false);
+    const before = violations();
+    const fits = () => countSeqViolations(x => (x === d ? value : st(x)), d - 7, d + 7, false) <= before;
+    if (!fits()) {
+      // Sudar dve zamene (prethodni dan III, ovaj dan I/II): bolje je pustiti jednu III juče
+      // (1 dan za drugog radnika) nego preskočiti dva dana danas i sutra (2 slobodna posle III).
+      const prevKey = d > 1 ? dateKey(year, month, d - 1) : null;
+      const prevIsHandover = prevKey && handoverFor[replacerId][prevKey] && st(d - 1) === "III";
+      if (!prevIsHandover) return;
+      const saved = { v: scheduleMap[replacerId][prevKey], nc: notCounted[replacerId].has(prevKey), vac: handoverFor[replacerId][prevKey] };
+      scheduleMap[replacerId][prevKey] = "OFF";
+      protectedOff[replacerId].delete(prevKey);
+      notCounted[replacerId].delete(prevKey);
+      delete handoverFor[replacerId][prevKey];
+      if (countSeqViolations(x => (x === d ? value : st(x)), d - 7, d + 7, false) > violations()) {
+        scheduleMap[replacerId][prevKey] = saved.v; // ni to ne pomaže — vrati kako je bilo
+        protectedOff[replacerId].add(prevKey);
+        if (saved.nc) notCounted[replacerId].add(prevKey);
+        handoverFor[replacerId][prevKey] = saved.vac;
+        return;
       }
-      if (!isWorkShift(value)) return;
-      scheduleMap[replacerId][key] = value;
-      protectedOff[replacerId].add(key);
-      if (!counted) notCounted[replacerId].add(key);
-      handoverFor[replacerId][key] = vacationerId;
-    });
+    }
+    scheduleMap[replacerId][key] = value;
+    protectedOff[replacerId].add(key);
+    if (!counted) notCounted[replacerId].add(key);
+    handoverFor[replacerId][key] = vacationerId;
   });
 
   // ---------- pomoćne strukture ----------
@@ -718,8 +751,15 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
           .filter(e => get(e.id, d) === "OFF")
           .sort((a, b) => total[a.id] - total[b.id]);
         const pick = options.find(e => editAllowed(e.id, { [d]: code }, true));
-        if (!pick) break;
-        applyEdits(pick.id, { [d]: code });
+        if (pick) { applyEdits(pick.id, { [d]: code }); continue; }
+        // Niko slobodan ne može — neko iz smene sa viškom tog dana prelazi u ovu (ako pravila dozvoljavaju).
+        const mover = everyone.find(e => {
+          const cur = get(e.id, d);
+          return isWorkShift(cur) && cur !== code && !notCounted[e.id].has(keys[d]) &&
+            counts[d][cur] > variant.mins[cur] && editAllowed(e.id, { [d]: code }, true);
+        });
+        if (!mover) break;
+        applyEdits(mover.id, { [d]: code });
       }
     }
   }

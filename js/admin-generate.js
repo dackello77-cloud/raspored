@@ -271,7 +271,7 @@ async function genHandleRun() {
       }
     }
 
-    genRenderResults(employees, radnici, liderMonitoring, combined, fondByEmployee, fondTarget, year, month, overfond, zamene);
+    genRenderResults(employees, radnici, liderMonitoring, combined, fondByEmployee, fondTarget, year, month, overfond, zamene, variant, handoverFor);
     genShowBanner(`Raspored za ${MONTH_NAMES_SR[month - 1]} ${year} je generisan i sačuvan.`, "success");
 
     const container = document.getElementById("rasporedi-months");
@@ -286,7 +286,7 @@ async function genHandleRun() {
   }
 }
 
-function genRenderResults(employees, radnici, liderMonitoring, combined, fondByEmployee, fondTarget, year, month, overfond, zamene = []) {
+function genRenderResults(employees, radnici, liderMonitoring, combined, fondByEmployee, fondTarget, year, month, overfond, zamene = [], variant = null, handoverFor = {}) {
   document.getElementById("gen-results").style.display = "grid";
 
   const nDays = daysInMonth(year, month);
@@ -339,7 +339,29 @@ function genRenderResults(employees, radnici, liderMonitoring, combined, fondByE
     .filter(e => (overfond || []).includes(e.id))
     .map(e => `${(e.profiles?.full_name || "").toUpperCase()} (${fondByEmployee[e.id].total}/${fondTarget})`);
 
+  // Smene sa manje radnika od minimuma (lideri/monitoring i zamena za lidera se ne računaju).
+  const liderIds = new Set(liderMonitoring.map(e => e.id));
+  const belowMin = [];
+  if (variant) {
+    for (let d = 1; d <= daysInMonth(year, month); d++) {
+      const key = dateKey(year, month, d);
+      const cnt = { I: 0, II: 0, III: 0 };
+      [...radnici, ...zamene].forEach(e => {
+        const v = combined[e.id] && combined[e.id][key];
+        const forId = handoverFor && handoverFor[e.id] && handoverFor[e.id][key];
+        if (cnt[v] !== undefined && !(forId && liderIds.has(forId))) cnt[v]++;
+      });
+      ["I", "II", "III"].forEach(c => {
+        if (cnt[c] < variant.mins[c]) belowMin.push(`${String(d).padStart(2, "0")}.${String(month).padStart(2, "0")}. ${c} smena (${cnt[c]}/${variant.mins[c]})`);
+      });
+    }
+  }
+
   document.getElementById("gen-underfond").innerHTML =
+    (belowMin.length
+      ? `<div class="field-label" style="margin-bottom:6px;">Smene ispod minimuma — popuniti ručno:</div>` +
+        belowMin.map(n => `<span class="underfond-chip">${n}</span>`).join("") + "<br/>"
+      : "") +
     (underfond.length
       ? `<div class="field-label" style="margin-bottom:6px;">Nemaju pun fond — dopuniti ručno:</div>` +
         underfond.map(n => `<span class="underfond-chip">${n}</span>`).join("")
