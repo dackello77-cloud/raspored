@@ -38,6 +38,7 @@ async function zmLoadLists() {
     zmRender("zm-hr", rows.filter(r => r.status === "pending_hr").sort((x, y) => x.date.localeCompare(y.date)), () => ZM_ACTIONS.hr,
       "Nema zahteva za odobrenje.");
     zmRender("zm-history", rows.filter(r => !pending(r)).slice(0, 30), () => "", "Još nema završenih zahteva.");
+    zmFillStaffInfo(document.getElementById("zm-hr"));
   }
 }
 

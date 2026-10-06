@@ -422,6 +422,9 @@ label.field-label {
 .zm-reason { font-size: 12.5px; background: var(--bg-soft); border-radius: 8px; padding: 6px 9px; }
 .zm-reason b { font-weight: 700; }
 .zm-meta { font-size: 11.5px; color: var(--text-muted); }
+.zm-staff { font-size: 12.5px; border-radius: 8px; padding: 6px 9px; background: var(--bg-soft); }
+.zm-staff.ok { background: var(--green-pill); color: var(--green-darker); }
+.zm-staff.low { background: var(--red-soft); color: var(--red-text); }
 .zm-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .zm-actions input { flex: 1; min-width: 160px; font-size: 12.5px; }
 .zm-status { font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }

@@ -59,7 +59,7 @@ function zmItemHtml(r, names, actions) {
   if (!dayOff && r.worker_responded_at && r.status !== "rejected_worker") meta.push(`${b} potvrdio/la`);
   if (r.hr_responded_at && names["p:" + r.hr_profile_id]) meta.push(`HR: ${names["p:" + r.hr_profile_id]}`);
   return `
-    <div class="zm-item" data-id="${r.id}">
+    <div class="zm-item" data-id="${r.id}"${dayOff && actions === ZM_ACTIONS.hr ? ` data-staff-date="${r.date}" data-staff-shift="${r.requester_shift}"` : ""}>
       <div class="zm-item-head">
         <span class="zm-date"><span class="zm-kind ${dayOff ? "zm-kind-off" : ""}">${dayOff ? "Slobodan dan" : "Zamena"}</span>${zmFmtDate(r.date)}</span>
         <span class="zm-status st-${r.status}">${ZM_STATUS[r.status] || r.status}</span>
@@ -69,9 +69,37 @@ function zmItemHtml(r, names, actions) {
         : `${a} ${zmShift(r.requester_shift)} ⇄ ${b} ${zmShift(r.target_shift)}`}</div>
       <div class="zm-reason"><b>Razlog:</b> ${zmEsc(r.reason)}</div>
       ${r.hr_comment ? `<div class="zm-reason"><b>Komentar HR:</b> ${zmEsc(r.hr_comment)}</div>` : ""}
+      ${dayOff && actions === ZM_ACTIONS.hr ? '<div class="zm-staff">Provera smene...</div>' : ""}
       <div class="zm-meta">${meta.join(" · ")}</div>
       ${actions || ""}
     </div>`;
+}
+
+// HR, slobodan dan: koliko radnika je u smeni sada, koliko ostaje posle odobrenja, i minimum
+// (zapamćen pri generisanju meseca). Poziva se posle crtanja liste zahteva.
+async function zmFillStaffInfo(root) {
+  const items = [...(root || document).querySelectorAll(".zm-item[data-staff-date]")];
+  for (const item of items) {
+    const date = item.dataset.staffDate, shift = item.dataset.staffShift;
+    const [{ data: rows }, { data: minRow }] = await Promise.all([
+      sb.from("schedule").select("is_medju_smena, employees!schedule_employee_id_fkey(funkcija)")
+        .eq("date", date).eq("shift_code", shift),
+      sb.from("settings").select("value").eq("key", `minimumi_${Number(date.slice(0, 4))}_${Number(date.slice(5, 7))}`).maybeSingle(),
+    ]);
+    const list = rows || [];
+    const radnici = list.filter(r => !r.is_medju_smena && (r.employees?.funkcija || "radnik") === "radnik").length;
+    const lider = list.some(r => r.employees?.funkcija === "shift_lider");
+    const monitoring = list.some(r => r.employees?.funkcija === "monitoring");
+    const extra = [lider ? "shift lider" : "", monitoring ? "monitoring" : ""].filter(Boolean).join(", ");
+    const min = minRow && minRow.value ? minRow.value[shift] : null;
+    const after = radnici - 1;
+    const low = min !== null && after < min;
+    const box = item.querySelector(".zm-staff");
+    box.className = `zm-staff ${low ? "low" : "ok"}`;
+    box.innerHTML = `<b>${shift} smena ${date.slice(8, 10)}.${date.slice(5, 7)}.:</b> sada ${radnici} radnika${extra ? ` (+ ${extra})` : ""}` +
+      ` → posle odobrenja <b>${after}</b>` +
+      (min !== null ? ` · minimum ${min}${low ? " — <b>ispod minimuma!</b>" : ""}` : "");
+  }
 }
 
 // Stranica postavlja: zmOnDone(message, isError) — prikaz poruke i ponovno učitavanje.

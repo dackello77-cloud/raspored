@@ -369,6 +369,7 @@ async function zmLoadInbox(profile) {
     forMe.map(r => zmItemHtml(r, names, ZM_ACTIONS.incoming)).join("") +
     forHR.map(r => zmItemHtml(r, names, ZM_ACTIONS.hr)).join("");
   box.hidden = false;
+  zmFillStaffInfo(box);
 }
 
 zmOnDone = async (msg, isError) => {

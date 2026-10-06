@@ -271,6 +271,12 @@ async function genHandleRun() {
       }
     }
 
+    // Minimum po smeni za ovaj mesec — HR ga vidi kad odobrava slobodan dan.
+    await sb.from("settings").upsert(
+      { key: `minimumi_${year}_${month}`, value: variant.mins, updated_at: new Date().toISOString() },
+      { onConflict: "key" }
+    );
+
     genRenderResults(employees, radnici, liderMonitoring, combined, fondByEmployee, fondTarget, year, month, overfond, zamene, variant, handoverFor);
     genShowBanner(`Raspored za ${MONTH_NAMES_SR[month - 1]} ${year} je generisan i sačuvan.`, "success");
 
