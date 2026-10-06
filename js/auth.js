@@ -1,0 +1,198 @@
+// Deljena logika za header, sesiju i proveru admin pristupa.
+// Očekuje da je prethodno učitan js/supabase.js (globalni `sb` klijent).
+
+async function getSessionAndProfile() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return { session: null, profile: null };
+  const { data: profile } = await sb
+    .from("profiles")
+    .select("*")
+    .eq("id", session.user.id)
+    .single();
+  return { session, profile };
+}
+
+async function mountHeader(activeKey) {
+  const mount = document.getElementById("app-header-mount");
+  if (!mount) return { session: null, profile: null };
+
+  const { session, profile } = await getSessionAndProfile();
+
+  let apiOk = true;
+  try {
+    const { error } = await sb.from("shift_types").select("code").limit(1);
+    apiOk = !error;
+  } catch (e) {
+    apiOk = false;
+  }
+
+  const navLinks = [
+    `<a href="${APP_BASE}index.html" class="${activeKey === "raspored" ? "active" : ""}">Raspored</a>`,
+  ];
+  if (profile && profile.role === "admin") {
+    navLinks.push(
+      `<a href="${APP_BASE}admin/index.html#osobe" data-admin-tab="osobe" class="${activeKey === "admin-osobe" ? "active" : ""}">Osobe u sistemu</a>`,
+      `<a href="${APP_BASE}admin/index.html#plan" data-admin-tab="plan" class="${activeKey === "admin-plan" ? "active" : ""}">Plan zaposlenih</a>`,
+      `<a href="${APP_BASE}admin/index.html#rasporedi" data-admin-tab="rasporedi" class="${activeKey === "admin-rasporedi" ? "active" : ""}">Generisanje rasporeda</a>`
+    );
+  }
+  if (session) {
+    navLinks.push(
+      `<a href="${APP_BASE}zamene.html" class="${activeKey === "zamene" ? "active" : ""}">Zamene<span class="nav-badge" id="nav-zamene-badge" hidden></span></a>`
+    );
+  } else {
+    navLinks.push(
+      `<a href="${APP_BASE}login.html" class="${activeKey === "login" ? "active" : ""}">Login</a>`
+    );
+  }
+
+  const rightHTML = session && profile
+    ? `
+      <div class="user-chip">
+        <div class="role">${({ admin: "Administrator", management: "Management" })[profile.role] || "Radnik"}${profile.hr_manager ? " · HR" : ""}</div>
+        <div class="username">${profile.username}</div>
+      </div>
+      <button class="btn-password" id="password-btn" type="button">Promeni lozinku</button>
+      <button class="btn-logout" id="logout-btn" type="button">Odjava</button>
+    `
+    : "";
+
+  mount.innerHTML = `
+    <div class="brand">
+      <div class="brand-logo">RA</div>
+      <div>
+        <div class="brand-name">Raspored App</div>
+        <div class="brand-sub">Smene bez nagađanja</div>
+      </div>
+    </div>
+    <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Meni" aria-expanded="false">
+      <span></span><span></span><span></span><i class="menu-dot" id="menu-dot" hidden></i>
+    </button>
+    <div class="header-menu" id="header-menu">
+      <nav>${navLinks.join("")}</nav>
+      <div class="header-right">
+        <span class="api-dot ${apiOk ? "" : "offline"}">${apiOk ? "API povezan" : "API nedostupan"}</span>
+        ${rightHTML}
+      </div>
+    </div>
+  `;
+
+  // Telefon: sve osim naziva aplikacije je u meniju (hamburger).
+  const toggle = document.getElementById("menu-toggle");
+  const setOpen = (open) => {
+    mount.classList.toggle("menu-open", open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  toggle.addEventListener("click", (e) => { e.stopPropagation(); setOpen(!mount.classList.contains("menu-open")); });
+  document.addEventListener("click", (e) => {
+    if (!mount.classList.contains("menu-open")) return;
+    if (!e.target.closest("#header-menu") || e.target.closest("a, button")) setOpen(false);
+  });
+
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await sb.auth.signOut();
+      window.location.href = APP_BASE + "index.html";
+    });
+  }
+
+  if (session) zmRefreshNavBadge(session, profile);
+
+  const passwordBtn = document.getElementById("password-btn");
+  if (passwordBtn) passwordBtn.addEventListener("click", () => openPasswordDialog(session.user.email));
+
+  return { session, profile };
+}
+
+// Broj zahteva za zamenu koji čekaju MOJ odgovor (i HR odobrenje ako sam HR/admin).
+async function zmRefreshNavBadge(session, profile) {
+  const badge = document.getElementById("nav-zamene-badge");
+  if (!badge) return;
+  if (!session) ({ session, profile } = await getSessionAndProfile());
+  if (!session) return;
+  try {
+    const { data: me } = await sb.from("employees").select("id").eq("profile_id", session.user.id).maybeSingle();
+    let n = 0;
+    if (me) {
+      const { count } = await sb.from("swap_requests").select("id", { count: "exact", head: true })
+        .eq("target_id", me.id).eq("status", "pending_worker");
+      n += count || 0;
+    }
+    if (profile && (profile.hr_manager || profile.role === "admin")) {
+      const { count } = await sb.from("swap_requests").select("id", { count: "exact", head: true }).eq("status", "pending_hr");
+      n += count || 0;
+    }
+    badge.textContent = n;
+    badge.hidden = !n;
+    const dot = document.getElementById("menu-dot");
+    if (dot) dot.hidden = !n;
+  } catch (e) { /* tabela zamena još ne postoji */ }
+}
+
+// Promena sopstvene lozinke (i admin i radnik). Stara lozinka se proverava ponovnom prijavom.
+function openPasswordDialog(email) {
+  document.getElementById("pw-dialog")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "pw-dialog";
+  overlay.className = "pw-overlay";
+  overlay.innerHTML = `
+    <form class="pw-box" novalidate>
+      <h3>Promena lozinke</h3>
+      <label>Trenutna lozinka<input type="password" name="current" autocomplete="current-password" required /></label>
+      <label>Nova lozinka<input type="password" name="next" autocomplete="new-password" minlength="6" required /></label>
+      <label>Ponovi novu lozinku<input type="password" name="repeat" autocomplete="new-password" minlength="6" required /></label>
+      <div class="pw-msg"></div>
+      <div class="pw-actions">
+        <button type="button" class="btn btn-ghost pw-cancel">Otkaži</button>
+        <button type="submit" class="btn btn-primary pw-save">Sačuvaj</button>
+      </div>
+    </form>`;
+  document.body.appendChild(overlay);
+
+  const form = overlay.querySelector("form");
+  const msg = overlay.querySelector(".pw-msg");
+  const close = () => overlay.remove();
+  overlay.querySelector(".pw-cancel").addEventListener("click", close);
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(); });
+  document.addEventListener("keydown", function onEsc(e) {
+    if (e.key === "Escape") { close(); document.removeEventListener("keydown", onEsc); }
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const current = form.current.value, next = form.next.value, repeat = form.repeat.value;
+    const show = (text, ok) => { msg.textContent = text; msg.className = `pw-msg ${ok ? "ok" : "err"}`; };
+    if (!current || !next) return show("Popuni sva polja.");
+    if (next.length < 6) return show("Nova lozinka mora imati bar 6 znakova.");
+    if (next !== repeat) return show("Nove lozinke se ne poklapaju.");
+    if (next === current) return show("Nova lozinka mora biti drugačija od trenutne.");
+
+    const saveBtn = form.querySelector(".pw-save");
+    saveBtn.disabled = true;
+    const { error: signInError } = await sb.auth.signInWithPassword({ email, password: current });
+    if (signInError) { saveBtn.disabled = false; return show("Trenutna lozinka nije tačna."); }
+    const { error } = await sb.auth.updateUser({ password: next });
+    saveBtn.disabled = false;
+    if (error) return show("Greška: " + error.message);
+    show("Lozinka je promenjena.", true);
+    form.querySelectorAll("input").forEach(i => { i.value = ""; i.disabled = true; });
+    saveBtn.hidden = true;
+    overlay.querySelector(".pw-cancel").textContent = "Zatvori";
+  });
+  form.current.focus();
+}
+
+// Poziva se na admin stranicama — ako korisnik nije ulogovani admin, preusmerava ga.
+async function requireAdmin() {
+  const { session, profile } = await getSessionAndProfile();
+  if (!session) {
+    window.location.href = APP_BASE + "login.html";
+    return null;
+  }
+  if (!profile || profile.role !== "admin") {
+    window.location.href = APP_BASE + "index.html";
+    return null;
+  }
+  return profile;
+}

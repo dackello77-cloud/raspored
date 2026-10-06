@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zamene — Raspored App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="css/style.css?v=20261006s" />
+<style>
+  .zm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .zm-grid { grid-template-columns: 1fr; } }
+  .zm-col { display: flex; flex-direction: column; gap: 16px; }
+  .card h2 { margin: 0 0 2px; font-size: 15px; }
+  .card .sub { margin: 0 0 14px; font-size: 12px; }
+  .zm-hint { font-size: 12.5px; background: var(--bg-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+  .zm-hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <header class="app-header" id="app-header-mount"></header>
+
+  <main class="page">
+    <div id="zm-banner"></div>
+    <div class="zm-hint">Zamenu tražiš na stranici <a href="index.html">Raspored</a>: desni klik na radnika iz druge smene → <b>Zamena</b>, a desni klik na sebe → <b>Slobodan dan</b>.</div>
+    <div class="zm-grid">
+      <div class="zm-col">
+        <section class="card">
+          <h2>Moji zahtevi</h2>
+          <p class="muted sub">Zahtevi koje si poslao/la i njihov status.</p>
+          <div class="zm-list" id="zm-mine"><div class="zm-empty">Učitavanje...</div></div>
+        </section>
+      </div>
+
+      <div class="zm-col">
+        <section class="card">
+          <h2>Traže zamenu sa tobom</h2>
+          <p class="muted sub">Potvrdi ili odbij. Posle potvrde zahtev ide HR manageru.</p>
+          <div class="zm-list" id="zm-incoming"><div class="zm-empty">Učitavanje...</div></div>
+        </section>
+
+        <section class="card zm-hidden" id="zm-hr-card">
+          <h2>HR — za odobrenje</h2>
+          <p class="muted sub">Kad odobriš, smene se automatski zamene u rasporedu.</p>
+          <div class="zm-list" id="zm-hr"></div>
+        </section>
+
+        <section class="card zm-hidden" id="zm-history-card">
+          <h2>Istorija zamena</h2>
+          <p class="muted sub">Poslednjih 30 završenih zahteva.</p>
+          <div class="zm-list" id="zm-history"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase.js?v=20261006s"></script>
+  <script src="js/auth.js?v=20261006s"></script>
+  <script src="js/constants.js?v=20261006s"></script>
+  <script src="js/swap-common.js?v=20261006s"></script>
+  <script src="js/zamene.js?v=20261006s"></script>
+</body>
+</html>

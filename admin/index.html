@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin portal — Raspored App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="../css/style.css?v=20261006s" />
+<style>
+
+  .add-form-grid {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1.4fr auto;
+    gap: 14px;
+    align-items: end;
+    margin-bottom: 8px;
+  }
+  .add-form-grid input, .add-form-grid select { width: 100%; }
+
+  .osobe-list-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .emp-actions { display: flex; gap: 6px; }
+  .role-tag {
+    display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 1px 6px; border-radius: 5px; margin-left: 4px; vertical-align: 1px;
+  }
+  .role-tag-hr { background: #f3e8fd; color: #7e22ce; border: 1px solid #dcc3f5; }
+  .role-tag-mgmt { background: #fbf3d5; color: #a16207; border: 1px solid #ecdca0; }
+  .role-tag-admin { background: var(--bg-soft); color: var(--green-dark); border: 1px solid var(--border); }
+  .pw-check { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--text) !important; }
+  .pw-check input { width: 16px; height: 16px; accent-color: var(--green-dark); }
+  .pw-hint { font-size: 11px; color: var(--text-muted); margin-top: -6px; }
+  .emp-actions .btn { padding: 6px 10px; font-size: 12px; }
+  .osobe-head-actions { display: flex; align-items: center; gap: 16px; }
+  .switch-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; cursor: pointer; user-select: none; }
+  .switch-input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch-track { width: 34px; height: 20px; border-radius: 999px; background: #cfd3cf; position: relative; transition: background 0.15s; flex: none; }
+  .switch-thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: left 0.15s; }
+  .switch-input:checked + .switch-track { background: var(--green-dark); }
+  .switch-input:checked + .switch-track .switch-thumb { left: 16px; }
+  .switch-input:focus-visible + .switch-track { outline: 2px solid var(--green-dark); outline-offset: 2px; }
+  #employees-list:not(.show-inactive) .emp-row[data-inactive] { display: none; }
+  .emp-row[data-inactive] { opacity: 0.6; }
+
+  .emp-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+  }
+  .emp-row:last-child { border-bottom: none; }
+  .emp-row .emp-name { font-weight: 700; }
+  .emp-row .emp-username { color: var(--text-muted); font-weight: 500; font-size: 11px; }
+  .emp-row select, .emp-row input { width: 100%; font-size: 12px; padding: 7px 8px; }
+  .emp-row .field-col-label { display: none; }
+  .active-col { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+
+  .col-head {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
+    gap: 10px;
+    padding: 0 8px 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .plan-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-soft);
+    padding: 9px 14px;
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--border);
+    margin: 20px 0 6px;
+  }
+  .plan-group-header:first-of-type { margin-top: 6px; }
+  .plan-group-header::before {
+    content: "";
+    width: 7px; height: 7px; border-radius: 50%; flex: none;
+    background: var(--accent, var(--border));
+  }
+  .plan-group-shift_lider { --accent: var(--dot-lider); border-left-color: var(--accent); }
+  .plan-group-monitoring { --accent: var(--dot-monitoring); border-left-color: var(--accent); }
+  .plan-group-radnik { --accent: var(--dot-radnik); border-left-color: var(--accent); }
+
+  .plan-head-row, .plan-row {
+    display: grid;
+    gap: 10px;
+    align-items: center;
+    padding: 9px 10px;
+  }
+  .plan-head-row {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    padding: 4px 10px 12px;
+    border-bottom: 2px solid var(--line);
+    margin-bottom: 4px;
+  }
+  .plan-row {
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    border-radius: 10px;
+    transition: background 0.12s ease;
+  }
+  .plan-row:last-child { border-bottom: none; }
+  .plan-row .emp-name { font-weight: 700; }
+  .plan-row .emp-username { color: var(--text-muted); font-size: 10.5px; }
+  .plan-row select, .plan-row input { width: 100%; font-size: 11.5px; padding: 6px 7px; }
+  .plan-fond { font-weight: 700; text-align: center; }
+  .plan-ne-zajedno { display: flex; align-items: center; gap: 4px; justify-content: center; }
+  .plan-repl-ok { margin-top: 3px; font-size: 10px; font-weight: 700; color: var(--green-darker); }
+  .plan-repl-bad { margin-top: 3px; font-size: 10px; font-weight: 700; color: var(--red-text); }
+  .plan-repl-clear { border: none; background: transparent; color: var(--red-text); cursor: pointer; font-weight: 700; font-size: 12px; margin-left: 2px; }
+  .plan-row input.p-vikend-lider, .plan-row input.p-ne-zajedno { width: 16px; height: 16px; padding: 0; cursor: pointer; accent-color: var(--green-dark); }
+  .plan-row input.p-replacer { width: 16px; height: 16px; cursor: pointer; accent-color: var(--green-dark); }
+  .plan-week-label {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 100%; padding: 7px 8px; border-radius: 8px; border: 1px solid transparent;
+    font-weight: 700; font-size: 11px; text-align: center;
+    height: 30px; overflow: hidden;
+    cursor: context-menu; user-select: none;
+    background: color-mix(in srgb, var(--bg-soft) 55%, #fff);
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .plan-week-label[data-value="slobodan"], .plan-week-label[data-value="ne_radi"] {
+    color: var(--text-muted); font-style: italic; font-weight: 600; background: transparent;
+  }
+  /* Odmor i zamene u planu — svaki par ima svoju boju */
+  .plan-week-label.has-pair { background: transparent; padding: 0 2px; }
+  .plan-week-label.has-pair .plan-week-text { display: none; }
+  .plan-week-label .pair-pill { margin-top: 0; cursor: context-menu; }
+  .plan-tag {
+    display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 1px 6px; border-radius: 5px; margin-left: 4px; vertical-align: 1px;
+  }
+  .plan-tag-zamena { background: var(--green-dark); color: #fff; }
+  .plan-tag-odmor { background: var(--blue-soft); color: #2459c9; border: 1px solid var(--blue-border); }
+  .vac-cell {
+    background: color-mix(in srgb, var(--blue-soft) 55%, var(--blue-border)); border: 1px dashed var(--blue-border); border-radius: 8px;
+    height: 30px; padding: 0 6px 0 8px; display: flex; flex-direction: row; gap: 6px; align-items: center;
+    overflow: hidden; white-space: nowrap;
+  }
+  .vac-badge {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #2459c9;
+  }
+  .vac-badge { flex: none; }
+  .vac-cell.vac-alone { justify-content: center; padding: 0 6px; }
+  .vac-cell.vac-no-repl { cursor: context-menu; user-select: none; }
+  .vac-cell .pair-pill { min-width: 0; }
+  .pair-pill {
+    display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+    background: var(--pc-bg); color: var(--pc-fg); border: 1px solid color-mix(in srgb, var(--pc-fg) 25%, transparent);
+    border-radius: 999px; padding: 3px 4px 3px 9px; margin-top: 4px; font-size: 11px; line-height: 1.2;
+  }
+  .vac-cell .pair-pill { margin-top: 0; }
+  .pair-pill .pair-arrow { font-weight: 800; }
+  .pair-pill .pair-label { font-weight: 600; font-size: 9px; opacity: 0.8; }
+  .pair-pill .pair-name { font-weight: 800; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pair-pill .plan-repl-clear {
+    color: var(--pc-fg); background: rgba(255,255,255,0.7); border-radius: 50%;
+    width: 14px; height: 14px; font-size: 9px; line-height: 1; padding: 0; margin: 0 0 0 2px; flex: none;
+  }
+  .pair-pill .plan-repl-clear:hover { background: #fff; color: var(--red-text); }
+  .plan-slava-note { font-size: 10px; font-weight: 700; color: var(--red-text); margin-top: 2px; }
+  .plan-row select.p-week:disabled { background: var(--bg-soft); color: var(--text-muted); }
+
+  .replace-grid {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  .replace-grid select, .replace-grid input { min-width: 160px; }
+
+  .rdm-month-wrap { margin-bottom: 16px; }
+  .rdm-search-bar {
+    position: sticky; top: 67px; z-index: 25;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg); padding: 8px 0 6px;
+  }
+  .rdm-search-bar input { width: 260px; }
+  .rdm-search-bar #rasporedi-search-info { font-size: 12px; }
+  .rdm-month-sticky {
+    position: sticky; top: 117px; z-index: 20;
+    background: var(--bg); padding: 6px 0 8px; margin-bottom: 4px;
+    box-shadow: 0 10px 12px -12px rgba(22, 58, 45, 0.35);
+  }
+  .rdm-month-sticky .month-header { margin-bottom: 6px; }
+  .rdm-underfond {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    padding: 0 4px; font-size: 11.5px;
+  }
+  .rdm-underfond-label { font-weight: 800; color: var(--red-text); text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.04em; margin-right: 2px; }
+  .rdm-underfond-chip {
+    background: var(--red-soft); color: var(--red-text); border-radius: 999px; padding: 3px 9px;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .rdm-underfond-chip b { font-weight: 800; }
+  .rdm-underfond-ok { color: var(--green-darker); font-weight: 700; }
+  .rdm-day-block {
+    display: grid;
+    grid-template-columns: 96px repeat(3, 1fr);
+    gap: 10px;
+    margin: 0 0 6px;
+    border-radius: 14px;
+    padding: 8px;
+    background: #fff;
+    border: 1.5px solid var(--line);
+  }
+  .rdm-day-block.today { border-color: var(--green-dark); box-shadow: var(--shadow-md); }
+  .rdm-day-block.weekend { background: #f7f3e8; }
+  .rdm-day-block.rdm-day-off-for-search { border: 2.5px solid var(--green-dark); background: #fdf0ef; }
+  .rdm-emp-row.search-hit { background: var(--green-darker); color: #fff; border-radius: 999px; padding: 4px 8px; margin: 0 -4px; }
+  .rdm-day-label { display: flex; flex-direction: column; align-self: start; padding: 6px 4px; line-height: 1.1; }
+  .rdm-day-label .dnum { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .rdm-day-label .dow { display: block; color: var(--text-muted); font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+  .rdm-day-block.weekend .rdm-day-label .dow { color: #b4532a; }
+  .rdm-day-label .today-badge {
+    display: inline-block; margin-top: 4px; width: fit-content; background: var(--green-dark); color: #fff;
+    font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 5px; text-transform: uppercase;
+  }
+
+  .rdm-shift-box {
+    background: var(--sc-bg, var(--bg-soft));
+    border-left: 3px solid var(--sc, var(--border));
+    border-radius: 10px;
+    padding: 8px 10px;
+  }
+  .rdm-shift-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+    font-size: 12px;
+    color: var(--sc, var(--text));
+    margin-bottom: 6px;
+  }
+  .rdm-shift-head > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+  .rdm-shift-head .time { font-weight: 600; color: var(--text-muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .rdm-add-btn {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: none; background: var(--sc, var(--green-dark)); color: #fff;
+    font-size: 13px; line-height: 1; cursor: pointer;
+  }
+  .rdm-emp-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    font-size: 11.5px;
+  }
+  .rdm-emp-row .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .rdm-emp-row .nm { flex: 1; font-weight: 600; }
+  .rdm-shift-body { display: flex; gap: 10px; align-items: flex-start; }
+  .rdm-main-col { flex: 1; min-width: 0; }
+  .rdm-ms-col {
+    flex: none; max-width: 48%;
+    border-left: 1.5px dashed var(--sc-line, var(--border));
+    padding-left: 8px;
+  }
+  .rdm-emp-row { cursor: context-menu; border-radius: 6px; }
+  .rdm-emp-row:hover { background: rgba(255,255,255,0.7); }
+  .rdm-emp-row.is-leader .nm { color: var(--red-text); }
+
+  .confirm-overlay {
+    position: fixed; inset: 0; z-index: 2000; background: rgba(22, 32, 28, 0.35);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+    backdrop-filter: blur(2px);
+  }
+  .confirm-box {
+    background: #fff; border-radius: 16px; padding: 22px 22px 18px; width: 100%; max-width: 360px;
+    box-shadow: 0 24px 48px -12px rgba(22, 58, 45, 0.35);
+  }
+  .confirm-msg { font-size: 15px; font-weight: 600; }
+  .confirm-detail { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+  .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .btn-danger-solid { background: var(--red-strong); color: #fff; }
+  .btn-danger-solid:hover { background: var(--red-text); }
+
+  .rdm-x-btn {
+    border: none; background: transparent; color: var(--red-text);
+    font-weight: 700; cursor: pointer; font-size: 13px; line-height: 1;
+  }
+  .rdm-add-inline { display: flex; gap: 4px; margin-top: 4px; }
+  .rdm-add-inline select { font-size: 11px; padding: 4px 6px; flex: 1; }
+
+  .gen-grid {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  .gen-grid select, .gen-grid input { min-width: 110px; }
+
+  .gen-results-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .gen-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .gen-table th, .gen-table td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+  .gen-table th:first-child, .gen-table td:first-child { text-align: left; }
+  .gen-table th { color: var(--text-muted); text-transform: uppercase; font-size: 10px; position: sticky; top: 0; background: #fff; }
+  .gen-table td.total, .gen-table th:last-child { font-weight: 700; }
+  .underfond-chip { display: inline-block; background: var(--red-soft); color: var(--red-text); border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700; margin: 2px; }
+</style>
+</head>
+<body>
+  <header class="app-header" id="app-header-mount"></header>
+
+  <main class="page">
+    <section id="tab-osobe" class="tab-panel active">
+      <div id="osobe-banner"></div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <h2 style="margin:0 0 2px;font-size:15px;">Dodaj osobu</h2>
+        <p class="muted" style="margin:0 0 16px;font-size:12px;">Ime, user i osnovna rola čuvaju se u Login tabu.</p>
+        <form id="add-person-form" class="add-form-grid">
+          <div>
+            <label class="field-label">Ime i prezime</label>
+            <input type="text" id="new-full-name" placeholder="Ime i prezime" required />
+          </div>
+          <div>
+            <label class="field-label">User</label>
+            <input type="text" id="new-username" placeholder="korisnicko.ime" required />
+          </div>
+          <div>
+            <label class="field-label">Rola</label>
+            <select id="new-role">
+              <option value="worker">Radnik</option>
+              <option value="admin">Administrator</option>
+              <option value="management">Management</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" id="add-person-btn">Dodaj osobu</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="osobe-list-head">
+          <div>
+            <h2 style="margin:0 0 2px;font-size:15px;">Osobe u sistemu</h2>
+            <p class="muted" style="margin:0;font-size:12px;">Ovde možete promeniti osnovnu rolu ili deaktivirati osobu.</p>
+          </div>
+          <div class="osobe-head-actions">
+            <label class="switch-label" title="Uključeno: prikazuju se i deaktivirane osobe">
+              <input type="checkbox" id="show-inactive" class="switch-input" />
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+              Prikaži i neaktivne <span id="show-inactive-count" class="muted"></span>
+            </label>
+            <button class="btn btn-primary" id="save-changes-btn">Sačuvaj izmene</button>
+          </div>
+        </div>
+
+        <div class="scroll-x">
+          <div style="min-width:1050px;">
+            <div class="col-head">
+              <div>Zaposleni</div>
+              <div>Funkcija</div>
+              <div>Monitoring</div>
+              <div>Slava</div>
+              <div>Odmor od (pon.)</div>
+              <div>Trajanje</div>
+              <div>Odmor do (ned.)</div>
+              <div>Status</div>
+              <div></div>
+            </div>
+            <div id="employees-list"><div class="empty-note muted">Učitavanje...</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-plan" class="tab-panel">
+      <div id="plan-banner"></div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;gap:14px;align-items:end;flex-wrap:wrap;">
+          <div>
+            <label class="field-label">Mesec</label>
+            <select id="plan-month"></select>
+          </div>
+          <div>
+            <label class="field-label">Godina</label>
+            <input type="number" id="plan-year" style="width:110px;" />
+          </div>
+          <div style="flex:1;"></div>
+          <button class="btn btn-primary" id="plan-save-btn">Sačuvaj plan</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 2px;font-size:15px;">Plan zaposlenih po nedeljama</h2>
+        <p class="muted" id="plan-subtitle" style="margin:0 0 14px;font-size:12px;"></p>
+        <div class="scroll-x">
+          <div id="plan-table-wrap" style="min-width:860px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-rasporedi" class="tab-panel">
+      <div id="rasporedi-banner"></div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <h2 style="margin:0 0 2px;font-size:15px;">Generisanje</h2>
+        <p class="muted" style="margin:0 0 16px;font-size:12px;">Postojeći raspored za izabrani mesec biće zamenjen. Prethodni meseci ostaju sačuvani.</p>
+        <div class="gen-grid">
+          <div>
+            <label class="field-label">Mesec</label>
+            <select id="gen-month"></select>
+          </div>
+          <div>
+            <label class="field-label">Godina</label>
+            <input type="number" id="gen-year" style="width:100px;" />
+          </div>
+          <div>
+            <label class="field-label">I smena</label>
+            <select id="gen-i"><option value="2/3">2 ili 3</option><option value="3/4">3 ili 4</option></select>
+          </div>
+          <div>
+            <label class="field-label">II smena</label>
+            <select id="gen-ii"><option value="2/3">2 ili 3</option><option value="3/4">3 ili 4</option></select>
+          </div>
+          <div>
+            <label class="field-label">III smena</label>
+            <select id="gen-iii"><option value="2/3">2 ili 3</option><option value="3/4">3 ili 4</option></select>
+          </div>
+          <button class="btn btn-ghost" id="gen-suggest-btn">Primeni predlog</button>
+          <button class="btn btn-primary" id="gen-run-btn">Napravi raspored</button>
+        </div>
+        <div id="gen-suggestion" class="muted" style="margin-top:10px;font-size:12px;"></div>
+      </div>
+
+      <div class="gen-results-grid" id="gen-results" style="display:none;">
+        <div class="card">
+          <h2 style="margin:0 0 10px;font-size:14px;">Broj ljudi po smenama</h2>
+          <div class="scroll-x" style="max-height:360px;overflow-y:auto;">
+            <table class="gen-table" id="gen-daily-table"></table>
+          </div>
+        </div>
+        <div class="card">
+          <h2 style="margin:0 0 10px;font-size:14px;">Fond smena po zaposlenom</h2>
+          <div class="scroll-x" style="max-height:360px;overflow-y:auto;">
+            <table class="gen-table" id="gen-fond-table"></table>
+          </div>
+          <div id="gen-underfond" style="margin-top:10px;"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <h2 style="margin:0 0 2px;font-size:15px;">Tekući i naredni rasporedi</h2>
+        <p class="muted" style="margin:0 0 16px;font-size:12px;">Tekući mesec je otvoren. Naredni generisani meseci otvaraju se klikom na naslov.</p>
+        <div class="replace-grid">
+          <div>
+            <label class="field-label">Vrsta</label>
+            <select id="rep-type">
+              <option value="day">Zameni tog dana</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Datum</label>
+            <input type="date" id="rep-date" />
+          </div>
+          <div>
+            <label class="field-label">Prvi zaposleni</label>
+            <select id="rep-emp1"><option value="">Izaberite...</option></select>
+          </div>
+          <div>
+            <label class="field-label">Drugi zaposleni</label>
+            <select id="rep-emp2"><option value="">Izaberite...</option></select>
+          </div>
+          <button class="btn btn-primary" id="rep-btn">Replace</button>
+        </div>
+      </div>
+
+      <!-- Pretraga — zakačena na vrhu pri skrolovanju, iznad zaglavlja meseca -->
+      <div class="rdm-search-bar">
+        <input type="text" id="rasporedi-search" placeholder="Pronađi zaposlenog..." autocomplete="off" />
+        <div id="rasporedi-search-info" class="muted"></div>
+      </div>
+      <div id="rasporedi-months"></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/supabase.js?v=20261006s"></script>
+  <script src="../js/auth.js?v=20261006s"></script>
+  <script src="../js/account.js?v=20261006s"></script>
+  <script src="../js/constants.js?v=20261006s"></script>
+  <script src="../js/admin-shell.js?v=20261006s"></script>
+  <script src="../js/admin-osobe.js?v=20261006s"></script>
+  <script src="../js/admin-plan.js?v=20261006s"></script>
+  <script src="../js/generator.js?v=20261006s"></script>
+  <script src="../js/admin-generate.js?v=20261006s"></script>
+  <script src="../js/admin-rasporedi.js?v=20261006s"></script>
+</body>
+</html>

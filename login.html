@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login — Raspored App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="css/style.css?v=20261006s" />
+<style>
+  body { min-height: 100vh; }
+  .login-wrap {
+    min-height: calc(100vh - 70px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .login-card {
+    width: 100%;
+    max-width: 380px;
+    padding: 32px;
+  }
+  .login-card h1 {
+    font-size: 20px;
+    margin: 0 0 4px;
+  }
+  .login-card p.sub {
+    margin: 0 0 24px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .field { margin-bottom: 16px; }
+  .field input { width: 100%; }
+  .login-error {
+    background: var(--red-soft);
+    color: var(--red-text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    margin-bottom: 16px;
+  }
+  .login-card .btn-primary { width: 100%; padding: 11px; font-size: 14px; }
+</style>
+</head>
+<body>
+  <header class="app-header" id="app-header-mount"></header>
+
+  <div class="login-wrap">
+    <form class="card login-card" id="login-form" novalidate>
+      <h1>Prijava</h1>
+      <p class="sub">Unesite korisničko ime i lozinku da vidite svoj raspored.</p>
+
+      <div id="login-error" class="login-error hidden"></div>
+
+      <div class="field">
+        <label class="field-label" for="username">Korisničko ime</label>
+        <input id="username" name="username" type="text" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label class="field-label" for="password">Lozinka</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="login-submit">Prijavi se</button>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase.js?v=20261006s"></script>
+  <script src="js/auth.js?v=20261006s"></script>
+  <script src="js/account.js?v=20261006s"></script>
+  <script src="js/login.js?v=20261006s"></script>
+</body>
+</html>
