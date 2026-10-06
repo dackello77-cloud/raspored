@@ -523,7 +523,7 @@ function mobRender() {
         <span class="dn">${d.getDate()}</span>
         <span class="dm">${DOW_SR[d.getDay()]}<br>${MONTH_NAMES_SR[d.getMonth()].slice(0, 3)}</span>
         ${m
-          ? `<span class="sh shift-${m.isMS ? "MS" : m.code}"><span class="shift-tag" style="background:var(--sc);color:#fff;border-radius:6px;padding:2px 8px;font-weight:800;font-size:12px;">${m.isMS ? "MS" : m.code}</span><span><span class="lbl">${m.isMS ? "Međusmena" : (MOB.shiftTypes.find(s => s.code === m.code) || {}).label || ""}</span><br><span class="tm">${mobTimeLabel(m.code, m.isMS)}</span></span></span>`
+          ? `<span class="sh shift-${m.isMS ? "MS" : m.code}"><span class="shift-tag mob-day-badge">${m.isMS ? "MS" : m.code}</span><span><span class="lbl">${m.isMS ? "Međusmena" : (MOB.shiftTypes.find(s => s.code === m.code) || {}).label || ""}</span><br><span class="tm">${mobTimeLabel(m.code, m.isMS)}</span></span></span>`
           : '<span class="off">Slobodan</span>'}
         <span class="chev">›</span>
       </div>`;
