@@ -52,6 +52,7 @@ async function mountHeader(activeKey) {
         <div class="role">${({ admin: "Administrator", management: "Management" })[profile.role] || "Radnik"}${profile.hr_manager ? " · HR" : ""}</div>
         <div class="username">${profile.username}</div>
       </div>
+      <button class="btn-password btn-push" id="push-btn" type="button">🔕 Uključi obaveštenja</button>
       <button class="btn-password" id="password-btn" type="button">Promeni lozinku</button>
       <button class="btn-logout" id="logout-btn" type="button">Odjava</button>
     `
@@ -92,12 +93,14 @@ async function mountHeader(activeKey) {
   const logoutBtn = document.getElementById("logout-btn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
+      if (typeof pushForgetDevice === "function") await pushForgetDevice();
       await sb.auth.signOut();
       window.location.href = APP_BASE + "index.html";
     });
   }
 
   if (session) zmRefreshNavBadge(session, profile);
+  if (typeof pushRefreshButton === "function") pushRefreshButton();
 
   const passwordBtn = document.getElementById("password-btn");
   if (passwordBtn) passwordBtn.addEventListener("click", () => openPasswordDialog(session.user.email));

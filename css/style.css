@@ -371,6 +371,7 @@ label.field-label {
   .header-menu .header-right { flex-wrap: wrap; justify-content: space-between; gap: 10px; }
   .header-menu .user-chip { text-align: right; flex: 1 1 55%; }
   .header-menu .btn-password, .header-menu .btn-logout { flex: 1 1 calc(50% - 5px); padding: 11px 12px; font-size: 13px; }
+  .header-menu .btn-push { flex-basis: 100%; }
 }
 
 /* Međusmena — oznaka pored imena */

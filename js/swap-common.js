@@ -77,8 +77,14 @@ function zmItemHtml(r, names, actions) {
 // Stranica postavlja: zmOnDone(message, isError) — prikaz poruke i ponovno učitavanje.
 let zmOnDone = (msg, isError) => { if (isError) alert(msg); };
 
-async function zmRun(promise, okText) {
+// Obaveštenje na telefon(e) — funkcija send-push sama zna kome, prema statusu zahteva.
+function zmNotify(requestId) {
+  if (requestId) sb.functions.invoke("send-push", { body: { request_id: requestId } }).catch(() => {});
+}
+
+async function zmRun(promise, okText, requestId) {
   const { error } = await promise;
+  if (!error) zmNotify(requestId);
   await zmOnDone(error ? error.message : okText, !!error);
   if (typeof zmRefreshNavBadge === "function") zmRefreshNavBadge();
 }
@@ -91,14 +97,14 @@ document.addEventListener("click", (e) => {
   if (e.target.closest(".zm-cancel")) {
     if (confirm("Otkazati ovaj zahtev za zamenu?")) zmRun(sb.rpc("swap_request_cancel", { p_id: id }), "Zahtev je otkazan.");
   } else if (e.target.closest(".zm-accept")) {
-    zmRun(sb.rpc("swap_request_respond", { p_id: id, p_accept: true }), "Potvrđeno — zahtev ide HR manageru na odobrenje.");
+    zmRun(sb.rpc("swap_request_respond", { p_id: id, p_accept: true }), "Potvrđeno — zahtev ide HR manageru na odobrenje.", id);
   } else if (e.target.closest(".zm-decline")) {
-    if (confirm("Odbiti zamenu?")) zmRun(sb.rpc("swap_request_respond", { p_id: id, p_accept: false }), "Zamena je odbijena.");
+    if (confirm("Odbiti zamenu?")) zmRun(sb.rpc("swap_request_respond", { p_id: id, p_accept: false }), "Zamena je odbijena.", id);
   } else if (e.target.closest(".zm-approve") || e.target.closest(".zm-reject")) {
     const approve = !!e.target.closest(".zm-approve");
     const comment = item.querySelector(".zm-hr-comment").value;
     zmRun(sb.rpc("swap_request_hr_decide", { p_id: id, p_approve: approve, p_comment: comment || null }),
-      approve ? "Zamena je odobrena i raspored je promenjen." : "Zamena je odbijena.");
+      approve ? "Odobreno — raspored je promenjen." : "Zahtev je odbijen.", id);
   }
 });
 
@@ -160,7 +166,7 @@ function zmOpenDayOffDialog(date, shift) {
     const reason = form.reason.value.trim();
     if (!reason) return;
     save.disabled = true;
-    const { error } = await sb.rpc("dayoff_request_create", { p_date: date, p_reason: reason });
+    const { data: newId, error } = await sb.rpc("dayoff_request_create", { p_date: date, p_reason: reason });
     if (error) {
       msg.className = "pw-msg err";
       msg.textContent = /dayoff_request_create/.test(error.message)
@@ -170,6 +176,7 @@ function zmOpenDayOffDialog(date, shift) {
       return;
     }
     close();
+    zmNotify(newId);
     await zmOnDone("Zahtev za slobodan dan je poslat HR manageru.", false);
     if (typeof zmRefreshNavBadge === "function") zmRefreshNavBadge();
   });
@@ -232,7 +239,7 @@ function zmOpenSwapDialog(date, me, target) {
     const reason = form.reason.value.trim();
     if (!ruleOk || !reason) return;
     save.disabled = true;
-    const { error } = await sb.rpc("swap_request_create", { p_date: date, p_target: target.id, p_reason: reason });
+    const { data: newId, error } = await sb.rpc("swap_request_create", { p_date: date, p_target: target.id, p_reason: reason });
     if (error) {
       msg.className = "pw-msg err";
       msg.textContent = error.message;
@@ -240,6 +247,7 @@ function zmOpenSwapDialog(date, me, target) {
       return;
     }
     close();
+    zmNotify(newId);
     await zmOnDone(`Zahtev je poslat — ${target.name} treba da ga potvrdi.`, false);
     if (typeof zmRefreshNavBadge === "function") zmRefreshNavBadge();
   });
