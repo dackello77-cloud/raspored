@@ -83,7 +83,7 @@ async function dlLoadDay() {
   const row = (name, details, status, attId) => `<div class="dl-row">
       <div class="dl-who"><b>${dlEsc(name)}</b><small>${details}</small></div>
       ${status}
-      ${attId ? `<button class="dl-del" data-id="${attId}" type="button" title="Obriši prijavu" aria-label="Obriši prijavu">×</button>` : ""}
+      ${attId && !window.DL_READONLY ? `<button class="dl-del" data-id="${attId}" type="button" title="Obriši prijavu" aria-label="Obriši prijavu">×</button>` : ""}
     </div>`;
   let html = "";
 

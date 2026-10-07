@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dolasci — Raspored App</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#1e4a3a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Raspored" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2" />
+<link rel="icon" type="image/png" href="icons/icon-192.png?v=2" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="css/style.css?v=20261007h" />
+</head>
+<body>
+  <header class="app-header" id="app-header-mount"></header>
+
+  <main class="page">
+    <div id="dolasci-banner"></div>
+
+    <div class="dl-tabs" role="tablist">
+      <button type="button" class="dl-tab active" data-view="day" role="tab">Po danu</button>
+      <button type="button" class="dl-tab" data-view="month" role="tab">Mesečni izveštaj</button>
+    </div>
+
+    <div class="dl-grid">
+    <div class="card dl-view" id="dl-view-day">
+      <h2 class="dl-view-title">Po danu</h2>
+      <div class="dl-bar">
+        <button class="dl-nav" id="dl-day-prev" type="button" aria-label="Prethodni dan">‹</button>
+        <div class="dl-bar-mid">
+          <div class="dl-bar-title" id="dl-day-label">—</div>
+          <input type="date" id="dl-date" aria-label="Izaberi datum" />
+        </div>
+        <button class="dl-nav" id="dl-day-next" type="button" aria-label="Sledeći dan">›</button>
+      </div>
+      <div class="dl-summary" id="dl-day-summary"></div>
+      <div id="dl-day-list"></div>
+    </div>
+
+    <div class="card dl-view" id="dl-view-month" hidden>
+      <h2 class="dl-view-title">Mesečni izveštaj</h2>
+      <div class="dl-bar">
+        <button class="dl-nav" id="dl-month-prev" type="button" aria-label="Prethodni mesec">‹</button>
+        <div class="dl-bar-mid"><div class="dl-bar-title" id="dl-month-label">—</div></div>
+        <button class="dl-nav" id="dl-month-next" type="button" aria-label="Sledeći mesec">›</button>
+      </div>
+      <div class="dl-totals" id="dl-month-totals"></div>
+      <div class="dl-month-tools">
+        <span class="muted" id="dl-month-note"></span>
+        <button class="btn btn-primary" id="dl-pdf" type="button">Preuzmi PDF</button>
+      </div>
+      <div id="dl-month-list"></div>
+    </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase.js?v=20261007h"></script>
+  <script src="js/auth.js?v=20261007h"></script>
+  <script src="js/push.js?v=20261007h"></script>
+  <script src="js/constants.js?v=20261007h"></script>
+  <script>window.DL_READONLY = true; // Management: samo pregled, bez brisanja</script>
+  <script src="js/admin-dolasci.js?v=20261007h"></script>
+  <script>
+    (async () => {
+      const { session, profile } = await mountHeader("dolasci");
+      if (!session) { location.href = APP_BASE + "login.html?next=dolasci.html"; return; }
+      if (!profile || !["management", "admin"].includes(profile.role)) { location.href = APP_BASE + "index.html"; return; }
+      dlRefresh();
+    })();
+  </script>
+</body>
+</html>

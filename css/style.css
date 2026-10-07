@@ -451,3 +451,67 @@ label.field-label {
   .checkin-fab:active { transform: translateX(-50%) scale(0.97); }
   body.has-checkin-fab { padding-bottom: 84px; }
 }
+
+/* ---- Dolasci (admin tab i dolasci.html za Management) ---- */
+.dl-tabs { display: flex; gap: 4px; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 4px; margin-bottom: 14px; max-width: 420px; }
+.dl-tab { flex: 1; border: none; background: none; font: inherit; font-weight: 700; font-size: 13.5px; padding: 10px 12px; border-radius: 10px; color: var(--text-muted); cursor: pointer; }
+.dl-tab.active { background: var(--green-dark); color: #fff; }
+.dl-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.dl-bar-mid { flex: 1; text-align: center; position: relative; }
+.dl-bar-title { font-size: 17px; font-weight: 800; }
+#dl-date { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.dl-nav { width: 42px; height: 42px; flex: none; border-radius: 12px; border: 1px solid var(--border); background: #fff; font-size: 22px; line-height: 1; cursor: pointer; color: var(--text); }
+.dl-summary, .dl-totals { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.dl-st { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+.dl-st.ok { background: var(--green-pill); color: var(--green-darker); }
+.dl-st.late { background: #fff1dc; color: #a35a00; }
+.dl-st.miss { background: var(--red-soft); color: var(--red-text); }
+.dl-st.wait { background: #f1f1ee; color: var(--text-muted); }
+.dl-st.extra { background: var(--blue-soft); color: #2459c9; }
+.dl-group { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 12px; }
+.dl-group-head { display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; font-weight: 800; font-size: 13px; background: var(--sc-bg, var(--bg-soft)); color: var(--sc, var(--text)); border-bottom: 1px solid var(--sc-line, var(--border)); }
+.dl-group-head small { font-weight: 700; font-size: 12px; opacity: 0.85; }
+.dl-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.dl-row:first-of-type { border-top: none; }
+.dl-who { flex: 1; min-width: 0; }
+.dl-who b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-who small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.dl-del { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 4px 6px; flex: none; }
+.dl-del:hover { color: var(--red-text); }
+.dl-empty { padding: 28px 10px; text-align: center; color: var(--text-muted); }
+.dl-terminal-link { display: inline-block; margin-top: 6px; font-size: 12.5px; color: var(--text-muted); }
+.dl-tile { flex: 1 1 120px; background: var(--bg-soft); border-radius: 12px; padding: 10px 12px; }
+.dl-tile b { display: block; font-size: 20px; font-weight: 800; }
+.dl-tile span { display: block; font-size: 12px; font-weight: 700; }
+.dl-tile small { display: block; font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.dl-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dl-tile.late b { color: #a35a00; }
+.dl-tile.miss b { color: var(--red-text); }
+.dl-month-tools { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; font-size: 12px; }
+.dl-person { border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; background: #fff; }
+.dl-p-head { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; }
+.dl-p-head .dl-who small { margin-top: 3px; }
+.dl-p-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.dl-chev { color: var(--text-muted); transition: transform 0.15s; flex: none; }
+.dl-person.open .dl-chev { transform: rotate(90deg); }
+.dl-p-detail { padding: 0 14px 12px; font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
+.dl-p-detail b { color: var(--text); }
+.dl-view-title { display: none; }
+/* Računar: bez tabova — levo "Po danu", desno "Mesečni izveštaj" */
+@media (min-width: 1000px) {
+  .dl-tabs { display: none; }
+  .dl-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .dl-grid > .dl-view[hidden] { display: block; }
+  .dl-view-title { display: block; margin: 0 0 12px; font-size: 15px; }
+}
+@media (max-width: 700px) {
+  .dl-tabs { max-width: none; }
+  .dl-row, .dl-p-head { padding: 10px 12px; }
+  .dl-p-head { align-items: flex-start; }
+  .dl-p-badges { flex-direction: column; align-items: flex-end; }
+  .dl-month-tools .btn { width: 100%; padding: 12px; }
+  .dl-totals { gap: 6px; }
+  .dl-tile { padding: 9px 10px; }
+  .dl-tile b { font-size: 18px; }
+}
+.dl-bad { color: var(--red-text); font-weight: 700; }

@@ -39,6 +39,9 @@ async function mountHeader(activeKey) {
       `<a href="${APP_BASE}admin/index.html#dolasci" data-admin-tab="dolasci" class="${activeKey === "admin-dolasci" ? "active" : ""}">Dolasci</a>`
     );
   }
+  if (profile && profile.role === "management") {
+    navLinks.push(`<a href="${APP_BASE}dolasci.html" class="${activeKey === "dolasci" ? "active" : ""}">Dolasci</a>`);
+  }
   if (session) {
     navLinks.push(
       `<a href="${APP_BASE}zamene.html" class="${activeKey === "zamene" ? "active" : ""}">Zamene<span class="nav-badge" id="nav-zamene-badge" hidden></span></a>`
@@ -103,7 +106,7 @@ async function mountHeader(activeKey) {
   }
 
   if (session) zmRefreshNavBadge(session, profile);
-  if (session) mountCheckInButton(session);
+  if (session && profile && profile.role !== "management") mountCheckInButton(session);
   if (typeof pushRefreshButton === "function") pushRefreshButton();
 
   const passwordBtn = document.getElementById("password-btn");
