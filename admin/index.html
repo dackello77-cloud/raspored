@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="../css/style.css?v=20261007f" />
+<link rel="stylesheet" href="../css/style.css?v=20261007g" />
 <style>
 
   .add-form-grid {
@@ -376,6 +376,14 @@
   .dl-person.open .dl-chev { transform: rotate(90deg); }
   .dl-p-detail { padding: 0 14px 12px; font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
   .dl-p-detail b { color: var(--text); }
+  .dl-view-title { display: none; }
+  /* Računar: bez tabova — levo "Po danu", desno "Mesečni izveštaj" */
+  @media (min-width: 1000px) {
+    .dl-tabs { display: none; }
+    .dl-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+    .dl-grid > .dl-view[hidden] { display: block; }
+    .dl-view-title { display: block; margin: 0 0 12px; font-size: 15px; }
+  }
   @media (max-width: 700px) {
     .dl-tabs { max-width: none; }
     .dl-row, .dl-p-head { padding: 10px 12px; }
@@ -578,7 +586,9 @@
         <button type="button" class="dl-tab" data-view="month" role="tab">Mesečni izveštaj</button>
       </div>
 
+      <div class="dl-grid">
       <div class="card dl-view" id="dl-view-day">
+        <h2 class="dl-view-title">Po danu</h2>
         <div class="dl-bar">
           <button class="dl-nav" id="dl-day-prev" type="button" aria-label="Prethodni dan">‹</button>
           <div class="dl-bar-mid">
@@ -593,6 +603,7 @@
       </div>
 
       <div class="card dl-view" id="dl-view-month" hidden>
+        <h2 class="dl-view-title">Mesečni izveštaj</h2>
         <div class="dl-bar">
           <button class="dl-nav" id="dl-month-prev" type="button" aria-label="Prethodni mesec">‹</button>
           <div class="dl-bar-mid"><div class="dl-bar-title" id="dl-month-label">—</div></div>
@@ -605,21 +616,22 @@
         </div>
         <div id="dl-month-list"></div>
       </div>
+      </div>
     </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/supabase.js?v=20261007f"></script>
-  <script src="../js/auth.js?v=20261007f"></script>
-  <script src="../js/push.js?v=20261007f"></script>
-  <script src="../js/account.js?v=20261007f"></script>
-  <script src="../js/constants.js?v=20261007f"></script>
-  <script src="../js/admin-shell.js?v=20261007f"></script>
-  <script src="../js/admin-osobe.js?v=20261007f"></script>
-  <script src="../js/admin-plan.js?v=20261007f"></script>
-  <script src="../js/generator.js?v=20261007f"></script>
-  <script src="../js/admin-generate.js?v=20261007f"></script>
-  <script src="../js/admin-rasporedi.js?v=20261007f"></script>
-  <script src="../js/admin-dolasci.js?v=20261007f"></script>
+  <script src="../js/supabase.js?v=20261007g"></script>
+  <script src="../js/auth.js?v=20261007g"></script>
+  <script src="../js/push.js?v=20261007g"></script>
+  <script src="../js/account.js?v=20261007g"></script>
+  <script src="../js/constants.js?v=20261007g"></script>
+  <script src="../js/admin-shell.js?v=20261007g"></script>
+  <script src="../js/admin-osobe.js?v=20261007g"></script>
+  <script src="../js/admin-plan.js?v=20261007g"></script>
+  <script src="../js/generator.js?v=20261007g"></script>
+  <script src="../js/admin-generate.js?v=20261007g"></script>
+  <script src="../js/admin-rasporedi.js?v=20261007g"></script>
+  <script src="../js/admin-dolasci.js?v=20261007g"></script>
 </body>
 </html>
