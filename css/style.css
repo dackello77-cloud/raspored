@@ -115,15 +115,14 @@ a { color: inherit; }
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: linear-gradient(135deg, var(--green-dark), #2b6e54);
+  background: #fff;
   box-shadow: 0 4px 10px -4px rgba(22, 58, 45, 0.5);
-  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
+  padding: 5px;
 }
+.brand-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .brand-name { font-weight: 700; font-size: 15px; line-height: 1.2; }
 .brand-sub { font-size: 11px; color: var(--text-muted); }
@@ -347,7 +346,7 @@ label.field-label {
 @media (max-width: 700px) {
   .app-header { position: sticky; top: 0; flex-wrap: nowrap; padding: 10px 14px; }
   .app-header .brand-sub { display: none; }
-  .brand-logo { width: 34px; height: 34px; font-size: 13px; }
+  .brand-logo { width: 34px; height: 34px; }
   .menu-toggle {
     display: inline-flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px;
     position: relative; margin-left: auto; width: 42px; height: 42px; border-radius: 12px;

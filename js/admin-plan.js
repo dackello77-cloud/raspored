@@ -618,16 +618,18 @@ async function handleSavePlan() {
 document.addEventListener("admin-ready", () => {
   const monthSelect = document.getElementById("plan-month");
   const yearInput = document.getElementById("plan-year");
+  // Podrazumevano: naredni mesec (decembar → januar naredne godine).
   const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
   MONTH_NAMES_SR.forEach((name, idx) => {
     const opt = document.createElement("option");
     opt.value = idx + 1;
     opt.textContent = name;
-    if (idx === now.getMonth()) opt.selected = true;
+    if (idx === next.getMonth()) opt.selected = true;
     monthSelect.appendChild(opt);
   });
-  yearInput.value = now.getFullYear();
+  yearInput.value = next.getFullYear();
 
   monthSelect.addEventListener("change", loadPlan);
   // Svaki put kad se otvori tab — sveži podaci iz "Osobe u sistemu" (odmori, aktivni, slava).

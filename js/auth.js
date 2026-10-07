@@ -60,7 +60,7 @@ async function mountHeader(activeKey) {
 
   mount.innerHTML = `
     <div class="brand">
-      <div class="brand-logo">RA</div>
+      <div class="brand-logo"><img src="${APP_BASE}icons/logo.png" alt="Logo" /></div>
       <div>
         <div class="brand-name">Raspored App</div>
         <div class="brand-sub">Smene bez nagađanja</div>
