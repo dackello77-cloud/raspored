@@ -48,6 +48,8 @@ async function submitToken(token) {
     showResult({ kind: "err", title: "Prijava nije uspela", text: error.message, retry: true });
     return;
   }
+  // Obaveštenje HR-u, adminu i Management-u (funkcija send-push; ne čeka se odgovor).
+  if (!data.already) sb.functions.invoke("send-push", { body: { checkin: true } }).catch(() => {});
   const firstName = (data.full_name || "").split(" ")[0];
   const shift = data.shift_code
     ? `${SHIFT_NAMES[data.shift_code] || data.shift_code}${data.is_medju_smena ? " (međusmena)" : ""}`

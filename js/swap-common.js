@@ -18,6 +18,18 @@ function zmFmtDate(iso) {
   const dow = ["Nedelja", "Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"][d.getDay()];
   return `${dow}, ${d.getDate()}. ${MONTH_NAMES_SR[d.getMonth()]} ${d.getFullYear()}.`;
 }
+// Nedelja (pon–ned) kojoj dan pripada.
+function zmWeekRange(iso) {
+  const d = new Date(iso + "T00:00:00");
+  const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+  const f = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  return { from: f(mon), to: f(sun), mon, sun };
+}
+function zmWeekLabel(iso) {
+  const { mon, sun } = zmWeekRange(iso);
+  return `Nedelja ${mon.getDate()}.${mon.getMonth() + 1}. – ${sun.getDate()}.${sun.getMonth() + 1}.${sun.getFullYear()}.`;
+}
 function zmShift(code) {
   return `<span class="shift-badge s-${code}">${code}</span>`;
 }
@@ -61,12 +73,14 @@ function zmItemHtml(r, names, actions) {
   return `
     <div class="zm-item" data-id="${r.id}"${dayOff && actions === ZM_ACTIONS.hr ? ` data-staff-date="${r.date}" data-staff-shift="${r.requester_shift}"` : ""}>
       <div class="zm-item-head">
-        <span class="zm-date"><span class="zm-kind ${dayOff ? "zm-kind-off" : ""}">${dayOff ? "Slobodan dan" : "Zamena"}</span>${zmFmtDate(r.date)}</span>
+        <span class="zm-date"><span class="zm-kind ${dayOff ? "zm-kind-off" : ""}">${dayOff ? "Slobodan dan" : r.is_week ? "Zamena · cela nedelja" : "Zamena"}</span>${r.is_week ? zmWeekLabel(r.date) : zmFmtDate(r.date)}</span>
         <span class="zm-status st-${r.status}">${ZM_STATUS[r.status] || r.status}</span>
       </div>
       <div class="zm-swap">${dayOff
         ? `${a} ${zmShift(r.requester_shift)} → slobodan`
-        : `${a} ${zmShift(r.requester_shift)} ⇄ ${b} ${zmShift(r.target_shift)}`}</div>
+        : r.is_week
+          ? `${a} ${zmShift(r.requester_shift)} ⇄ ${b} ${zmShift(r.target_shift)} — menjaju sve smene te nedelje`
+          : `${a} ${zmShift(r.requester_shift)} ⇄ ${b} ${zmShift(r.target_shift)}`}</div>
       <div class="zm-reason"><b>Razlog:</b> ${zmEsc(r.reason)}</div>
       ${r.hr_comment ? `<div class="zm-reason"><b>Komentar HR:</b> ${zmEsc(r.hr_comment)}</div>` : ""}
       ${dayOff && actions === ZM_ACTIONS.hr ? '<div class="zm-staff">Provera smene...</div>' : ""}
@@ -213,16 +227,18 @@ function zmOpenDayOffDialog(date, shift) {
 
 // ---------- Prozor: nova zamena ----------
 // me / target: { id, name, shift }
-function zmOpenSwapDialog(date, me, target) {
+function zmOpenSwapDialog(date, me, target, week = false) {
   document.getElementById("zm-dialog")?.remove();
   const overlay = document.createElement("div");
   overlay.id = "zm-dialog";
   overlay.className = "pw-overlay";
   overlay.innerHTML = `
     <form class="pw-box" novalidate>
-      <h3>Zamena smene</h3>
-      <div class="zm-date">${zmFmtDate(date)}</div>
-      <div class="zm-swap">Ti ${zmShift(me.shift)} → ${zmShift(target.shift)} · ${zmEsc(target.name)} ${zmShift(target.shift)} → ${zmShift(me.shift)}</div>
+      <h3>${week ? "Zamena za celu nedelju" : "Zamena smene"}</h3>
+      <div class="zm-date">${week ? zmWeekLabel(date) : zmFmtDate(date)}</div>
+      <div class="zm-swap">${week
+        ? `Ti i ${zmEsc(target.name)} menjate sve smene te nedelje (prošli dani ostaju kakvi jesu).`
+        : `Ti ${zmShift(me.shift)} → ${zmShift(target.shift)} · ${zmEsc(target.name)} ${zmShift(target.shift)} → ${zmShift(me.shift)}`}</div>
       <div class="zm-check">Provera pravila...</div>
       <label>Razlog zamene<textarea name="reason" placeholder="Npr. lekarski pregled ujutru" required></textarea></label>
       <div class="pw-msg"></div>
@@ -245,7 +261,7 @@ function zmOpenSwapDialog(date, me, target) {
   form.reason.addEventListener("input", refresh);
 
   // Provera odmah, pre slanja drugom radniku (isto pravilo kao pri slanju i odobrenju).
-  sb.rpc("swap_precheck", { p_date: date, p_target: target.id }).then(({ data, error }) => {
+  sb.rpc("swap_precheck", week ? { p_date: date, p_target: target.id, p_week: true } : { p_date: date, p_target: target.id }).then(({ data, error }) => {
     if (error) {
       check.className = "zm-check err";
       check.textContent = /swap_precheck/.test(error.message)
@@ -267,7 +283,8 @@ function zmOpenSwapDialog(date, me, target) {
     const reason = form.reason.value.trim();
     if (!ruleOk || !reason) return;
     save.disabled = true;
-    const { data: newId, error } = await sb.rpc("swap_request_create", { p_date: date, p_target: target.id, p_reason: reason });
+    const { data: newId, error } = await sb.rpc("swap_request_create",
+      week ? { p_date: date, p_target: target.id, p_reason: reason, p_week: true } : { p_date: date, p_target: target.id, p_reason: reason });
     if (error) {
       msg.className = "pw-msg err";
       msg.textContent = error.message;

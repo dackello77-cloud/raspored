@@ -318,21 +318,32 @@ function zmChipMenu(ev, chip) {
     return;
   }
 
+  const myF = RASPORED_ME_EMP.funkcija, theirF = chip.dataset.funkcija;
+  const target = { id: chip.dataset.emp, name: targetName, shift: chip.dataset.shift };
   let note = "";
-  if (RASPORED_ME_EMP.funkcija !== "radnik") note = "Zamenu mogu da traže samo radnici.";
+  if (myF !== "radnik" && myF !== "monitoring") note = "Zamenu mogu da traže radnici i monitoring.";
+  else if (theirF !== myF) note = myF === "monitoring" ? "Monitoring menja samo sa monitoringom." : "Zamena je moguća samo sa radnikom.";
   else if (date < today) note = "Dan je prošao.";
   else if (!mine) note = "Tog dana ne radiš.";
-  else if (chip.dataset.funkcija !== "radnik") note = "Zamena je moguća samo sa radnikom.";
   else if (mine.dataset.shift === chip.dataset.shift) note = "Radite istu smenu.";
 
-  zmOpenMenu(ev.clientX, ev.clientY, `${targetName} · ${zmFmtDate(date)}`, [{
-    label: `Zamena sa ${targetName}`,
+  const items = [{
+    label: myF === "monitoring" && theirF === "monitoring" ? `Zamena sa ${targetName} — samo ovaj dan` : `Zamena sa ${targetName}`,
     note,
     disabled: !!note,
-    run: () => zmOpenSwapDialog(date,
-      { id: RASPORED_ME_EMP.id, shift: mine.dataset.shift },
-      { id: chip.dataset.emp, name: targetName, shift: chip.dataset.shift }),
-  }]);
+    run: () => zmOpenSwapDialog(date, { id: RASPORED_ME_EMP.id, shift: mine.dataset.shift }, target),
+  }];
+  // Monitoring: i zamena za celu nedelju (pon–ned), od danas ako je nedelja već počela.
+  if (myF === "monitoring" && theirF === "monitoring") {
+    const sunday = zmWeekRange(date).to;
+    items.push({
+      label: `Zamena sa ${targetName} — cela nedelja`,
+      note: sunday < today ? "Nedelja je prošla." : zmWeekLabel(date),
+      disabled: sunday < today,
+      run: () => zmOpenSwapDialog(date, { id: RASPORED_ME_EMP.id, shift: mine ? mine.dataset.shift : "" }, target, true),
+    });
+  }
+  zmOpenMenu(ev.clientX, ev.clientY, `${targetName} · ${zmFmtDate(date)}`, items);
 }
 
 // Radnik u rasporedu: čip u tabeli, ili red u prozoru "ceo dan" na telefonu.
