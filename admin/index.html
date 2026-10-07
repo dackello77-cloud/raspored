@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="../css/style.css?v=20261007e" />
+<link rel="stylesheet" href="../css/style.css?v=20261007f" />
 <style>
 
   .add-form-grid {
@@ -332,31 +332,60 @@
     gap: 16px;
     margin-bottom: 16px;
   }
-  .dl-head { display: flex; justify-content: space-between; align-items: end; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
-  .dl-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .dl-controls .btn { padding: 8px 12px; }
-  .dl-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-  .dl-summary span { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 99px; background: var(--bg-soft); }
-  .dl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .dl-table th, .dl-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  .dl-table th { color: var(--text-muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
-  .dl-table td.num, .dl-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .dl-table tr.dl-shift-row td { background: var(--bg-soft); font-weight: 700; font-size: 12px; }
-  .dl-st { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px; }
+  /* ---- Dolasci ---- */
+  .dl-tabs { display: flex; gap: 4px; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 4px; margin-bottom: 14px; max-width: 420px; }
+  .dl-tab { flex: 1; border: none; background: none; font: inherit; font-weight: 700; font-size: 13.5px; padding: 10px 12px; border-radius: 10px; color: var(--text-muted); cursor: pointer; }
+  .dl-tab.active { background: var(--green-dark); color: #fff; }
+  .dl-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .dl-bar-mid { flex: 1; text-align: center; position: relative; }
+  .dl-bar-title { font-size: 17px; font-weight: 800; }
+  #dl-date { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+  .dl-nav { width: 42px; height: 42px; flex: none; border-radius: 12px; border: 1px solid var(--border); background: #fff; font-size: 22px; line-height: 1; cursor: pointer; color: var(--text); }
+  .dl-summary, .dl-totals { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .dl-st { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
   .dl-st.ok { background: var(--green-pill); color: var(--green-darker); }
   .dl-st.late { background: #fff1dc; color: #a35a00; }
   .dl-st.miss { background: var(--red-soft); color: var(--red-text); }
   .dl-st.wait { background: #f1f1ee; color: var(--text-muted); }
   .dl-st.extra { background: var(--blue-soft); color: #2459c9; }
-  .dl-del { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 0 4px; }
+  .dl-group { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 12px; }
+  .dl-group-head { display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; font-weight: 800; font-size: 13px; background: var(--sc-bg, var(--bg-soft)); color: var(--sc, var(--text)); border-bottom: 1px solid var(--sc-line, var(--border)); }
+  .dl-group-head small { font-weight: 700; font-size: 12px; opacity: 0.85; }
+  .dl-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line); }
+  .dl-row:first-of-type { border-top: none; }
+  .dl-who { flex: 1; min-width: 0; }
+  .dl-who b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dl-who small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .dl-del { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 4px 6px; flex: none; }
   .dl-del:hover { color: var(--red-text); }
-  .dl-name { cursor: pointer; font-weight: 600; }
-  .dl-name::before { content: "▸ "; color: var(--text-muted); }
-  tr.open .dl-name::before { content: "▾ "; }
-  .dl-detail td { background: #fbfaf6; white-space: normal; font-size: 12px; color: var(--text-muted); }
-  .dl-detail b { color: var(--text); }
-  .dl-bad { color: var(--red-text); font-weight: 700; }
-  .dl-warn { color: #a35a00; font-weight: 700; }
+  .dl-empty { padding: 28px 10px; text-align: center; color: var(--text-muted); }
+  .dl-terminal-link { display: inline-block; margin-top: 6px; font-size: 12.5px; color: var(--text-muted); }
+  .dl-tile { flex: 1 1 120px; background: var(--bg-soft); border-radius: 12px; padding: 10px 12px; }
+  .dl-tile b { display: block; font-size: 20px; font-weight: 800; }
+  .dl-tile span { display: block; font-size: 12px; font-weight: 700; }
+  .dl-tile small { display: block; font-size: 11px; color: var(--text-muted); font-weight: 600; }
+  .dl-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dl-tile.late b { color: #a35a00; }
+  .dl-tile.miss b { color: var(--red-text); }
+  .dl-month-tools { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; font-size: 12px; }
+  .dl-person { border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; background: #fff; }
+  .dl-p-head { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; }
+  .dl-p-head .dl-who small { margin-top: 3px; }
+  .dl-p-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .dl-chev { color: var(--text-muted); transition: transform 0.15s; flex: none; }
+  .dl-person.open .dl-chev { transform: rotate(90deg); }
+  .dl-p-detail { padding: 0 14px 12px; font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
+  .dl-p-detail b { color: var(--text); }
+  @media (max-width: 700px) {
+    .dl-tabs { max-width: none; }
+    .dl-row, .dl-p-head { padding: 10px 12px; }
+    .dl-p-head { align-items: flex-start; }
+    .dl-p-badges { flex-direction: column; align-items: flex-end; }
+    .dl-month-tools .btn { width: 100%; padding: 12px; }
+    .dl-totals { gap: 6px; }
+    .dl-tile { padding: 9px 10px; }
+    .dl-tile b { font-size: 18px; }
+  }
   .gen-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   .gen-table th, .gen-table td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--border); }
   .gen-table th:first-child, .gen-table td:first-child { text-align: left; }
@@ -544,52 +573,53 @@
     <section id="tab-dolasci" class="tab-panel">
       <div id="dolasci-banner"></div>
 
-      <div class="card" style="margin-bottom:16px;">
-        <div class="dl-head">
-          <div>
-            <h2 style="margin:0 0 2px;font-size:15px;">Dolasci po danu</h2>
-            <p class="muted" style="margin:0;font-size:12px;">Ko je bio na smeni, kad se prijavio i da li je kasnio.</p>
-          </div>
-          <div class="dl-controls">
-            <button class="btn btn-ghost" id="dl-day-prev" type="button" aria-label="Prethodni dan">‹</button>
-            <input type="date" id="dl-date" />
-            <button class="btn btn-ghost" id="dl-day-next" type="button" aria-label="Sledeći dan">›</button>
-            <a class="btn btn-ghost" href="../terminal.html" target="_blank" rel="noopener">Otvori terminal</a>
-          </div>
-        </div>
-        <div class="dl-summary" id="dl-day-summary"></div>
-        <div class="scroll-x"><table class="dl-table" id="dl-day-table"></table></div>
+      <div class="dl-tabs" role="tablist">
+        <button type="button" class="dl-tab active" data-view="day" role="tab">Po danu</button>
+        <button type="button" class="dl-tab" data-view="month" role="tab">Mesečni izveštaj</button>
       </div>
 
-      <div class="card">
-        <div class="dl-head">
-          <div>
-            <h2 style="margin:0 0 2px;font-size:15px;">Mesečni izveštaj</h2>
-            <p class="muted" style="margin:0;font-size:12px;">Smene koje su počele do sada. Klik na ime prikazuje kašnjenja i smene bez prijave.</p>
+      <div class="card dl-view" id="dl-view-day">
+        <div class="dl-bar">
+          <button class="dl-nav" id="dl-day-prev" type="button" aria-label="Prethodni dan">‹</button>
+          <div class="dl-bar-mid">
+            <div class="dl-bar-title" id="dl-day-label">—</div>
+            <input type="date" id="dl-date" aria-label="Izaberi datum" />
           </div>
-          <div class="dl-controls">
-            <select id="dl-month"></select>
-            <input type="number" id="dl-year" style="width:96px;" />
-            <button class="btn btn-ghost" id="dl-csv" type="button">Preuzmi za Excel</button>
-          </div>
+          <button class="dl-nav" id="dl-day-next" type="button" aria-label="Sledeći dan">›</button>
         </div>
-        <div class="scroll-x"><table class="dl-table" id="dl-month-table"></table></div>
+        <div class="dl-summary" id="dl-day-summary"></div>
+        <div id="dl-day-list"></div>
+        <a class="dl-terminal-link" href="../terminal.html" target="_blank" rel="noopener">Otvori ekran za tablet ↗</a>
+      </div>
+
+      <div class="card dl-view" id="dl-view-month" hidden>
+        <div class="dl-bar">
+          <button class="dl-nav" id="dl-month-prev" type="button" aria-label="Prethodni mesec">‹</button>
+          <div class="dl-bar-mid"><div class="dl-bar-title" id="dl-month-label">—</div></div>
+          <button class="dl-nav" id="dl-month-next" type="button" aria-label="Sledeći mesec">›</button>
+        </div>
+        <div class="dl-totals" id="dl-month-totals"></div>
+        <div class="dl-month-tools">
+          <span class="muted" id="dl-month-note"></span>
+          <button class="btn btn-primary" id="dl-pdf" type="button">Preuzmi PDF</button>
+        </div>
+        <div id="dl-month-list"></div>
       </div>
     </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/supabase.js?v=20261007e"></script>
-  <script src="../js/auth.js?v=20261007e"></script>
-  <script src="../js/push.js?v=20261007e"></script>
-  <script src="../js/account.js?v=20261007e"></script>
-  <script src="../js/constants.js?v=20261007e"></script>
-  <script src="../js/admin-shell.js?v=20261007e"></script>
-  <script src="../js/admin-osobe.js?v=20261007e"></script>
-  <script src="../js/admin-plan.js?v=20261007e"></script>
-  <script src="../js/generator.js?v=20261007e"></script>
-  <script src="../js/admin-generate.js?v=20261007e"></script>
-  <script src="../js/admin-rasporedi.js?v=20261007e"></script>
-  <script src="../js/admin-dolasci.js?v=20261007e"></script>
+  <script src="../js/supabase.js?v=20261007f"></script>
+  <script src="../js/auth.js?v=20261007f"></script>
+  <script src="../js/push.js?v=20261007f"></script>
+  <script src="../js/account.js?v=20261007f"></script>
+  <script src="../js/constants.js?v=20261007f"></script>
+  <script src="../js/admin-shell.js?v=20261007f"></script>
+  <script src="../js/admin-osobe.js?v=20261007f"></script>
+  <script src="../js/admin-plan.js?v=20261007f"></script>
+  <script src="../js/generator.js?v=20261007f"></script>
+  <script src="../js/admin-generate.js?v=20261007f"></script>
+  <script src="../js/admin-rasporedi.js?v=20261007f"></script>
+  <script src="../js/admin-dolasci.js?v=20261007f"></script>
 </body>
 </html>

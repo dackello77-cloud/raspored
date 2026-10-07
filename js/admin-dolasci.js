@@ -1,7 +1,7 @@
 // Admin → Dolasci: dnevni pregled prijava dolaska i mesečni izveštaj (kašnjenja, smene bez prijave).
 // Prijave upisuje check_in() kad radnik skenira QR kod sa tableta (sql/migration_009_attendance.sql).
 
-const DL = { shiftTypes: null, startDate: null, month: null };
+const DL = { shiftTypes: null, startDate: null, month: null, ym: null, view: "day" };
 const DL_SHIFT_ORDER = ["I", "II", "III"];
 const DL_TIME_FMT = new Intl.DateTimeFormat("sr-Latn", { timeZone: "Europe/Belgrade", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
@@ -26,6 +26,11 @@ function dlPlannedStart(date, code, isMS, isLeader) {
 }
 function dlHHMM(dt) { return `${dlPad(dt.getHours())}:${dlPad(dt.getMinutes())}`; }
 function dlShiftLabel(code, isMS) { return isMS ? `${code} · MS` : code; }
+const DL_DOW = ["Nedelja", "Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"];
+function dlLongDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return `${DL_DOW[d.getDay()]}, ${d.getDate()}. ${MONTH_NAMES_SR[d.getMonth()].toLowerCase()}`;
+}
 
 async function dlEnsureBase() {
   if (DL.shiftTypes) return true;
@@ -48,9 +53,12 @@ async function dlEnsureBase() {
 async function dlLoadDay() {
   if (!(await dlEnsureBase())) return;
   const date = document.getElementById("dl-date").value;
-  const table = document.getElementById("dl-day-table");
+  const list = document.getElementById("dl-day-list");
   const summary = document.getElementById("dl-day-summary");
-  table.innerHTML = `<tr><td class="muted">Učitavanje…</td></tr>`;
+  const today = dlIso(belgradeNow());
+  document.getElementById("dl-day-label").textContent =
+    date === today ? `Danas · ${dlLongDate(date).split(", ")[1]}` : dlLongDate(date);
+  list.innerHTML = `<div class="dl-empty">Učitavanje…</div>`;
 
   const [{ data: sched, error: e1 }, { data: att, error: e2 }] = await Promise.all([
     sb.from("schedule")
@@ -60,7 +68,7 @@ async function dlLoadDay() {
       .select("id, employee_id, checked_at, shift_code, is_medju_smena, late_minutes, employees(profiles(full_name))")
       .eq("work_date", date),
   ]);
-  if (e1 || e2) { table.innerHTML = `<tr><td class="dl-bad">Greška: ${dlEsc((e1 || e2).message)}</td></tr>`; return; }
+  if (e1 || e2) { list.innerHTML = `<div class="dl-empty dl-bad">Greška: ${dlEsc((e1 || e2).message)}</div>`; return; }
 
   const now = belgradeNow();
   const tracked = date >= DL.startDate;
@@ -72,14 +80,19 @@ async function dlLoadDay() {
   });
 
   const counts = { ok: 0, late: 0, miss: 0, wait: 0 };
-  let html = `<tr><th>Zaposleni</th><th>Smena</th><th>Početak</th><th>Dolazak</th><th>Status</th><th></th></tr>`;
+  const row = (name, details, status, attId) => `<div class="dl-row">
+      <div class="dl-who"><b>${dlEsc(name)}</b><small>${details}</small></div>
+      ${status}
+      ${attId ? `<button class="dl-del" data-id="${attId}" type="button" title="Obriši prijavu" aria-label="Obriši prijavu">×</button>` : ""}
+    </div>`;
+  let html = "";
 
   DL_SHIFT_ORDER.forEach(code => {
     const rows = (sched || []).filter(r => r.shift_code === code)
-      .sort((a, b) => (a.is_medju_smena - b.is_medju_smena) || dlName(a).localeCompare(dlName(b), "sr"));
+      .sort((a, b) => (a.is_medju_smena - b.is_medju_smena) || (dlIsLeader(b) - dlIsLeader(a)) || dlName(a).localeCompare(dlName(b), "sr"));
     if (!rows.length) return;
     const came = rows.filter(r => attByKey.has(`${r.employee_id}|${code}`)).length;
-    html += `<tr class="dl-shift-row"><td colspan="6">${DL.shiftTypes[code]?.label || code} — prijavljeno ${came} od ${rows.length}</td></tr>`;
+    html += `<div class="dl-group"><div class="dl-group-head shift-${code}"><span>${DL.shiftTypes[code]?.label || code}</span><small>prijavljeno ${came}/${rows.length}</small></div>`;
     rows.forEach(r => {
       const start = dlPlannedStart(r.date, code, r.is_medju_smena, dlIsLeader(r));
       const a = attByKey.get(`${r.employee_id}|${code}`);
@@ -92,56 +105,50 @@ async function dlLoadDay() {
       } else if (start > now) {
         counts.wait++; status = `<span class="dl-st wait">Još nije počela</span>`;
       } else if (!tracked) {
-        status = `<span class="dl-st wait">Pre uvođenja prijava</span>`;
+        status = `<span class="dl-st wait">Pre prijava</span>`;
       } else {
         counts.miss++; status = `<span class="dl-st miss">Bez prijave</span>`;
       }
-      html += `<tr>
-        <td>${dlEsc(dlName(r))}</td>
-        <td>${dlShiftLabel(code, r.is_medju_smena)}${dlIsLeader(r) ? " · Lider" : ""}</td>
-        <td>${dlHHMM(start)}</td>
-        <td>${a ? DL_TIME_FMT.format(new Date(a.checked_at)) : "—"}</td>
-        <td>${status}</td>
-        <td>${a ? `<button class="dl-del" data-id="${a.id}" title="Obriši prijavu">×</button>` : ""}</td>
-      </tr>`;
+      const role = r.is_medju_smena ? "Međusmena · " : dlIsLeader(r) ? "Lider · " : "";
+      const details = `${role}početak ${dlHHMM(start)}${a ? ` · došao/la ${DL_TIME_FMT.format(new Date(a.checked_at))}` : ""}`;
+      html += row(dlName(r), details, status, a && a.id);
     });
+    html += `</div>`;
   });
 
   // Prijave za smene koje su u međuvremenu skinute iz rasporeda + dolasci van rasporeda.
   const others = [...attByKey.values(), ...extra];
   if (others.length) {
-    html += `<tr class="dl-shift-row"><td colspan="6">Van rasporeda</td></tr>`;
+    html += `<div class="dl-group"><div class="dl-group-head"><span>Van rasporeda</span><small>${others.length}</small></div>`;
     others.forEach(a => {
-      html += `<tr>
-        <td>${dlEsc(dlName(a))}</td>
-        <td>${a.shift_code ? dlShiftLabel(a.shift_code, a.is_medju_smena) : "—"}</td>
-        <td>—</td>
-        <td>${DL_TIME_FMT.format(new Date(a.checked_at))}</td>
-        <td><span class="dl-st extra">Nije u rasporedu</span></td>
-        <td><button class="dl-del" data-id="${a.id}" title="Obriši prijavu">×</button></td>
-      </tr>`;
+      html += row(dlName(a), `došao/la ${DL_TIME_FMT.format(new Date(a.checked_at))}${a.shift_code ? ` · ${dlShiftLabel(a.shift_code, a.is_medju_smena)}` : ""}`,
+        `<span class="dl-st extra">Nije u rasporedu</span>`, a.id);
     });
+    html += `</div>`;
   }
 
-  if (!(sched || []).length && !others.length) html += `<tr><td colspan="6" class="muted">Za ovaj dan nema rasporeda ni prijava.</td></tr>`;
-  table.innerHTML = html;
-  summary.innerHTML = [
-    `<span class="dl-st ok">Na vreme: ${counts.ok}</span>`,
-    `<span class="dl-st late">Kasnili: ${counts.late}</span>`,
-    `<span class="dl-st miss">Bez prijave: ${counts.miss}</span>`,
-    counts.wait ? `<span class="dl-st wait">Tek dolaze: ${counts.wait}</span>` : "",
-    others.length ? `<span class="dl-st extra">Van rasporeda: ${others.length}</span>` : "",
-  ].join("");
+  list.innerHTML = html || `<div class="dl-empty">Za ovaj dan nema rasporeda ni prijava.</div>`;
+  summary.innerHTML = html ? [
+    `<span class="dl-st ok">Na vreme ${counts.ok}</span>`,
+    `<span class="dl-st late">Kasnili ${counts.late}</span>`,
+    `<span class="dl-st miss">Bez prijave ${counts.miss}</span>`,
+    counts.wait ? `<span class="dl-st wait">Tek dolaze ${counts.wait}</span>` : "",
+    others.length ? `<span class="dl-st extra">Van rasporeda ${others.length}</span>` : "",
+  ].join("") : "";
 }
 
 // ---------------- Mesečni izveštaj ----------------
 
 async function dlLoadMonth() {
   if (!(await dlEnsureBase())) return;
-  const year = parseInt(document.getElementById("dl-year").value, 10);
-  const month = parseInt(document.getElementById("dl-month").value, 10);
-  const table = document.getElementById("dl-month-table");
-  table.innerHTML = `<tr><td class="muted">Učitavanje…</td></tr>`;
+  const { year, month } = DL.ym;
+  document.getElementById("dl-month-label").textContent = `${MONTH_NAMES_SR[month - 1]} ${year}.`;
+  const listEl = document.getElementById("dl-month-list");
+  const totalsEl = document.getElementById("dl-month-totals");
+  const noteEl = document.getElementById("dl-month-note");
+  listEl.innerHTML = `<div class="dl-empty">Učitavanje…</div>`;
+  totalsEl.innerHTML = "";
+  DL.month = null;
   const from = `${year}-${dlPad(month)}-01`;
   const to = dlIso(new Date(year, month, 0));
 
@@ -153,7 +160,8 @@ async function dlLoadMonth() {
       .select("employee_id, checked_at, work_date, shift_code, is_medju_smena, late_minutes, employees(profiles(full_name))")
       .gte("work_date", from).lte("work_date", to).range(0, 4999),
   ]);
-  if (e1 || e2) { table.innerHTML = `<tr><td class="dl-bad">Greška: ${dlEsc((e1 || e2).message)}</td></tr>`; return; }
+  if (e1 || e2) { listEl.innerHTML = `<div class="dl-empty dl-bad">Greška: ${dlEsc((e1 || e2).message)}</div>`; return; }
+  if (DL.ym.year !== year || DL.ym.month !== month) return; // korisnik je u međuvremenu promenio mesec
 
   const now = belgradeNow();
   const people = new Map();
@@ -184,53 +192,169 @@ async function dlLoadMonth() {
 
   const list = [...people.values()].filter(p => p.planned || p.extra.length)
     .sort((a, b) => a.name.localeCompare(b.name, "sr"));
+  list.forEach(p => {
+    p.late.sort((a, b) => a.work_date.localeCompare(b.work_date));
+    p.missed.sort((a, b) => a.date.localeCompare(b.date));
+    p.extra.sort((a, b) => a.work_date.localeCompare(b.work_date));
+  });
   DL.month = { year, month, list };
 
-  let html = `<tr><th>Zaposleni</th><th class="num">Smena</th><th class="num">Prijavljen</th><th class="num">Na vreme</th>
-    <th class="num">Kasnio</th><th class="num">Ukupno kašnjenje</th><th class="num">Bez prijave</th><th class="num">Van rasporeda</th></tr>`;
-  if (from <= DL.startDate && DL.startDate <= to) {
-    html += `<tr><td colspan="8" class="muted" style="white-space:normal;">Prijave dolaska se vode od ${dlShortDate(DL.startDate)}${DL.startDate.slice(0, 4)}. — ranije smene se ne računaju.</td></tr>`;
-  }
-  if (!list.length) html += `<tr><td colspan="8" class="muted">Nema podataka za ovaj mesec.</td></tr>`;
-  list.forEach((p, i) => {
+  const sum = (f) => list.reduce((n, p) => n + f(p), 0);
+  const planned = sum(p => p.planned), onTime = sum(p => p.onTime);
+  totalsEl.innerHTML = list.length ? `
+    <div class="dl-tile"><b>${planned ? Math.round(onTime / planned * 100) : 0}%</b><span>na vreme</span><small>${onTime} od ${planned} smena</small></div>
+    <div class="dl-tile late"><b>${sum(p => p.lateN)}</b><span>kašnjenja</span><small>ukupno ${sum(p => p.lateMin)} min</small></div>
+    <div class="dl-tile miss"><b>${sum(p => p.missed.length)}</b><span>bez prijave</span><small>smena</small></div>` : "";
+  noteEl.textContent = from <= DL.startDate && DL.startDate <= to
+    ? `Prijave se vode od ${dlShortDate(DL.startDate)} — ranije smene se ne računaju.` : "";
+  document.getElementById("dl-pdf").disabled = !list.length;
+
+  listEl.innerHTML = list.length ? list.map((p, i) => {
+    const badges = [
+      p.lateN ? `<span class="dl-st late">Kasnio ${p.lateN}× · ${p.lateMin} min</span>` : "",
+      p.missed.length ? `<span class="dl-st miss">Bez prijave ${p.missed.length}</span>` : "",
+      p.extra.length ? `<span class="dl-st extra">Van rasporeda ${p.extra.length}</span>` : "",
+    ].join("") || `<span class="dl-st ok">Uredno</span>`;
     const detail = [
-      p.late.length ? `<b>Kašnjenja:</b> ${p.late.sort((a, b) => a.work_date.localeCompare(b.work_date)).map(a => `${dlShortDate(a.work_date)} ${dlShiftLabel(a.shift_code, a.is_medju_smena)} (${a.late_minutes} min)`).join(", ")}` : "",
-      p.missed.length ? `<b>Bez prijave:</b> ${p.missed.sort((a, b) => a.date.localeCompare(b.date)).map(r => `${dlShortDate(r.date)} ${dlShiftLabel(r.shift_code, r.is_medju_smena)}`).join(", ")}` : "",
+      p.late.length ? `<b>Kašnjenja:</b> ${p.late.map(a => `${dlShortDate(a.work_date)} ${dlShiftLabel(a.shift_code, a.is_medju_smena)} (${a.late_minutes} min)`).join(", ")}` : "",
+      p.missed.length ? `<b>Bez prijave:</b> ${p.missed.map(r => `${dlShortDate(r.date)} ${dlShiftLabel(r.shift_code, r.is_medju_smena)}`).join(", ")}` : "",
       p.extra.length ? `<b>Van rasporeda:</b> ${p.extra.map(a => `${dlShortDate(a.work_date)} u ${DL_TIME_FMT.format(new Date(a.checked_at))}`).join(", ")}` : "",
     ].filter(Boolean).join("<br>") || "Sve smene na vreme.";
-    html += `<tr data-i="${i}">
-      <td class="dl-name">${dlEsc(p.name)}</td>
-      <td class="num">${p.planned}</td>
-      <td class="num">${p.came}</td>
-      <td class="num">${p.onTime}</td>
-      <td class="num ${p.lateN ? "dl-warn" : ""}">${p.lateN}</td>
-      <td class="num ${p.lateMin ? "dl-warn" : ""}">${p.lateMin ? p.lateMin + " min" : "—"}</td>
-      <td class="num ${p.missed.length ? "dl-bad" : ""}">${p.missed.length}</td>
-      <td class="num">${p.extra.length}</td>
-    </tr>
-    <tr class="dl-detail" data-detail="${i}" hidden><td colspan="8">${detail}</td></tr>`;
-  });
-  table.innerHTML = html;
+    return `<div class="dl-person" data-i="${i}">
+      <div class="dl-p-head">
+        <div class="dl-who"><b>${dlEsc(p.name)}</b><small>${p.planned} smena · prijavljen ${p.came} · na vreme ${p.onTime}</small></div>
+        <div class="dl-p-badges">${badges}</div>
+        <span class="dl-chev">›</span>
+      </div>
+      <div class="dl-p-detail" hidden>${detail}</div>
+    </div>`;
+  }).join("") : `<div class="dl-empty">Nema podataka za ovaj mesec.</div>`;
 }
 
-function dlDownloadCsv() {
+// ---------------- PDF ----------------
+
+const DL_PDF_LIBS = [
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js",
+];
+const DL_PDF_FONTS = {
+  normal: "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf",
+  bold: "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf",
+};
+let dlPdfReady = null;
+
+function dlLoadScript(src) {
+  return new Promise((resolve, reject) => {
+    const el = document.createElement("script");
+    el.src = src; el.onload = resolve; el.onerror = () => reject(new Error("Nije učitano: " + src));
+    document.head.appendChild(el);
+  });
+}
+// Font sa našim slovima (č ć đ š ž) — ugrađeni PDF fontovi ih nemaju.
+async function dlFontBase64(url) {
+  const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+function dlPdfPrepare() {
+  if (!dlPdfReady) {
+    dlPdfReady = (async () => {
+      for (const src of DL_PDF_LIBS) await dlLoadScript(src);
+      const [normal, bold] = await Promise.all([dlFontBase64(DL_PDF_FONTS.normal), dlFontBase64(DL_PDF_FONTS.bold)]);
+      return { normal, bold };
+    })();
+    dlPdfReady.catch(() => { dlPdfReady = null; });
+  }
+  return dlPdfReady;
+}
+
+async function dlDownloadPdf() {
   if (!DL.month) return;
-  const { year, month, list } = DL.month;
-  const lines = [["Zaposleni", "Smena", "Prijavljen", "Na vreme", "Kasnio (puta)", "Ukupno kašnjenje (min)", "Bez prijave", "Van rasporeda", "Datumi kašnjenja", "Datumi bez prijave"]];
-  list.forEach(p => lines.push([
-    p.name, p.planned, p.came, p.onTime, p.lateN, p.lateMin, p.missed.length, p.extra.length,
-    p.late.map(a => `${dlShortDate(a.work_date)} ${a.shift_code} (${a.late_minutes} min)`).join(", "),
-    p.missed.map(r => `${dlShortDate(r.date)} ${r.shift_code}`).join(", "),
-  ]));
-  const csv = "﻿" + lines.map(l => l.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\r\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  a.download = `dolasci_${MONTH_NAMES_SR[month - 1].toLowerCase()}_${year}.csv`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  const btn = document.getElementById("dl-pdf");
+  btn.disabled = true;
+  btn.textContent = "Pravim PDF…";
+  try {
+    const fonts = await dlPdfPrepare();
+    const { year, month, list } = DL.month;
+    const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+    doc.addFileToVFS("DejaVuSans.ttf", fonts.normal);
+    doc.addFileToVFS("DejaVuSans-Bold.ttf", fonts.bold);
+    doc.addFont("DejaVuSans.ttf", "DejaVu", "normal");
+    doc.addFont("DejaVuSans-Bold.ttf", "DejaVu", "bold");
+
+    const n = belgradeNow();
+    const sum = (f) => list.reduce((s, p) => s + f(p), 0);
+    const planned = sum(p => p.planned), onTime = sum(p => p.onTime);
+    doc.setFont("DejaVu", "bold"); doc.setFontSize(16);
+    doc.text(`Dolasci — ${MONTH_NAMES_SR[month - 1]} ${year}.`, 14, 18);
+    doc.setFont("DejaVu", "normal"); doc.setFontSize(9); doc.setTextColor(110);
+    doc.text(`Izveštaj napravljen ${n.getDate()}.${n.getMonth() + 1}.${n.getFullYear()}. u ${dlHHMM(n)}` +
+      (document.getElementById("dl-month-note").textContent ? ` · ${document.getElementById("dl-month-note").textContent}` : ""), 14, 24);
+    doc.setTextColor(30); doc.setFontSize(10);
+    doc.text(`Na vreme: ${planned ? Math.round(onTime / planned * 100) : 0}% (${onTime} od ${planned} smena)   ·   ` +
+      `Kašnjenja: ${sum(p => p.lateN)} (ukupno ${sum(p => p.lateMin)} min)   ·   Bez prijave: ${sum(p => p.missed.length)}`, 14, 31);
+
+    const green = [30, 74, 58];
+    const base = { font: "DejaVu", fontSize: 8.5, cellPadding: 1.8, lineColor: [228, 222, 208], lineWidth: 0.1 };
+    doc.autoTable({
+      startY: 36,
+      head: [["Zaposleni", "Smena", "Prijavljen", "Na vreme", "Kasnio", "Kašnjenje (min)", "Bez prijave", "Van rasporeda"]],
+      body: list.map(p => [p.name, p.planned, p.came, p.onTime, p.lateN, p.lateMin, p.missed.length, p.extra.length]),
+      styles: base,
+      headStyles: { fillColor: green, textColor: 255, fontStyle: "bold" },
+      columnStyles: { 0: { cellWidth: 52 }, 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" } },
+      alternateRowStyles: { fillColor: [247, 246, 241] },
+      didParseCell: (d) => {
+        if (d.section !== "body") return;
+        if ((d.column.index === 4 || d.column.index === 5) && +d.cell.raw > 0) d.cell.styles.textColor = [163, 90, 0];
+        if (d.column.index === 6 && +d.cell.raw > 0) d.cell.styles.textColor = [192, 57, 43];
+      },
+    });
+
+    const details = list.filter(p => p.late.length || p.missed.length || p.extra.length).map(p => [
+      p.name,
+      p.late.map(a => `${dlShortDate(a.work_date)} ${dlShiftLabel(a.shift_code, a.is_medju_smena)} (${a.late_minutes} min)`).join(", "),
+      [...p.missed.map(r => `${dlShortDate(r.date)} ${dlShiftLabel(r.shift_code, r.is_medju_smena)}`),
+       ...p.extra.map(a => `${dlShortDate(a.work_date)} van rasporeda`)].join(", "),
+    ]);
+    if (details.length) {
+      let y = doc.lastAutoTable.finalY + 10;
+      if (y > 260) { doc.addPage(); y = 18; }
+      doc.setFont("DejaVu", "bold"); doc.setFontSize(11); doc.text("Detalji po zaposlenom", 14, y);
+      doc.autoTable({
+        startY: y + 3,
+        head: [["Zaposleni", "Kašnjenja", "Bez prijave / van rasporeda"]],
+        body: details,
+        styles: base,
+        headStyles: { fillColor: green, textColor: 255, fontStyle: "bold" },
+        columnStyles: { 0: { cellWidth: 42 } },
+      });
+    }
+
+    const pages = doc.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i); doc.setFont("DejaVu", "normal"); doc.setFontSize(8); doc.setTextColor(140);
+      doc.text(`Raspored App · strana ${i}/${pages}`, 196, 290, { align: "right" });
+    }
+    doc.save(`dolasci_${MONTH_NAMES_SR[month - 1].toLowerCase()}_${year}.pdf`);
+  } catch (e) {
+    console.error(e);
+    dlBanner("PDF nije napravljen: " + dlEsc(e.message || e));
+  }
+  btn.disabled = false;
+  btn.textContent = "Preuzmi PDF";
 }
 
 // ---------------- Kontrole (kače se odmah, podaci tek posle admin-ready) ----------------
+
+function dlSetView(view) {
+  DL.view = view;
+  document.querySelectorAll(".dl-tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
+  document.getElementById("dl-view-day").hidden = view !== "day";
+  document.getElementById("dl-view-month").hidden = view !== "month";
+  try { localStorage.setItem("dl-view", view); } catch (e) { /* nije bitno */ }
+}
 
 (() => {
   const dateInput = document.getElementById("dl-date");
@@ -240,14 +364,20 @@ function dlDownloadCsv() {
     dateInput.value = dlIso(d);
     dlLoadDay();
   };
-  dateInput.addEventListener("change", dlLoadDay);
+  const shiftMonth = (delta) => {
+    const d = new Date(DL.ym.year, DL.ym.month - 1 + delta, 1);
+    DL.ym = { year: d.getFullYear(), month: d.getMonth() + 1 };
+    dlLoadMonth();
+  };
+  dateInput.addEventListener("change", () => { if (dateInput.value) dlLoadDay(); });
   document.getElementById("dl-day-prev").addEventListener("click", () => shiftDay(-1));
   document.getElementById("dl-day-next").addEventListener("click", () => shiftDay(1));
-  document.getElementById("dl-month").addEventListener("change", dlLoadMonth);
-  document.getElementById("dl-year").addEventListener("change", dlLoadMonth);
-  document.getElementById("dl-csv").addEventListener("click", dlDownloadCsv);
+  document.getElementById("dl-month-prev").addEventListener("click", () => shiftMonth(-1));
+  document.getElementById("dl-month-next").addEventListener("click", () => shiftMonth(1));
+  document.getElementById("dl-pdf").addEventListener("click", dlDownloadPdf);
+  document.querySelectorAll(".dl-tab").forEach(t => t.addEventListener("click", () => dlSetView(t.dataset.view)));
 
-  document.getElementById("dl-day-table").addEventListener("click", async (e) => {
+  document.getElementById("dl-day-list").addEventListener("click", async (e) => {
     const btn = e.target.closest(".dl-del");
     if (!btn || !confirm("Obrisati ovu prijavu dolaska?")) return;
     const { error } = await sb.from("attendance").delete().eq("id", btn.dataset.id);
@@ -255,25 +385,21 @@ function dlDownloadCsv() {
     dlLoadDay();
     dlLoadMonth();
   });
-  document.getElementById("dl-month-table").addEventListener("click", (e) => {
-    const row = e.target.closest("tr[data-i]");
-    if (!row) return;
-    const detail = document.querySelector(`#dl-month-table tr[data-detail="${row.dataset.i}"]`);
+  document.getElementById("dl-month-list").addEventListener("click", (e) => {
+    const head = e.target.closest(".dl-p-head");
+    if (!head) return;
+    const card = head.parentElement;
+    const detail = card.querySelector(".dl-p-detail");
     detail.hidden = !detail.hidden;
-    row.classList.toggle("open", !detail.hidden);
+    card.classList.toggle("open", !detail.hidden);
   });
 
   const now = belgradeNow();
   dateInput.value = dlIso(now);
-  const monthSelect = document.getElementById("dl-month");
-  MONTH_NAMES_SR.forEach((name, idx) => {
-    const opt = document.createElement("option");
-    opt.value = idx + 1;
-    opt.textContent = name;
-    if (idx === now.getMonth()) opt.selected = true;
-    monthSelect.appendChild(opt);
-  });
-  document.getElementById("dl-year").value = now.getFullYear();
+  DL.ym = { year: now.getFullYear(), month: now.getMonth() + 1 };
+  let saved = null;
+  try { saved = localStorage.getItem("dl-view"); } catch (e) { /* nije bitno */ }
+  dlSetView(saved === "month" ? "month" : "day");
 })();
 
 function dlRefresh() { dlLoadDay(); dlLoadMonth(); }
