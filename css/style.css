@@ -470,6 +470,8 @@ label.field-label {
 .dl-st.extra { background: var(--blue-soft); color: #2459c9; }
 .dl-group { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 12px; }
 .dl-group-head { display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; font-weight: 800; font-size: 13px; background: var(--sc-bg, var(--bg-soft)); color: var(--sc, var(--text)); border-bottom: 1px solid var(--sc-line, var(--border)); }
+.dl-group.dl-current { border: 2px solid var(--sc, var(--green-dark)); box-shadow: 0 6px 18px -10px var(--sc, rgba(0,0,0,0.4)); }
+.dl-now { font-style: normal; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; background: var(--sc, var(--green-dark)); color: #fff; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: 1px; }
 .dl-group-head small { font-weight: 700; font-size: 12px; opacity: 0.85; }
 .dl-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line); }
 .dl-row:first-of-type { border-top: none; }

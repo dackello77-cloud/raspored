@@ -32,6 +32,17 @@ function dlLongDate(iso) {
   return `${DL_DOW[d.getDay()]}, ${d.getDate()}. ${MONTH_NAMES_SR[d.getMonth()].toLowerCase()}`;
 }
 
+// Smena koja je sada u toku (kao "Sada:" na Rasporedu: I 7–15, II 15–23, III 23–7).
+// III posle ponoći pripada prethodnom danu.
+function dlCurrentShift() {
+  const now = belgradeNow();
+  const h = now.getHours();
+  if (h >= 7 && h < 15) return { date: dlIso(now), code: "I" };
+  if (h >= 15 && h < 23) return { date: dlIso(now), code: "II" };
+  if (h >= 23) return { date: dlIso(now), code: "III" };
+  return { date: dlIso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)), code: "III" };
+}
+
 async function dlEnsureBase() {
   if (DL.shiftTypes) return true;
   const [{ data: st }, { data: start }, { error: attErr }] = await Promise.all([
@@ -56,9 +67,10 @@ async function dlLoadDay() {
   const list = document.getElementById("dl-day-list");
   const summary = document.getElementById("dl-day-summary");
   const today = dlIso(belgradeNow());
+  const current = dlCurrentShift();
   document.getElementById("dl-day-label").textContent =
     date === today ? `Danas · ${dlLongDate(date).split(", ")[1]}` : dlLongDate(date);
-  list.innerHTML = `<div class="dl-empty">Učitavanje…</div>`;
+  if (!list.children.length) list.innerHTML = `<div class="dl-empty">Učitavanje…</div>`;
 
   const [{ data: sched, error: e1 }, { data: att, error: e2 }] = await Promise.all([
     sb.from("schedule")
@@ -92,7 +104,9 @@ async function dlLoadDay() {
       .sort((a, b) => (a.is_medju_smena - b.is_medju_smena) || (dlIsLeader(b) - dlIsLeader(a)) || dlName(a).localeCompare(dlName(b), "sr"));
     if (!rows.length) return;
     const came = rows.filter(r => attByKey.has(`${r.employee_id}|${code}`)).length;
-    html += `<div class="dl-group"><div class="dl-group-head shift-${code}"><span>${DL.shiftTypes[code]?.label || code}</span><small>prijavljeno ${came}/${rows.length}</small></div>`;
+    const isNow = current.date === date && current.code === code;
+    html += `<div class="dl-group shift-${code}${isNow ? " dl-current" : ""}"><div class="dl-group-head shift-${code}">
+      <span>${DL.shiftTypes[code]?.label || code}${isNow ? ` <em class="dl-now">U toku</em>` : ""}</span><small>prijavljeno ${came}/${rows.length}</small></div>`;
     rows.forEach(r => {
       const start = dlPlannedStart(r.date, code, r.is_medju_smena, dlIsLeader(r));
       const a = attByKey.get(`${r.employee_id}|${code}`);
@@ -395,7 +409,13 @@ function dlSetView(view) {
   });
 
   const now = belgradeNow();
-  dateInput.value = dlIso(now);
+  dateInput.value = dlCurrentShift().date;
+  // Dan sa smenom u toku se sam osvežava svakog minuta (novi dolasci, "U toku").
+  setInterval(() => {
+    if (document.hidden || document.getElementById("dl-view-day").offsetParent === null) return;
+    const cur = dlCurrentShift();
+    if (dateInput.value === cur.date || dateInput.value === dlIso(belgradeNow())) dlLoadDay();
+  }, 60 * 1000);
   DL.ym = { year: now.getFullYear(), month: now.getMonth() + 1 };
   let saved = null;
   try { saved = localStorage.getItem("dl-view"); } catch (e) { /* nije bitno */ }

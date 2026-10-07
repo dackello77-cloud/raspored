@@ -5,6 +5,7 @@ const submitBtn = document.getElementById("login-submit");
 // Kuda posle prijave: ?next=dolazak.html (samo stranice ove aplikacije), inače po ulozi.
 function afterLoginUrl(role) {
   if (role === "terminal") return APP_BASE + "terminal.html";
+  if (role === "management") return APP_BASE + "dolasci.html";
   const next = new URLSearchParams(location.search).get("next");
   if (next && /^[a-z]+\.html(\?[\w=.%-]*)?$/.test(next)) return APP_BASE + next;
   return role === "admin" ? APP_BASE + "admin/index.html" : APP_BASE + "index.html";

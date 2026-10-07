@@ -19,6 +19,9 @@ async function mountHeader(activeKey) {
   const { session, profile } = await getSessionAndProfile();
   // Tablet na ulazu ne koristi ostatak aplikacije.
   if (profile && profile.role === "terminal") { window.location.href = APP_BASE + "terminal.html"; return { session: null, profile: null }; }
+  // Management vidi samo stranicu Dolasci.
+  if (profile && profile.role === "management" && activeKey !== "dolasci") { window.location.href = APP_BASE + "dolasci.html"; return { session: null, profile: null }; }
+  const isManagement = !!profile && profile.role === "management";
 
   let apiOk = true;
   try {
@@ -28,7 +31,7 @@ async function mountHeader(activeKey) {
     apiOk = false;
   }
 
-  const navLinks = [
+  const navLinks = isManagement ? [] : [
     `<a href="${APP_BASE}index.html" class="${activeKey === "raspored" ? "active" : ""}">Raspored</a>`,
   ];
   if (profile && profile.role === "admin") {
@@ -39,10 +42,9 @@ async function mountHeader(activeKey) {
       `<a href="${APP_BASE}admin/index.html#dolasci" data-admin-tab="dolasci" class="${activeKey === "admin-dolasci" ? "active" : ""}">Dolasci</a>`
     );
   }
-  if (profile && profile.role === "management") {
+  if (isManagement) {
     navLinks.push(`<a href="${APP_BASE}dolasci.html" class="${activeKey === "dolasci" ? "active" : ""}">Dolasci</a>`);
-  }
-  if (session) {
+  } else if (session) {
     navLinks.push(
       `<a href="${APP_BASE}zamene.html" class="${activeKey === "zamene" ? "active" : ""}">Zamene<span class="nav-badge" id="nav-zamene-badge" hidden></span></a>`
     );
@@ -105,8 +107,8 @@ async function mountHeader(activeKey) {
     });
   }
 
-  if (session) zmRefreshNavBadge(session, profile);
-  if (session && profile && profile.role !== "management") mountCheckInButton(session);
+  if (session && !isManagement) zmRefreshNavBadge(session, profile);
+  if (session && !isManagement) mountCheckInButton(session);
   if (typeof pushRefreshButton === "function") pushRefreshButton();
 
   const passwordBtn = document.getElementById("password-btn");
