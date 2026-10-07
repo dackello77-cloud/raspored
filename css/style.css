@@ -432,3 +432,18 @@ label.field-label {
 .st-rejected_worker, .st-rejected_hr { background: var(--red-soft); color: var(--red-text); }
 .st-cancelled { background: var(--bg-soft); color: var(--text-muted); }
 .zm-empty { font-size: 12.5px; color: var(--text-muted); padding: 6px 0; }
+
+/* Dugme "Dolazak" (QR prijava) — samo na telefonu, dole na sredini */
+.checkin-fab { display: none; }
+@media (max-width: 700px) {
+  .checkin-fab {
+    display: flex; align-items: center; gap: 8px;
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 800; background: var(--green-dark); color: #fff; text-decoration: none;
+    padding: 13px 22px; border-radius: 999px; font-weight: 700; font-size: 15px;
+    box-shadow: 0 10px 24px -8px rgba(22, 58, 45, 0.7);
+  }
+  .checkin-fab svg { width: 22px; height: 22px; }
+  .checkin-fab:active { transform: translateX(-50%) scale(0.97); }
+  body.has-checkin-fab { padding-bottom: 84px; }
+}

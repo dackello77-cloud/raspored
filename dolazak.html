@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Dolazak — Raspored App</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#111111" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Raspored" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2" />
+<link rel="icon" type="image/png" href="icons/icon-192.png?v=2" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="css/style.css?v=20261007c" />
+<style>
+  html, body { height: 100%; }
+  body { background: #111; color: #fff; display: flex; flex-direction: column; overflow: hidden; }
+  .dz-top { color: #fff; display: flex; align-items: center; justify-content: space-between; padding: max(12px, env(safe-area-inset-top)) 16px 12px; }
+  .dz-top a { color: #fff; text-decoration: none; font-weight: 600; font-size: 15px; padding: 6px 0; }
+  .dz-top b { font-size: 16px; }
+  .dz-stage { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .dz-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .dz-frame { position: relative; width: min(72vw, 320px); aspect-ratio: 1; border-radius: 22px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55); border: 3px solid rgba(255, 255, 255, 0.9); }
+  .dz-tip { position: absolute; bottom: max(28px, env(safe-area-inset-bottom)); left: 16px; right: 16px; text-align: center; font-size: 15px; font-weight: 600; text-shadow: 0 1px 3px #000; }
+  .dz-result { position: absolute; inset: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px 20px; text-align: center; }
+  .dz-result[hidden] { display: none; }
+  .dz-icon { width: 96px; height: 96px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 52px; color: #fff; }
+  .dz-icon.ok { background: #1f9d55; }
+  .dz-icon.late { background: #e08a12; }
+  .dz-icon.err { background: var(--red-strong); }
+  .dz-result h2 { margin: 0; font-size: 24px; }
+  .dz-result p { margin: 0; font-size: 16px; color: var(--text-muted); max-width: 340px; }
+  .dz-result .dz-big { font-size: 40px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+  .dz-late { background: #fff1dc; color: #a35a00; font-weight: 700; padding: 8px 16px; border-radius: 99px; font-size: 16px; }
+  .dz-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; margin-top: 10px; }
+  .dz-actions .btn { padding: 14px; font-size: 16px; justify-content: center; text-align: center; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="dz-top">
+    <a href="index.html">← Nazad</a>
+    <b>Prijava dolaska</b>
+    <span style="width:60px;"></span>
+  </div>
+  <div class="dz-stage">
+    <video id="dz-video" playsinline muted></video>
+    <div class="dz-frame"></div>
+    <div class="dz-tip" id="dz-tip">Uperi kameru u QR kod na tabletu</div>
+
+    <div class="dz-result" id="dz-result" hidden>
+      <div class="dz-icon" id="dz-icon"></div>
+      <h2 id="dz-title"></h2>
+      <div class="dz-big" id="dz-big"></div>
+      <div id="dz-extra"></div>
+      <p id="dz-text"></p>
+      <div class="dz-actions">
+        <button class="btn btn-ghost" id="dz-retry" type="button" hidden>Skeniraj ponovo</button>
+        <a class="btn btn-primary" href="index.html">Na raspored</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="js/supabase.js?v=20261007c"></script>
+  <script src="js/auth.js?v=20261007c"></script>
+  <script src="js/dolazak.js?v=20261007c"></script>
+</body>
+</html>

@@ -2,6 +2,14 @@ const form = document.getElementById("login-form");
 const errorBox = document.getElementById("login-error");
 const submitBtn = document.getElementById("login-submit");
 
+// Kuda posle prijave: ?next=dolazak.html (samo stranice ove aplikacije), inače po ulozi.
+function afterLoginUrl(role) {
+  if (role === "terminal") return APP_BASE + "terminal.html";
+  const next = new URLSearchParams(location.search).get("next");
+  if (next && /^[a-z]+\.html(\?[\w=.%-]*)?$/.test(next)) return APP_BASE + next;
+  return role === "admin" ? APP_BASE + "admin/index.html" : APP_BASE + "index.html";
+}
+
 // Kačimo submit handler ODMAH (sinhrono), pre bilo kakvog await-a,
 // da ne postoji trenutak kada bi klik/Enter pokrenuo "sirov" GET submit
 // forme (što bi lozinku ubacilo u URL).
@@ -33,12 +41,12 @@ form.addEventListener("submit", async (e) => {
     .eq("id", data.user.id)
     .single();
 
-  window.location.href = profileRow && profileRow.role === "admin" ? APP_BASE + "admin/index.html" : APP_BASE + "index.html";
+  window.location.href = afterLoginUrl(profileRow && profileRow.role);
 });
 
 (async () => {
   const { session, profile } = await mountHeader("login");
   if (session && profile) {
-    window.location.href = profile.role === "admin" ? APP_BASE + "admin/index.html" : APP_BASE + "index.html";
+    window.location.href = afterLoginUrl(profile.role);
   }
 })();

@@ -17,6 +17,8 @@ async function mountHeader(activeKey) {
   if (!mount) return { session: null, profile: null };
 
   const { session, profile } = await getSessionAndProfile();
+  // Tablet na ulazu ne koristi ostatak aplikacije.
+  if (profile && profile.role === "terminal") { window.location.href = APP_BASE + "terminal.html"; return { session: null, profile: null }; }
 
   let apiOk = true;
   try {
@@ -33,7 +35,8 @@ async function mountHeader(activeKey) {
     navLinks.push(
       `<a href="${APP_BASE}admin/index.html#osobe" data-admin-tab="osobe" class="${activeKey === "admin-osobe" ? "active" : ""}">Osobe u sistemu</a>`,
       `<a href="${APP_BASE}admin/index.html#plan" data-admin-tab="plan" class="${activeKey === "admin-plan" ? "active" : ""}">Plan zaposlenih</a>`,
-      `<a href="${APP_BASE}admin/index.html#rasporedi" data-admin-tab="rasporedi" class="${activeKey === "admin-rasporedi" ? "active" : ""}">Generisanje rasporeda</a>`
+      `<a href="${APP_BASE}admin/index.html#rasporedi" data-admin-tab="rasporedi" class="${activeKey === "admin-rasporedi" ? "active" : ""}">Generisanje rasporeda</a>`,
+      `<a href="${APP_BASE}admin/index.html#dolasci" data-admin-tab="dolasci" class="${activeKey === "admin-dolasci" ? "active" : ""}">Dolasci</a>`
     );
   }
   if (session) {
@@ -100,12 +103,27 @@ async function mountHeader(activeKey) {
   }
 
   if (session) zmRefreshNavBadge(session, profile);
+  if (session) mountCheckInButton(session);
   if (typeof pushRefreshButton === "function") pushRefreshButton();
 
   const passwordBtn = document.getElementById("password-btn");
   if (passwordBtn) passwordBtn.addEventListener("click", () => openPasswordDialog(session.user.email));
 
   return { session, profile };
+}
+
+// Dugme "Dolazak" na dnu ekrana (telefon) — samo za naloge povezane sa zaposlenim.
+async function mountCheckInButton(session) {
+  if (document.getElementById("checkin-fab")) return;
+  const { data: me } = await sb.from("employees").select("id").eq("profile_id", session.user.id).maybeSingle();
+  if (!me) return;
+  const a = document.createElement("a");
+  a.id = "checkin-fab";
+  a.className = "checkin-fab";
+  a.href = APP_BASE + "dolazak.html";
+  a.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg><span>Dolazak</span>`;
+  document.body.appendChild(a);
+  document.body.classList.add("has-checkin-fab");
 }
 
 // Broj zahteva za zamenu koji čekaju MOJ odgovor (i HR odobrenje ako sam HR/admin).

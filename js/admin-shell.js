@@ -7,7 +7,7 @@
 let ADMIN_PROFILE = null;
 let adminCurrentTab = "osobe";
 
-const ADMIN_TAB_KEYS = ["osobe", "plan", "rasporedi"];
+const ADMIN_TAB_KEYS = ["osobe", "plan", "rasporedi", "dolasci"];
 
 function adminTabFromHash() {
   const h = (location.hash || "").slice(1);
