@@ -15,12 +15,14 @@ function dlBanner(html, type) {
   document.getElementById("dolasci-banner").innerHTML = html ? `<div class="banner ${type || "error"}">${html}</div>` : "";
 }
 
-// Planirani početak smene po beogradskom vremenu (međusmena počinje 6 h posle smene: 13 ili 21 h).
-function dlPlannedStart(date, code, isMS) {
+// Planirani početak smene po beogradskom vremenu (međusmena počinje 6 h posle smene: 13 ili 21 h;
+// lideri — shift lider ili "Lider" u smeni — sat ranije: 6, 14 ili 22 h).
+function dlIsLeader(row) { return !!row.is_leader || row.employees?.funkcija === "shift_lider"; }
+function dlPlannedStart(date, code, isMS, isLeader) {
   const st = DL.shiftTypes[code];
   const [y, m, d] = date.split("-").map(Number);
   const [h, min] = st.start_time.split(":").map(Number);
-  return new Date(y, m - 1, d, h + (isMS ? 6 : 0), min);
+  return new Date(y, m - 1, d, h + (isMS ? 6 : isLeader ? -1 : 0), min);
 }
 function dlHHMM(dt) { return `${dlPad(dt.getHours())}:${dlPad(dt.getMinutes())}`; }
 function dlShiftLabel(code, isMS) { return isMS ? `${code} · MS` : code; }
@@ -52,7 +54,7 @@ async function dlLoadDay() {
 
   const [{ data: sched, error: e1 }, { data: att, error: e2 }] = await Promise.all([
     sb.from("schedule")
-      .select("id, date, shift_code, is_medju_smena, employee_id, employees!schedule_employee_id_fkey(profiles(full_name))")
+      .select("id, date, shift_code, is_medju_smena, is_leader, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name))")
       .eq("date", date),
     sb.from("attendance")
       .select("id, employee_id, checked_at, shift_code, is_medju_smena, late_minutes, employees(profiles(full_name))")
@@ -79,7 +81,7 @@ async function dlLoadDay() {
     const came = rows.filter(r => attByKey.has(`${r.employee_id}|${code}`)).length;
     html += `<tr class="dl-shift-row"><td colspan="6">${DL.shiftTypes[code]?.label || code} — prijavljeno ${came} od ${rows.length}</td></tr>`;
     rows.forEach(r => {
-      const start = dlPlannedStart(r.date, code, r.is_medju_smena);
+      const start = dlPlannedStart(r.date, code, r.is_medju_smena, dlIsLeader(r));
       const a = attByKey.get(`${r.employee_id}|${code}`);
       attByKey.delete(`${r.employee_id}|${code}`);
       let status;
@@ -96,7 +98,7 @@ async function dlLoadDay() {
       }
       html += `<tr>
         <td>${dlEsc(dlName(r))}</td>
-        <td>${dlShiftLabel(code, r.is_medju_smena)}</td>
+        <td>${dlShiftLabel(code, r.is_medju_smena)}${dlIsLeader(r) ? " · Lider" : ""}</td>
         <td>${dlHHMM(start)}</td>
         <td>${a ? DL_TIME_FMT.format(new Date(a.checked_at)) : "—"}</td>
         <td>${status}</td>
@@ -145,7 +147,7 @@ async function dlLoadMonth() {
 
   const [{ data: sched, error: e1 }, { data: att, error: e2 }] = await Promise.all([
     sb.from("schedule")
-      .select("date, shift_code, is_medju_smena, employee_id, employees!schedule_employee_id_fkey(profiles(full_name))")
+      .select("date, shift_code, is_medju_smena, is_leader, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name))")
       .gte("date", from).lte("date", to).range(0, 4999),
     sb.from("attendance")
       .select("employee_id, checked_at, work_date, shift_code, is_medju_smena, late_minutes, employees(profiles(full_name))")
@@ -170,7 +172,7 @@ async function dlLoadMonth() {
     const key = `${r.employee_id}|${r.date}|${r.shift_code}`;
     const a = attByKey.get(key);
     attByKey.delete(key);
-    const started = dlPlannedStart(r.date, r.shift_code, r.is_medju_smena) <= now;
+    const started = dlPlannedStart(r.date, r.shift_code, r.is_medju_smena, dlIsLeader(r)) <= now;
     if (!a && (!started || r.date < DL.startDate)) return;
     p.planned++;
     if (!a) { p.missed.push(r); return; }

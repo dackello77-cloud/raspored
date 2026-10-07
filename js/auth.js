@@ -119,7 +119,7 @@ const CHECKIN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 
 async function mountCheckInButton(session) {
   if (document.getElementById("checkin-fab")) return;
-  const { data: me } = await sb.from("employees").select("id").eq("profile_id", session.user.id).maybeSingle();
+  const { data: me } = await sb.from("employees").select("id, funkcija").eq("profile_id", session.user.id).maybeSingle();
   if (!me) return;
 
   const a = document.createElement("a");
@@ -136,15 +136,17 @@ async function mountCheckInButton(session) {
   const day = (n) => iso(new Date(now0.getFullYear(), now0.getMonth(), now0.getDate() + n));
   const [{ data: types }, { data: shifts }, { data: done }] = await Promise.all([
     sb.from("shift_types").select("code, start_time"),
-    sb.from("schedule").select("date, shift_code, is_medju_smena").eq("employee_id", me.id).gte("date", day(-1)).lte("date", day(2)),
+    sb.from("schedule").select("date, shift_code, is_medju_smena, is_leader").eq("employee_id", me.id).gte("date", day(-1)).lte("date", day(2)),
     sb.from("attendance").select("work_date, shift_code, checked_at").eq("employee_id", me.id).gte("work_date", day(-1)),
   ]);
   const startOf = Object.fromEntries((types || []).map(t => [t.code, t.start_time]));
-  // Smene sa početkom i krajem po beogradskom vremenu (međusmena počinje 6 h kasnije; smena traje 8 h).
+  // Smene sa početkom i krajem po beogradskom vremenu (smena traje 8 h): međusmena počinje 6 h kasnije,
+  // lideri (shift lider ili "Lider" u smeni) sat ranije — 6–14, 14–22, 22–6.
   const windows = (shifts || []).map(s => {
     const [y, m, d] = s.date.split("-").map(Number);
     const [h, min] = (startOf[s.shift_code] || "00:00").split(":").map(Number);
-    const start = new Date(y, m - 1, d, h + (s.is_medju_smena ? 6 : 0), min);
+    const leader = s.is_leader || me.funkcija === "shift_lider";
+    const start = new Date(y, m - 1, d, h + (s.is_medju_smena ? 6 : leader ? -1 : 0), min);
     const att = (done || []).find(x => x.work_date === s.date && x.shift_code === s.shift_code);
     return { start, end: new Date(start.getTime() + 8 * 3600e3), att };
   }).sort((x, y) => x.start - y.start);
