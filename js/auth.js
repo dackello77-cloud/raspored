@@ -113,17 +113,71 @@ async function mountHeader(activeKey) {
 }
 
 // Dugme "Dolazak" na dnu ekrana (telefon) — samo za naloge povezane sa zaposlenim.
+// Aktivno od 45 min pre početka smene do kraja smene (isto pravilo proverava i server u check_in).
+const CHECKIN_BEFORE_MIN = 45;
+const CHECKIN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>`;
+
 async function mountCheckInButton(session) {
   if (document.getElementById("checkin-fab")) return;
   const { data: me } = await sb.from("employees").select("id").eq("profile_id", session.user.id).maybeSingle();
   if (!me) return;
+
   const a = document.createElement("a");
   a.id = "checkin-fab";
-  a.className = "checkin-fab";
+  a.className = "checkin-fab is-off";
   a.href = APP_BASE + "dolazak.html";
-  a.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg><span>Dolazak</span>`;
+  a.innerHTML = `${CHECKIN_ICON}<span class="checkin-fab-text"><b>Dolazak</b><small></small></span>`;
+  a.addEventListener("click", (e) => { if (a.classList.contains("is-off")) e.preventDefault(); });
   document.body.appendChild(a);
   document.body.classList.add("has-checkin-fab");
+
+  const now0 = typeof belgradeNow === "function" ? belgradeNow() : new Date();
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const day = (n) => iso(new Date(now0.getFullYear(), now0.getMonth(), now0.getDate() + n));
+  const [{ data: types }, { data: shifts }, { data: done }] = await Promise.all([
+    sb.from("shift_types").select("code, start_time"),
+    sb.from("schedule").select("date, shift_code, is_medju_smena").eq("employee_id", me.id).gte("date", day(-1)).lte("date", day(2)),
+    sb.from("attendance").select("work_date, shift_code, checked_at").eq("employee_id", me.id).gte("work_date", day(-1)),
+  ]);
+  const startOf = Object.fromEntries((types || []).map(t => [t.code, t.start_time]));
+  // Smene sa početkom i krajem po beogradskom vremenu (međusmena počinje 6 h kasnije; smena traje 8 h).
+  const windows = (shifts || []).map(s => {
+    const [y, m, d] = s.date.split("-").map(Number);
+    const [h, min] = (startOf[s.shift_code] || "00:00").split(":").map(Number);
+    const start = new Date(y, m - 1, d, h + (s.is_medju_smena ? 6 : 0), min);
+    const att = (done || []).find(x => x.work_date === s.date && x.shift_code === s.shift_code);
+    return { start, end: new Date(start.getTime() + 8 * 3600e3), att };
+  }).sort((x, y) => x.start - y.start);
+
+  const hhmm = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const small = a.querySelector("small");
+  const refresh = () => {
+    const now = typeof belgradeNow === "function" ? belgradeNow() : new Date();
+    const cur = windows.find(w => now >= new Date(w.start.getTime() - CHECKIN_BEFORE_MIN * 60e3) && now < w.end);
+    let on = false, note = "";
+    if (cur && cur.att) {
+      const t = new Date(cur.att.checked_at);
+      note = `prijavljen/a ${t.toLocaleTimeString("sr-Latn", { timeZone: "Europe/Belgrade", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
+    } else if (cur) {
+      on = true;
+    } else {
+      const next = windows.find(w => w.start > now);
+      if (next) {
+        const opens = new Date(next.start.getTime() - CHECKIN_BEFORE_MIN * 60e3);
+        const sameDay = iso(opens) === iso(now);
+        const tomorrow = iso(opens) === iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+        note = `od ${sameDay ? "" : tomorrow ? "sutra " : opens.getDate() + "." + (opens.getMonth() + 1) + ". "}${hhmm(opens)}`;
+      } else {
+        note = "nema smene";
+      }
+    }
+    a.classList.toggle("is-off", !on);
+    a.setAttribute("aria-disabled", on ? "false" : "true");
+    small.textContent = note;
+    small.hidden = !note;
+  };
+  refresh();
+  setInterval(refresh, 30 * 1000);
 }
 
 // Broj zahteva za zamenu koji čekaju MOJ odgovor (i HR odobrenje ako sam HR/admin).
