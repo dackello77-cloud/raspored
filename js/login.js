@@ -8,7 +8,7 @@ function afterLoginUrl(role, adminAccess) {
   if (role === "management") return APP_BASE + "dolasci.html";
   const next = new URLSearchParams(location.search).get("next");
   if (next && /^[a-z]+\.html(\?[\w=.%-]*)?$/.test(next)) return APP_BASE + next;
-  return role === "admin" || adminAccess ? APP_BASE + "admin/index.html" : APP_BASE + "index.html";
+  return APP_BASE + "index.html"; // svi ostali (i admin) počinju na Rasporedu
 }
 
 // Kačimo submit handler ODMAH (sinhrono), pre bilo kakvog await-a,
