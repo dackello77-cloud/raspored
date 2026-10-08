@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="css/style.css?v=20261008a" />
+<link rel="stylesheet" href="css/style.css?v=20261008d" />
 <style>
   .zm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
   @media (max-width: 900px) { .zm-grid { grid-template-columns: 1fr; } }
@@ -24,6 +24,11 @@
   .card .sub { margin: 0 0 14px; font-size: 12px; }
   .zm-hint { font-size: 12.5px; background: var(--bg-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
   .zm-hidden { display: none !important; }
+  .zm-office-form { display: flex; flex-direction: column; gap: 6px; }
+  .zm-office-form textarea { min-height: 70px; resize: vertical; font: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+  .zm-office-form .btn { align-self: flex-start; margin-top: 6px; }
+  .zm-office-msg { font-size: 12.5px; }
+  .zm-office-msg.err { color: var(--red-text); }
 </style>
 </head>
 <body>
@@ -34,6 +39,19 @@
     <div class="zm-hint">Zamenu tražiš na stranici <a href="index.html">Raspored</a>: desni klik na radnika iz druge smene → <b>Zamena</b> (monitoring: za jedan dan ili celu nedelju), a desni klik na sebe → <b>Slobodan dan</b>.</div>
     <div class="zm-grid">
       <div class="zm-col">
+        <section class="card zm-hidden" id="zm-office-card">
+          <h2>Zatraži slobodan dan</h2>
+          <p class="muted sub" id="zm-office-sub">Zahtev ide HR manageru na odobrenje.</p>
+          <form class="zm-office-form" id="zm-office-form" novalidate>
+            <label class="field-label" for="zm-office-date">Datum</label>
+            <input type="date" id="zm-office-date" required />
+            <label class="field-label" for="zm-office-reason">Razlog</label>
+            <textarea id="zm-office-reason" placeholder="Npr. porodične obaveze" required></textarea>
+            <div class="zm-office-msg" id="zm-office-msg"></div>
+            <button type="submit" class="btn btn-primary" id="zm-office-send" disabled>Pošalji zahtev</button>
+          </form>
+        </section>
+
         <section class="card">
           <h2>Moji zahtevi</h2>
           <p class="muted sub">Zahtevi koje si poslao/la i njihov status.</p>
@@ -64,11 +82,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="js/supabase.js?v=20261008a"></script>
-  <script src="js/auth.js?v=20261008a"></script>
-  <script src="js/push.js?v=20261008a"></script>
-  <script src="js/constants.js?v=20261008a"></script>
-  <script src="js/swap-common.js?v=20261008a"></script>
-  <script src="js/zamene.js?v=20261008a"></script>
+  <script src="js/supabase.js?v=20261008d"></script>
+  <script src="js/auth.js?v=20261008d"></script>
+  <script src="js/push.js?v=20261008d"></script>
+  <script src="js/constants.js?v=20261008d"></script>
+  <script src="js/swap-common.js?v=20261008d"></script>
+  <script src="js/zamene.js?v=20261008d"></script>
 </body>
 </html>

@@ -55,3 +55,43 @@ function belgradeNow() {
   }).formatToParts(new Date()).forEach(p => { parts[p.type] = p.value; });
   return new Date(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
 }
+
+// ---------- Kancelarija: Office manager (08–16) i Accounting (15–23) ----------
+// Nisu u rasporedu smena. Rade pon–pet; državni praznici i 25.12. su slobodni
+// (isto kao office_holiday() u sql/migration_014_office_roles.sql). Kod "smene": OM / AC.
+const OFFICE_ROLES = {
+  office_manager: { code: "OM", startHour: 8, label: "Office manager", hours: "08:00–16:00" },
+  accounting: { code: "AC", startHour: 15, label: "Accounting", hours: "15:00–23:00" },
+};
+const OFFICE_CODE_LABEL = { OM: "Office manager", AC: "Accounting" };
+
+function officeIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function orthodoxEasterLocal(year) {
+  const a = year % 4, b = year % 7, c = year % 19;
+  const d = (19 * c + 15) % 30, e = (2 * a + 4 * b - d + 34) % 7;
+  const month = Math.floor((d + e + 114) / 31), day = ((d + e + 114) % 31) + 1;
+  return new Date(year, month - 1, day + 13);
+}
+const OFFICE_HOLIDAY_CACHE = {};
+function officeHolidays(year) {
+  if (OFFICE_HOLIDAY_CACHE[year]) return OFFICE_HOLIDAY_CACHE[year];
+  const set = new Set(["01-01", "01-02", "01-07", "02-15", "02-16", "05-01", "05-02", "11-11", "12-25"].map(md => `${year}-${md}`));
+  const e = orthodoxEasterLocal(year);
+  const easter = [-2, -1, 0, 1].map(n => officeIso(new Date(e.getFullYear(), e.getMonth(), e.getDate() + n)));
+  easter.forEach(x => set.add(x));
+  // Dvodnevni praznik ili 11.11. u nedelju -> slobodan i prvi sledeći radni dan (ne na Uskrs).
+  [[0, 1], [1, 15], [4, 1]].forEach(([m, d]) => {
+    const first = new Date(year, m, d), second = new Date(year, m, d + 1);
+    if (first.getDay() === 0 || second.getDay() === 0) {
+      let moved = new Date(year, m, d + 2);
+      while (easter.includes(officeIso(moved))) moved = new Date(moved.getFullYear(), moved.getMonth(), moved.getDate() + 1);
+      set.add(officeIso(moved));
+    }
+  });
+  if (new Date(year, 10, 11).getDay() === 0) set.add(`${year}-11-12`);
+  return (OFFICE_HOLIDAY_CACHE[year] = set);
+}
+function officeIsWorkday(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return d.getDay() >= 1 && d.getDay() <= 5 && !officeHolidays(d.getFullYear()).has(iso);
+}

@@ -114,7 +114,7 @@ function scanFrame() {
   const params = new URLSearchParams(location.search);
   const urlToken = params.get("t");
   const { session, profile } = await getSessionAndProfile();
-  if (session && profile && profile.role === "worker") {
+  if (session && profile && PHONE_ROLES.includes(profile.role)) {
     const dev = await deviceCheck();
     if (dev.status === "blocked") { deviceSignOutBlocked(dev.label); return; }
   }

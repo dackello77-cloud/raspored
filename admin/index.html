@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="../css/style.css?v=20261008a" />
+<link rel="stylesheet" href="../css/style.css?v=20261008d" />
 <style>
 
   .add-form-grid {
@@ -42,6 +42,7 @@
   .role-tag-hr { background: #f3e8fd; color: #7e22ce; border: 1px solid #dcc3f5; }
   .role-tag-mgmt { background: #fbf3d5; color: #a16207; border: 1px solid #ecdca0; }
   .role-tag-admin { background: var(--bg-soft); color: var(--green-dark); border: 1px solid var(--border); }
+  .role-tag-office { background: #e8f1fd; color: #1d4ed8; border: 1px solid #c3d7f5; }
   .pw-check { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--text) !important; }
   .pw-check input { width: 16px; height: 16px; accent-color: var(--green-dark); }
   .pw-hint { font-size: 11px; color: var(--text-muted); margin-top: -6px; }
@@ -370,6 +371,8 @@
               <option value="worker">Radnik</option>
               <option value="admin">Administrator</option>
               <option value="management">Management</option>
+              <option value="office_manager">Office manager</option>
+              <option value="accounting">Accounting</option>
             </select>
           </div>
           <button type="submit" class="btn btn-primary" id="add-person-btn">Dodaj osobu</button>
@@ -564,17 +567,17 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/supabase.js?v=20261008a"></script>
-  <script src="../js/auth.js?v=20261008a"></script>
-  <script src="../js/push.js?v=20261008a"></script>
-  <script src="../js/account.js?v=20261008a"></script>
-  <script src="../js/constants.js?v=20261008a"></script>
-  <script src="../js/admin-shell.js?v=20261008a"></script>
-  <script src="../js/admin-osobe.js?v=20261008a"></script>
-  <script src="../js/admin-plan.js?v=20261008a"></script>
-  <script src="../js/generator.js?v=20261008a"></script>
-  <script src="../js/admin-generate.js?v=20261008a"></script>
-  <script src="../js/admin-rasporedi.js?v=20261008a"></script>
-  <script src="../js/admin-dolasci.js?v=20261008a"></script>
+  <script src="../js/supabase.js?v=20261008d"></script>
+  <script src="../js/auth.js?v=20261008d"></script>
+  <script src="../js/push.js?v=20261008d"></script>
+  <script src="../js/account.js?v=20261008d"></script>
+  <script src="../js/constants.js?v=20261008d"></script>
+  <script src="../js/admin-shell.js?v=20261008d"></script>
+  <script src="../js/admin-osobe.js?v=20261008d"></script>
+  <script src="../js/admin-plan.js?v=20261008d"></script>
+  <script src="../js/generator.js?v=20261008d"></script>
+  <script src="../js/admin-generate.js?v=20261008d"></script>
+  <script src="../js/admin-rasporedi.js?v=20261008d"></script>
+  <script src="../js/admin-dolasci.js?v=20261008d"></script>
 </body>
 </html>

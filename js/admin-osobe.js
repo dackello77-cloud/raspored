@@ -4,6 +4,8 @@ const FUNKCIJA_LABELS = {
   shift_lider: "Shift lider",
   radnik: "Radnik",
   monitoring: "Monitoring",
+  office_manager: "Office manager",
+  accounting: "Accounting",
 };
 
 function optionsHTML(options, selected) {
@@ -58,7 +60,7 @@ function osobeShortDate(ts) {
 }
 // Red ispod korisničkog imena: koji telefon je vezan i da li je bilo pokušaja sa drugog.
 function deviceLineHtml(emp) {
-  if (!emp.profiles || emp.profiles.role !== "worker") return "";
+  if (!emp.profiles || !PHONE_ROLES.includes(emp.profiles.role)) return "";
   const d = emp.device;
   if (!d) return `<div class="emp-device muted">📱 telefon još nije vezan</div>`;
   const blocked = d.blocked_at && new Date(d.blocked_at) > new Date(d.registered_at)
@@ -73,6 +75,9 @@ function roleTagsHtml(p) {
   let html = "";
   if (p.role === "admin") html += '<span class="role-tag role-tag-admin">Admin</span>';
   if (p.role === "management") html += '<span class="role-tag role-tag-mgmt">Management</span>';
+  if (p.role === "office_manager") html += '<span class="role-tag role-tag-office">Office manager</span>';
+  if (p.role === "accounting") html += '<span class="role-tag role-tag-office">Accounting</span>';
+  if (p.admin_access && p.role !== "admin") html += '<span class="role-tag role-tag-admin">Admin</span>';
   if (p.hr_manager) html += '<span class="role-tag role-tag-hr">HR</span>';
   return html;
 }
@@ -81,7 +86,8 @@ function roleTagsHtml(p) {
 function funkcijaForRole(role, current) {
   if (role === "admin") return "administrator";
   if (role === "management") return "management";
-  return current === "administrator" || current === "management" ? "radnik" : current;
+  if (role === "office_manager" || role === "accounting") return role;
+  return ["administrator", "management", "office_manager", "accounting"].includes(current) ? "radnik" : current;
 }
 
 function buildEmployeeRow(emp) {
@@ -202,12 +208,16 @@ function openEditPersonDialog(emp, row) {
           <option value="worker">Radnik</option>
           <option value="admin">Administrator</option>
           <option value="management">Management</option>
+          <option value="office_manager">Office manager (08–16)</option>
+          <option value="accounting">Accounting (15–23)</option>
         </select>
       </label>
+      <label class="pw-check pw-admin-access"><input type="checkbox" name="adminAccess" /> Admin pristup</label>
+      <div class="pw-hint pw-admin-access">Daje sva prava administratora uz ovu ulogu.</div>
       <label class="pw-check"><input type="checkbox" name="hr" /> HR manager</label>
       <div class="pw-hint">HR se dodaje uz postojeću ulogu — funkcija u rasporedu ostaje ista.</div>
       <label>Nova lozinka<input type="text" name="password" autocomplete="off" placeholder="Prazno = lozinka se ne menja" /></label>
-      ${p.role === "worker" ? `<div class="pw-device">
+      ${PHONE_ROLES.includes(p.role) ? `<div class="pw-device">
         <div class="field-label" style="margin:0 0 4px;">Telefon</div>
         <div class="pw-device-info">${emp.device ? `📱 ${zmSafe(emp.device.label)}<br><span class="muted">vezan od ${osobeShortDate(emp.device.registered_at)}</span>` : '<span class="muted">Telefon još nije vezan — vezaće se pri prvoj prijavi sa telefona.</span>'}</div>
         ${emp.device ? `<button type="button" class="btn btn-danger pw-device-remove">Ukloni telefon</button>
@@ -226,6 +236,13 @@ function openEditPersonDialog(emp, row) {
   form.username.value = p.username || "";
   form.role.value = p.role || "worker";
   form.hr.checked = !!p.hr_manager;
+  form.adminAccess.checked = !!p.admin_access;
+  // "Admin pristup" ima smisla samo uz Office manager / Accounting.
+  const syncAdminAccess = () => overlay.querySelectorAll(".pw-admin-access").forEach(el => {
+    el.style.display = ["office_manager", "accounting"].includes(form.role.value) ? "" : "none";
+  });
+  form.role.addEventListener("change", syncAdminAccess);
+  syncAdminAccess();
   const msg = overlay.querySelector(".pw-msg");
   const show = (text, ok) => { msg.textContent = text; msg.className = `pw-msg ${ok ? "ok" : "err"}`; };
   const close = () => overlay.remove();
@@ -252,30 +269,33 @@ function openEditPersonDialog(emp, row) {
     const username = form.username.value.trim().toLowerCase();
     const role = form.role.value;
     const hr = form.hr.checked;
+    const adminAccess = ["office_manager", "accounting"].includes(role) && form.adminAccess.checked;
     const password = form.password.value;
     if (!fullName || !username) return show("Ime i korisničko ime su obavezni.");
     if (!/^[a-z0-9._-]+$/.test(username)) return show("Korisničko ime: samo mala slova, brojevi, tačka, crtica i donja crta.");
     if (password && password.length < 6) return show("Lozinka mora imati bar 6 znakova.");
-    if (ADMIN_PROFILE && emp.profile_id === ADMIN_PROFILE.id && role !== "admin") {
+    if (ADMIN_PROFILE && emp.profile_id === ADMIN_PROFILE.id && role !== "admin" && !adminAccess) {
       return show("Ne možeš sebi da skineš ulogu administratora.");
     }
 
     const saveBtn = form.querySelector(".pw-save");
     saveBtn.disabled = true;
 
-    if (fullName !== p.full_name || role !== p.role || hr !== !!p.hr_manager) {
+    if (fullName !== p.full_name || role !== p.role || hr !== !!p.hr_manager || adminAccess !== !!p.admin_access) {
       const update = { full_name: fullName, role };
       if (hr !== !!p.hr_manager) update.hr_manager = hr;
+      if (adminAccess !== !!p.admin_access) update.admin_access = adminAccess;
       const { error } = await sb.from("profiles").update(update).eq("id", emp.profile_id);
       if (error) {
         saveBtn.disabled = false;
-        const missing = /hr_manager|profiles_role_check/.test(error.message);
+        const missing = /admin_access|profiles_role_check|employees_funkcija_check/.test(error.message);
         return show(missing
-          ? "Za Management i HR prvo treba jednom pokrenuti SQL iz fajla sql/migration_005_management_hr.sql u Supabase."
+          ? "Za Office manager / Accounting i Admin pristup prvo treba jednom pokrenuti SQL iz fajla sql/migration_014_office_roles.sql u Supabase."
           : "Greška: " + error.message);
       }
       p.full_name = fullName;
       p.hr_manager = hr;
+      p.admin_access = adminAccess;
       if (role !== p.role) {
         p.role = role;
         // Admin/Management izlaze iz rasporeda, povratak u Radnika vraća funkciju Radnik.

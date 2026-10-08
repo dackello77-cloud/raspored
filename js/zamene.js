@@ -47,14 +47,52 @@ zmOnDone = async (msg, isError) => {
   await zmLoadLists();
 };
 
+// Forma "Zatraži slobodan dan" (Office manager / Accounting) — kači se odmah, pre učitavanja.
+(() => {
+  const form = document.getElementById("zm-office-form");
+  const date = document.getElementById("zm-office-date");
+  const reason = document.getElementById("zm-office-reason");
+  const send = document.getElementById("zm-office-send");
+  const msg = document.getElementById("zm-office-msg");
+  const sync = () => {
+    msg.textContent = ""; msg.className = "zm-office-msg";
+    if (date.value && !officeIsWorkday(date.value)) {
+      msg.textContent = "Taj dan je vikend ili praznik — već si slobodan/na.";
+      msg.className = "zm-office-msg err";
+    }
+    send.disabled = !(date.value && reason.value.trim() && officeIsWorkday(date.value));
+  };
+  date.addEventListener("input", sync);
+  reason.addEventListener("input", sync);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (send.disabled) return;
+    send.disabled = true;
+    const { data: newId, error } = await sb.rpc("dayoff_request_create", { p_date: date.value, p_reason: reason.value.trim() });
+    if (error) { msg.textContent = error.message; msg.className = "zm-office-msg err"; send.disabled = false; return; }
+    zmNotify(newId);
+    date.value = ""; reason.value = ""; sync();
+    zmBanner("Zahtev za slobodan dan je poslat HR manageru.", "success");
+    await zmLoadLists();
+  });
+})();
+
 (async () => {
   const { session, profile } = await mountHeader("zamene");
   if (!session) { window.location.href = APP_BASE + "login.html"; return; }
-  ZM.isHR = !!(profile && (profile.hr_manager || profile.role === "admin"));
+  ZM.isHR = !!(profile && (profile.hr_manager || isAdminProfile(profile)));
   const { names, employees } = await zmFetchNames();
   ZM.names = names;
   ZM.me = employees.find(e => e.profile_id === session.user.id) || null;
   document.getElementById("zm-hr-card").classList.toggle("zm-hidden", !ZM.isHR);
+  // Office manager / Accounting nisu u rasporedu — slobodan dan traže ovde.
+  const office = ZM.me && OFFICE_ROLES[ZM.me.funkcija];
+  document.getElementById("zm-office-card").classList.toggle("zm-hidden", !office);
+  if (office) {
+    const t = belgradeNow();
+    document.getElementById("zm-office-date").min = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    document.getElementById("zm-office-sub").textContent = `${office.label} · ${office.hours}, pon–pet. Zahtev ide HR manageru na odobrenje.`;
+  }
   document.getElementById("zm-history-card").classList.toggle("zm-hidden", !ZM.isHR);
   await zmLoadLists();
 })();

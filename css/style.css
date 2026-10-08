@@ -517,3 +517,13 @@ label.field-label {
   .dl-tile b { font-size: 18px; }
 }
 .dl-bad { color: var(--red-text); font-weight: 700; }
+.dl-group.dl-office .dl-group-head, .dl-group-head.dl-office { background: #e8f1fd; color: #1d4ed8; border-bottom-color: #c3d7f5; }
+.dl-group.dl-office { --sc: #1d4ed8; }
+.dl-group.dl-hr .dl-group-head, .dl-group-head.dl-hr { background: #f3e8fd; color: #7e22ce; border-bottom-color: #dcc3f5; }
+.dl-tag { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #1d4ed8; background: #e8f1fd; border-radius: 5px; padding: 1px 6px; margin-left: 4px; vertical-align: 1px; }
+.dl-now { white-space: nowrap; }
+.dl-group-head small { white-space: nowrap; }
+/* Office manager / Accounting — svoje radne dane vide kao smene (plava boja kancelarije) */
+.shift-OM, .shift-AC { --sc: #1d4ed8; --sc-bg: #e8f1fd; --sc-line: #c3d7f5; }
+.mob-next-item.is-office .s, .wk-day.is-office .s { font-size: 17px; letter-spacing: -0.02em; }
+.mob-day-badge.is-office { min-width: 46px; font-size: 10.5px; }

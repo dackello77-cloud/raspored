@@ -31,6 +31,7 @@ function zmWeekLabel(iso) {
   return `Nedelja ${mon.getDate()}.${mon.getMonth() + 1}. – ${sun.getDate()}.${sun.getMonth() + 1}.${sun.getFullYear()}.`;
 }
 function zmShift(code) {
+  if (typeof OFFICE_CODE_LABEL !== "undefined" && OFFICE_CODE_LABEL[code]) return `<span class="shift-badge">${OFFICE_CODE_LABEL[code]}</span>`;
   return `<span class="shift-badge s-${code}">${code}</span>`;
 }
 function zmEsc(s) {
@@ -95,6 +96,12 @@ async function zmFillStaffInfo(root) {
   const items = [...(root || document).querySelectorAll(".zm-item[data-staff-date]")];
   for (const item of items) {
     const date = item.dataset.staffDate, shift = item.dataset.staffShift;
+    if (typeof OFFICE_CODE_LABEL !== "undefined" && OFFICE_CODE_LABEL[shift]) {
+      const box = item.querySelector(".zm-staff");
+      box.className = "zm-staff ok";
+      box.textContent = `${OFFICE_CODE_LABEL[shift]} — nije u rasporedu smena, odobrenje ne menja smene.`;
+      continue;
+    }
     const [{ data: rows }, { data: minRow }] = await Promise.all([
       sb.from("schedule").select("is_medju_smena, employees!schedule_employee_id_fkey(funkcija)")
         .eq("date", date).eq("shift_code", shift),

@@ -87,7 +87,7 @@ function tickClock() {
   setInterval(tickClock, 5000);
   const { session, profile } = await getSessionAndProfile();
   if (!session) { location.href = APP_BASE + "login.html?next=terminal.html"; return; }
-  if (!profile || !["terminal", "admin"].includes(profile.role)) {
+  if (!profile || !(profile.role === "terminal" || isAdminProfile(profile))) {
     showError("Ovaj nalog nije terminal. Prijavi se kao „terminal“.");
     return;
   }

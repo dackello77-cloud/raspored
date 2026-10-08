@@ -3,12 +3,12 @@ const errorBox = document.getElementById("login-error");
 const submitBtn = document.getElementById("login-submit");
 
 // Kuda posle prijave: ?next=dolazak.html (samo stranice ove aplikacije), inače po ulozi.
-function afterLoginUrl(role) {
+function afterLoginUrl(role, adminAccess) {
   if (role === "terminal") return APP_BASE + "terminal.html";
   if (role === "management") return APP_BASE + "dolasci.html";
   const next = new URLSearchParams(location.search).get("next");
   if (next && /^[a-z]+\.html(\?[\w=.%-]*)?$/.test(next)) return APP_BASE + next;
-  return role === "admin" ? APP_BASE + "admin/index.html" : APP_BASE + "index.html";
+  return role === "admin" || adminAccess ? APP_BASE + "admin/index.html" : APP_BASE + "index.html";
 }
 
 // Kačimo submit handler ODMAH (sinhrono), pre bilo kakvog await-a,
@@ -38,12 +38,12 @@ form.addEventListener("submit", async (e) => {
 
   const { data: profileRow } = await sb
     .from("profiles")
-    .select("role")
+    .select("role, admin_access")
     .eq("id", data.user.id)
     .single();
 
   // Radnik: samo sa svog telefona (prvi telefon se upiše, drugi se odbija dok admin ne ukloni stari).
-  if (profileRow && profileRow.role === "worker") {
+  if (profileRow && PHONE_ROLES.includes(profileRow.role)) {
     const dev = await deviceCheck();
     if (dev.status === "blocked") {
       await sb.auth.signOut();
@@ -55,7 +55,7 @@ form.addEventListener("submit", async (e) => {
     }
   }
 
-  window.location.href = afterLoginUrl(profileRow && profileRow.role);
+  window.location.href = afterLoginUrl(profileRow && profileRow.role, profileRow && profileRow.admin_access);
 });
 
 (async () => {
@@ -69,6 +69,6 @@ form.addEventListener("submit", async (e) => {
   } catch (e) { /* nije bitno */ }
   const { session, profile } = await mountHeader("login");
   if (session && profile) {
-    window.location.href = afterLoginUrl(profile.role);
+    window.location.href = afterLoginUrl(profile.role, profile.admin_access);
   }
 })();

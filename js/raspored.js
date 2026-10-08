@@ -33,6 +33,8 @@ let RASPORED_ME = null;
 // Prijavljeni zaposleni (radnik, lider, monitoring): desni klik na sebe -> slobodan dan,
 // a radnik desnim klikom na drugog radnika traži zamenu.
 let RASPORED_ME_EMP = null;
+// Office manager / Accounting: nisu u rasporedu, ali vide svoje radne dane (pon–pet bez praznika).
+let RASPORED_ME_OFFICE = null;
 
 function renderChip(person, shiftCode) {
   const funkcija = person.funkcija || "radnik";
@@ -366,7 +368,7 @@ let ZM_PROFILE = null;
 async function zmLoadInbox(profile) {
   if (profile) ZM_PROFILE = profile;
   const box = document.getElementById("zm-inbox");
-  const isHR = !!(ZM_PROFILE && (ZM_PROFILE.hr_manager || ZM_PROFILE.role === "admin"));
+  const isHR = !!(ZM_PROFILE && (ZM_PROFILE.hr_manager || isAdminProfile(ZM_PROFILE)));
   const myId = RASPORED_ME_EMP && RASPORED_ME_EMP.id;
   if (!myId && !isHR) { box.hidden = true; return; }
   const { data, error } = await sb.from("swap_requests").select("*")
@@ -398,7 +400,7 @@ zmOnDone = async (msg, isError) => {
 // ---------- Mobilni prikaz (telefon) ----------
 // Bez prijave: ko sada radi. Prijavljeni zaposleni: naredne 3 smene, ko sada radi,
 // i njegovih narednih 20 dana. Dodir na dan otvara ceo raspored za taj dan.
-const MOB = { byDate: {}, shiftTypes: [] };
+const MOB = { byDate: {}, shiftTypes: [], officeOff: new Set() };
 
 function mobIso(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
 function mobAddDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
@@ -415,6 +417,30 @@ function mobShiftSpan(code, isMS) {
   const a = mobMins(st.start_time), b = mobMins(st.end_time);
   return [a, b <= a ? b + 1440 : b];
 }
+// Kancelarijski radni dani (Office manager / Accounting) u obliku "mojih smena".
+function mobOfficeDays(now, today) {
+  const me = RASPORED_ME_OFFICE, o = me && OFFICE_ROLES[me.funkcija];
+  if (!o) return [];
+  const out = [];
+  for (let i = -1; i <= 21; i++) {
+    const date = mobIso(mobAddDays(now, i));
+    if (!officeIsWorkday(date) || MOB.officeOff.has(date)) continue;
+    const a = o.startHour * 60;
+    out.push({ date, code: o.code, office: o, start: i * 1440 + a, end: i * 1440 + a + 480 });
+  }
+  return out;
+}
+// Šta piše na slobodan dan: kancelarija razlikuje praznik i odobren slobodan dan.
+function mobOffText(iso) {
+  if (!RASPORED_ME_OFFICE) return "Slobodan";
+  if (MOB.officeOff.has(iso)) return "Slobodan dan";
+  const d = new Date(iso + "T00:00:00");
+  return d.getDay() >= 1 && d.getDay() <= 5 ? "Praznik" : "Slobodan";
+}
+function mobBadge(m) { return m.office ? m.office.hours.replace(/:00/g, "") : m.isMS ? "MS" : m.code; }
+function mobShiftName(m) { return m.office ? m.office.label : m.isMS ? "Međusmena" : (MOB.shiftTypes.find(s => s.code === m.code) || {}).label || ""; }
+function mobMineTime(m) { return m.office ? m.office.hours : mobTimeLabel(m.code, m.isMS); }
+
 function mobTimeLabel(code, isMS) {
   if (isMS && MS_LABEL[code]) return MS_LABEL[code].replace("MS ", "") + " h";
   const st = MOB.shiftTypes.find(s => s.code === code);
@@ -469,9 +495,9 @@ function mobRender() {
   let html = "";
 
   // Moje smene (sa početkom/krajem) — za "naredne 3" i "narednih 20 dana".
-  const mine = [];
-  if (RASPORED_ME_EMP) {
-    Object.entries(MOB.byDate).forEach(([date, day]) => {
+  const mine = mobOfficeDays(now, today);
+  if (RASPORED_ME_EMP || RASPORED_ME_OFFICE) {
+    if (RASPORED_ME_EMP) Object.entries(MOB.byDate).forEach(([date, day]) => {
       ["I", "II", "III"].forEach(code => (day[code] || []).forEach(p => {
         if (p.employee_id !== RASPORED_ME_EMP.id) return;
         const [a, b] = mobShiftSpan(code, p.isMS);
@@ -487,13 +513,13 @@ function mobRender() {
       const iso = mobIso(mobAddDays(now, i));
       const m = mine.find(x => x.date === iso);
       if (!m) {
-        return `<div class="mob-next-item is-off" data-day="${iso}"><div class="d">${lbl}</div><div class="s">S</div><div class="t">Slobodan</div></div>`;
+        return `<div class="mob-next-item is-off" data-day="${iso}"><div class="d">${lbl}</div><div class="s">S</div><div class="t">${mobOffText(iso)}</div></div>`;
       }
       const running = m.start <= nowM && nowM < m.end;
-      return `<div class="mob-next-item shift-${m.isMS ? "MS" : m.code}" data-day="${iso}">
+      return `<div class="mob-next-item shift-${m.isMS ? "MS" : m.code}${m.office ? " is-office" : ""}" data-day="${iso}">
           <div class="d">${lbl}</div>
-          <div class="s">${m.isMS ? "MS" : m.code}</div>
-          <div class="t">${mobTimeLabel(m.code, m.isMS)}</div>
+          <div class="s">${mobBadge(m)}</div>
+          <div class="t">${m.office ? m.office.label : mobTimeLabel(m.code, m.isMS)}</div>
           ${running ? '<span class="now">U toku</span>' : ""}
         </div>`;
     }).join("")}</div></section>`;
@@ -528,7 +554,7 @@ function mobRender() {
   html += `</section>`;
 
   // Mojih narednih 20 dana.
-  if (RASPORED_ME_EMP) {
+  if (RASPORED_ME_EMP || RASPORED_ME_OFFICE) {
     let days = "";
     for (let i = 0; i < 20; i++) {
       const d = mobAddDays(now, i);
@@ -539,8 +565,8 @@ function mobRender() {
         <span class="dn">${d.getDate()}</span>
         <span class="dm">${DOW_SR[d.getDay()]}<br>${MONTH_NAMES_SR[d.getMonth()].slice(0, 3)}</span>
         ${m
-          ? `<span class="sh shift-${m.isMS ? "MS" : m.code}"><span class="shift-tag mob-day-badge">${m.isMS ? "MS" : m.code}</span><span><span class="lbl">${m.isMS ? "Međusmena" : (MOB.shiftTypes.find(s => s.code === m.code) || {}).label || ""}</span><br><span class="tm">${mobTimeLabel(m.code, m.isMS)}</span></span></span>`
-          : '<span class="off">Slobodan</span>'}
+          ? `<span class="sh shift-${m.isMS ? "MS" : m.code}"><span class="shift-tag mob-day-badge${m.office ? " is-office" : ""}">${mobBadge(m)}</span><span><span class="lbl">${mobShiftName(m)}</span><br><span class="tm">${mobMineTime(m)}</span></span></span>`
+          : `<span class="off">${mobOffText(iso)}</span>`}
         <span class="chev">›</span>
       </div>`;
     }
@@ -556,7 +582,7 @@ function mobRender() {
 // Računar: "Tvojih narednih 7 dana" između "Ko radi danas?" i "Raspored po danima".
 function mobRenderWeek(mine, now) {
   const box = document.getElementById("my-week");
-  if (!RASPORED_ME_EMP) { box.hidden = true; return; }
+  if (!RASPORED_ME_EMP && !RASPORED_ME_OFFICE) { box.hidden = true; return; }
   const today = mobIso(now);
   let html = "";
   for (let i = 0; i < 7; i++) {
@@ -565,10 +591,10 @@ function mobRenderWeek(mine, now) {
     const m = mine.find(x => x.date === iso);
     const when = i === 0 ? "Danas" : i === 1 ? "Sutra" : `${DOW_SR[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.`;
     html += m
-      ? `<div class="wk-day shift-${m.isMS ? "MS" : m.code}${iso === today ? " today" : ""}" data-week-day="${iso}">
-          <div class="d">${when}</div><div class="s">${m.isMS ? "MS" : m.code}</div><div class="t">${mobTimeLabel(m.code, m.isMS)}</div></div>`
+      ? `<div class="wk-day shift-${m.isMS ? "MS" : m.code}${m.office ? " is-office" : ""}${iso === today ? " today" : ""}" data-week-day="${iso}">
+          <div class="d">${when}</div><div class="s">${mobBadge(m)}</div><div class="t">${m.office ? m.office.label : mobTimeLabel(m.code, m.isMS)}</div></div>`
       : `<div class="wk-day is-off${iso === today ? " today" : ""}" data-week-day="${iso}">
-          <div class="d">${when}</div><div class="s">S</div><div class="t">Slobodan</div></div>`;
+          <div class="d">${when}</div><div class="s">S</div><div class="t">${mobOffText(iso)}</div></div>`;
   }
   document.getElementById("my-week-grid").innerHTML = html;
   box.hidden = false;
@@ -647,10 +673,16 @@ function startClock(shiftTypes) {
 
 (async () => {
   const { session, profile } = await mountHeader("raspored");
-  if (profile && profile.role !== "admin" && profile.username) RASPORED_ME = profile.username.toLowerCase();
+  if (profile && !isAdminProfile(profile) && profile.username) RASPORED_ME = profile.username.toLowerCase();
   if (session) {
     const { data: me } = await sb.from("employees").select("id, funkcija").eq("profile_id", session.user.id).maybeSingle();
     if (me && ["radnik", "shift_lider", "monitoring"].includes(me.funkcija)) RASPORED_ME_EMP = me;
+    else if (me && OFFICE_ROLES[me.funkcija]) {
+      RASPORED_ME_OFFICE = me;
+      const { data: off } = await sb.from("swap_requests").select("date")
+        .eq("requester_id", me.id).eq("kind", "day_off").eq("status", "approved");
+      MOB.officeOff = new Set((off || []).map(r => r.date));
+    }
     zmLoadInbox(profile);
   }
 

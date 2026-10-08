@@ -25,7 +25,7 @@ function dlPlannedStart(date, code, isMS, isLeader) {
   return new Date(y, m - 1, d, h + (isMS ? 6 : isLeader ? -1 : 0), min);
 }
 function dlHHMM(dt) { return `${dlPad(dt.getHours())}:${dlPad(dt.getMinutes())}`; }
-function dlShiftLabel(code, isMS) { return isMS ? `${code} · MS` : code; }
+function dlShiftLabel(code, isMS) { return OFFICE_CODE_LABEL[code] || (isMS ? `${code} · MS` : code); }
 const DL_DOW = ["Nedelja", "Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"];
 function dlLongDate(iso) {
   const d = new Date(iso + "T00:00:00");
@@ -61,6 +61,23 @@ async function dlEnsureBase() {
 
 // ---------------- Dnevni pregled ----------------
 
+// Zaposleni (aktivni) sa imenom, HR oznakom i funkcijom — za grupe Office manager / HR / Accounting.
+async function dlFetchPeople() {
+  const { data } = await sb.from("employees")
+    .select("id, funkcija, active, profiles(full_name, hr_manager, role)").eq("active", true);
+  return (data || []).map(e => ({ id: e.id, funkcija: e.funkcija, name: e.profiles?.full_name || "—", hr: !!e.profiles?.hr_manager }));
+}
+// Odobreni slobodni dani u periodu: Set "employeeId|datum".
+async function dlFetchDaysOff(from, to) {
+  const { data } = await sb.from("swap_requests").select("requester_id, date")
+    .eq("kind", "day_off").eq("status", "approved").gte("date", from).lte("date", to);
+  return new Set((data || []).map(r => `${r.requester_id}|${r.date}`));
+}
+function dlOfficeStart(date, code) {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(y, m - 1, d, code === "OM" ? 8 : 15, 0);
+}
+
 async function dlLoadDay() {
   if (!(await dlEnsureBase())) return;
   const date = document.getElementById("dl-date").value;
@@ -72,73 +89,122 @@ async function dlLoadDay() {
     date === today ? `Danas · ${dlLongDate(date).split(", ")[1]}` : dlLongDate(date);
   if (!list.children.length) list.innerHTML = `<div class="dl-empty">Učitavanje…</div>`;
 
-  const [{ data: sched, error: e1 }, { data: att, error: e2 }] = await Promise.all([
+  const [{ data: sched, error: e1 }, { data: att, error: e2 }, people, daysOff] = await Promise.all([
     sb.from("schedule")
       .select("id, date, shift_code, is_medju_smena, is_leader, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name))")
       .eq("date", date),
     sb.from("attendance")
       .select("id, employee_id, checked_at, shift_code, is_medju_smena, late_minutes, employees(profiles(full_name))")
       .eq("work_date", date),
+    dlFetchPeople(),
+    dlFetchDaysOff(date, date),
   ]);
   if (e1 || e2) { list.innerHTML = `<div class="dl-empty dl-bad">Greška: ${dlEsc((e1 || e2).message)}</div>`; return; }
 
   const now = belgradeNow();
   const tracked = date >= DL.startDate;
-  const attByKey = new Map();
+  const attAll = new Map();   // za čitanje (HR grupa prikazuje iste dolaske još jednom)
+  const attLeft = new Map();  // šta još nije prikazano -> na kraju "Van rasporeda"
   const extra = [];
   (att || []).forEach(a => {
-    if (a.shift_code) attByKey.set(`${a.employee_id}|${a.shift_code}`, a);
+    if (a.shift_code) { attAll.set(`${a.employee_id}|${a.shift_code}`, a); attLeft.set(`${a.employee_id}|${a.shift_code}`, a); }
     else extra.push(a);
   });
 
   const counts = { ok: 0, late: 0, miss: 0, wait: 0 };
-  const row = (name, details, status, attId) => `<div class="dl-row">
+  // Status jednog očekivanog dolaska; count=false za ponovljeni prikaz (HR grupa).
+  const status = (start, a, count) => {
+    const c = (k) => { if (count) counts[k]++; };
+    if (a) return a.late_minutes > 0 ? (c("late"), `<span class="dl-st late">Kasni ${a.late_minutes} min</span>`) : (c("ok"), `<span class="dl-st ok">Na vreme</span>`);
+    if (start > now) { c("wait"); return `<span class="dl-st wait">Još nije počela</span>`; }
+    if (!tracked) return `<span class="dl-st wait">Pre prijava</span>`;
+    c("miss"); return `<span class="dl-st miss">Bez prijave</span>`;
+  };
+  const row = (name, details, st, attId) => `<div class="dl-row">
       <div class="dl-who"><b>${dlEsc(name)}</b><small>${details}</small></div>
-      ${status}
+      ${st}
       ${attId && !window.DL_READONLY ? `<button class="dl-del" data-id="${attId}" type="button" title="Obriši prijavu" aria-label="Obriši prijavu">×</button>` : ""}
     </div>`;
+  const came = (a) => a ? ` · došao/la ${DL_TIME_FMT.format(new Date(a.checked_at))}` : "";
+  const group = (cls, title, sub, inner, isNow) =>
+    `<div class="dl-group ${cls}${isNow ? " dl-current" : ""}"><div class="dl-group-head ${cls}">
+      <span>${title}${isNow ? ` <em class="dl-now">U toku</em>` : ""}</span><small>${sub}</small></div>${inner}</div>`;
+  const byName = (x, y) => x.name.localeCompare(y.name, "sr");
+  const workday = officeIsWorkday(date);
   let html = "";
 
+  // Office manager (08–16) i Accounting (15–23) — nisu u rasporedu, rade pon–pet bez praznika.
+  const officeGroup = (funkcija) => {
+    const o = OFFICE_ROLES[funkcija];
+    const members = people.filter(p => p.funkcija === funkcija).sort(byName);
+    if (!members.length) return "";
+    const start = dlOfficeStart(date, o.code);
+    if (!workday) return group("dl-office", o.label, "", `<div class="dl-row"><div class="dl-who"><small>Neradni dan (vikend ili praznik).</small></div></div>`, false);
+    let n = 0, inner = "";
+    members.forEach(p => {
+      const a = attAll.get(`${p.id}|${o.code}`);
+      attLeft.delete(`${p.id}|${o.code}`);
+      if (a) n++;
+      const st = daysOff.has(`${p.id}|${date}`) && !a ? `<span class="dl-st wait">Slobodan dan</span>` : status(start, a, true);
+      inner += row(p.name, `početak ${dlHHMM(start)}${came(a)}`, st, a && a.id);
+    });
+    const isNow = date === today && now >= start && now < new Date(start.getTime() + 8 * 3600e3);
+    return group("dl-office", o.label, `prijavljeno ${n}/${members.length}`, inner, isNow);
+  };
+
+  // Smene iz rasporeda (za HR grupu i za I/II/III).
+  const schedRows = (sched || []).map(r => ({ ...r, start: dlPlannedStart(r.date, r.shift_code, r.is_medju_smena, dlIsLeader(r)) }));
+
+  html += officeGroup("office_manager");
+
+  // HR: prikazuju se ovde i (ponovo) u svojoj smeni.
+  const hrPeople = people.filter(p => p.hr).sort(byName);
+  if (hrPeople.length) {
+    let inner = "";
+    hrPeople.forEach(p => {
+      const r = schedRows.find(x => x.employee_id === p.id);
+      const o = OFFICE_ROLES[p.funkcija];
+      if (r) {
+        const a = attAll.get(`${p.id}|${r.shift_code}`);
+        inner += row(p.name, `${dlShiftLabel(r.shift_code, r.is_medju_smena)} smena · početak ${dlHHMM(r.start)}${came(a)}`, status(r.start, a, false), null);
+      } else if (o && workday && !daysOff.has(`${p.id}|${date}`)) {
+        const start = dlOfficeStart(date, o.code);
+        const a = attAll.get(`${p.id}|${o.code}`);
+        inner += row(p.name, `${o.label} · početak ${dlHHMM(start)}${came(a)}`, status(start, a, false), null);
+      } else {
+        inner += row(p.name, daysOff.has(`${p.id}|${date}`) ? "slobodan dan" : "ne radi ovog dana", `<span class="dl-st wait">Slobodan</span>`, null);
+      }
+    });
+    html += group("dl-hr", "HR", `${hrPeople.length}`, inner, false);
+  }
+
+  html += officeGroup("accounting");
+
   DL_SHIFT_ORDER.forEach(code => {
-    const rows = (sched || []).filter(r => r.shift_code === code)
+    const rows = schedRows.filter(r => r.shift_code === code)
       .sort((a, b) => (a.is_medju_smena - b.is_medju_smena) || (dlIsLeader(b) - dlIsLeader(a)) || dlName(a).localeCompare(dlName(b), "sr"));
     if (!rows.length) return;
-    const came = rows.filter(r => attByKey.has(`${r.employee_id}|${code}`)).length;
-    const isNow = current.date === date && current.code === code;
-    html += `<div class="dl-group shift-${code}${isNow ? " dl-current" : ""}"><div class="dl-group-head shift-${code}">
-      <span>${DL.shiftTypes[code]?.label || code}${isNow ? ` <em class="dl-now">U toku</em>` : ""}</span><small>prijavljeno ${came}/${rows.length}</small></div>`;
+    let n = 0, inner = "";
     rows.forEach(r => {
-      const start = dlPlannedStart(r.date, code, r.is_medju_smena, dlIsLeader(r));
-      const a = attByKey.get(`${r.employee_id}|${code}`);
-      attByKey.delete(`${r.employee_id}|${code}`);
-      let status;
-      if (a) {
-        status = a.late_minutes > 0
-          ? (counts.late++, `<span class="dl-st late">Kasni ${a.late_minutes} min</span>`)
-          : (counts.ok++, `<span class="dl-st ok">Na vreme</span>`);
-      } else if (start > now) {
-        counts.wait++; status = `<span class="dl-st wait">Još nije počela</span>`;
-      } else if (!tracked) {
-        status = `<span class="dl-st wait">Pre prijava</span>`;
-      } else {
-        counts.miss++; status = `<span class="dl-st miss">Bez prijave</span>`;
-      }
+      const a = attAll.get(`${r.employee_id}|${code}`);
+      attLeft.delete(`${r.employee_id}|${code}`);
+      if (a) n++;
       const role = r.is_medju_smena ? "Međusmena · " : dlIsLeader(r) ? "Lider · " : "";
-      const details = `${role}početak ${dlHHMM(start)}${a ? ` · došao/la ${DL_TIME_FMT.format(new Date(a.checked_at))}` : ""}`;
-      html += row(dlName(r), details, status, a && a.id);
+      inner += row(dlName(r), `${role}početak ${dlHHMM(r.start)}${came(a)}`, status(r.start, a, true), a && a.id);
     });
-    html += `</div>`;
+    const isNow = current.date === date && current.code === code;
+    html += group(`shift-${code}`, DL.shiftTypes[code]?.label || code, `prijavljeno ${n}/${rows.length}`, inner, isNow);
   });
 
   // Prijave za smene koje su u međuvremenu skinute iz rasporeda + dolasci van rasporeda.
-  const others = [...attByKey.values(), ...extra];
+  const others = [...attLeft.values(), ...extra];
   if (others.length) {
-    html += `<div class="dl-group"><div class="dl-group-head"><span>Van rasporeda</span><small>${others.length}</small></div>`;
+    let inner = "";
     others.forEach(a => {
-      html += row(dlName(a), `došao/la ${DL_TIME_FMT.format(new Date(a.checked_at))}${a.shift_code ? ` · ${dlShiftLabel(a.shift_code, a.is_medju_smena)}` : ""}`,
+      inner += row(dlName(a), `došao/la ${DL_TIME_FMT.format(new Date(a.checked_at))}${a.shift_code ? ` · ${OFFICE_CODE_LABEL[a.shift_code] || dlShiftLabel(a.shift_code, a.is_medju_smena)}` : ""}`,
         `<span class="dl-st extra">Nije u rasporedu</span>`, a.id);
     });
-    html += `</div>`;
+    html += group("", "Van rasporeda", `${others.length}`, inner, false);
   }
 
   list.innerHTML = html || `<div class="dl-empty">Za ovaj dan nema rasporeda ni prijava.</div>`;
@@ -166,13 +232,15 @@ async function dlLoadMonth() {
   const from = `${year}-${dlPad(month)}-01`;
   const to = dlIso(new Date(year, month, 0));
 
-  const [{ data: sched, error: e1 }, { data: att, error: e2 }] = await Promise.all([
+  const [{ data: sched, error: e1 }, { data: att, error: e2 }, staff, daysOff] = await Promise.all([
     sb.from("schedule")
       .select("date, shift_code, is_medju_smena, is_leader, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name))")
       .gte("date", from).lte("date", to).range(0, 4999),
     sb.from("attendance")
       .select("employee_id, checked_at, work_date, shift_code, is_medju_smena, late_minutes, employees(profiles(full_name))")
       .gte("work_date", from).lte("work_date", to).range(0, 4999),
+    dlFetchPeople(),
+    dlFetchDaysOff(from, to),
   ]);
   if (e1 || e2) { listEl.innerHTML = `<div class="dl-empty dl-bad">Greška: ${dlEsc((e1 || e2).message)}</div>`; return; }
   if (DL.ym.year !== year || DL.ym.month !== month) return; // korisnik je u međuvremenu promenio mesec
@@ -202,10 +270,32 @@ async function dlLoadMonth() {
     if (a.late_minutes > 0) { p.lateN++; p.lateMin += a.late_minutes; p.late.push(a); }
     else p.onTime++;
   });
+  // Office manager / Accounting: svaki radni dan (pon–pet, bez praznika i odobrenih slobodnih dana).
+  staff.filter(e => OFFICE_ROLES[e.funkcija]).forEach(e => {
+    const o = OFFICE_ROLES[e.funkcija];
+    const p = person(e.id, e.name);
+    for (let d = new Date(year, month - 1, 1); d.getMonth() === month - 1; d.setDate(d.getDate() + 1)) {
+      const date = dlIso(d);
+      if (!officeIsWorkday(date) || daysOff.has(`${e.id}|${date}`)) continue;
+      const key = `${e.id}|${date}|${o.code}`;
+      const a = attByKey.get(key);
+      attByKey.delete(key);
+      if (!a && (dlOfficeStart(date, o.code) > now || date < DL.startDate)) continue;
+      p.planned++;
+      if (!a) { p.missed.push({ date, shift_code: o.code, is_medju_smena: false }); continue; }
+      p.came++;
+      if (a.late_minutes > 0) { p.lateN++; p.lateMin += a.late_minutes; p.late.push(a); }
+      else p.onTime++;
+    }
+  });
   attByKey.forEach(a => person(a.employee_id, dlName(a)).extra.push(a));
 
+  // Redosled kao u dnevnom pregledu: Office manager, HR, Accounting, pa ostali po imenu.
+  const info = new Map(staff.map(e => [e.id, e]));
+  const rank = (id) => { const e = info.get(id) || {}; return e.funkcija === "office_manager" ? 0 : e.hr ? 1 : e.funkcija === "accounting" ? 2 : 3; };
+  people.forEach((p, id) => { p.rank = rank(id); p.tag = OFFICE_ROLES[(info.get(id) || {}).funkcija]?.label || ((info.get(id) || {}).hr ? "HR" : ""); });
   const list = [...people.values()].filter(p => p.planned || p.extra.length)
-    .sort((a, b) => a.name.localeCompare(b.name, "sr"));
+    .sort((a, b) => (a.rank - b.rank) || a.name.localeCompare(b.name, "sr"));
   list.forEach(p => {
     p.late.sort((a, b) => a.work_date.localeCompare(b.work_date));
     p.missed.sort((a, b) => a.date.localeCompare(b.date));
@@ -236,7 +326,7 @@ async function dlLoadMonth() {
     ].filter(Boolean).join("<br>") || "Sve smene na vreme.";
     return `<div class="dl-person" data-i="${i}">
       <div class="dl-p-head">
-        <div class="dl-who"><b>${dlEsc(p.name)}</b><small>${p.planned} smena · prijavljen ${p.came} · na vreme ${p.onTime}</small></div>
+        <div class="dl-who"><b>${dlEsc(p.name)}${p.tag ? ` <span class="dl-tag">${p.tag}</span>` : ""}</b><small>${p.planned} smena · prijavljen ${p.came} · na vreme ${p.onTime}</small></div>
         <div class="dl-p-badges">${badges}</div>
         <span class="dl-chev">›</span>
       </div>

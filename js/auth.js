@@ -12,6 +12,12 @@ async function getSessionAndProfile() {
   return { session, profile };
 }
 
+// Admin = uloga admin ili dodatak "Admin pristup" (npr. Office manager / Accounting sa admin pravima).
+function isAdminProfile(p) { return !!p && (p.role === "admin" || !!p.admin_access); }
+// Uloge vezane za telefon i prijavu dolaska.
+const PHONE_ROLES = ["worker", "accounting", "office_manager"];
+const ROLE_LABELS = { admin: "Administrator", management: "Management", accounting: "Accounting", office_manager: "Office manager", worker: "Radnik" };
+
 // ---------- Jedan telefon po radniku (sql/migration_013_device_binding.sql) ----------
 // Telefon pri prvom otvaranju dobije trajnu tajnu oznaku (čuva se u pregledaču). Server pamti
 // oznaku + model telefona i odbija prijavu sa drugog telefona dok admin ne ukloni stari.
@@ -89,7 +95,7 @@ async function mountHeader(activeKey) {
   const navLinks = isManagement ? [] : [
     `<a href="${APP_BASE}index.html" class="${activeKey === "raspored" ? "active" : ""}">Raspored</a>`,
   ];
-  if (profile && profile.role === "admin") {
+  if (isAdminProfile(profile)) {
     navLinks.push(
       `<a href="${APP_BASE}admin/index.html#osobe" data-admin-tab="osobe" class="${activeKey === "admin-osobe" ? "active" : ""}">Osobe u sistemu</a>`,
       `<a href="${APP_BASE}admin/index.html#plan" data-admin-tab="plan" class="${activeKey === "admin-plan" ? "active" : ""}">Plan zaposlenih</a>`,
@@ -112,7 +118,7 @@ async function mountHeader(activeKey) {
   const rightHTML = session && profile
     ? `
       <div class="user-chip">
-        <div class="role">${({ admin: "Administrator", management: "Management" })[profile.role] || "Radnik"}${profile.hr_manager ? " · HR" : ""}</div>
+        <div class="role">${ROLE_LABELS[profile.role] || "Radnik"}${profile.admin_access && profile.role !== "admin" ? " · Admin" : ""}${profile.hr_manager ? " · HR" : ""}</div>
         <div class="username">${profile.username}</div>
       </div>
       <button class="btn-password btn-push" id="push-btn" type="button">🔕 Uključi obaveštenja</button>
@@ -162,7 +168,7 @@ async function mountHeader(activeKey) {
     });
   }
 
-  if (session && profile && profile.role === "worker") {
+  if (session && profile && PHONE_ROLES.includes(profile.role)) {
     deviceCheck().then(d => { if (d.status === "blocked") deviceSignOutBlocked(d.label); });
   }
   if (session && !isManagement) zmRefreshNavBadge(session, profile);
@@ -197,10 +203,11 @@ async function mountCheckInButton(session) {
   const now0 = typeof belgradeNow === "function" ? belgradeNow() : new Date();
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const day = (n) => iso(new Date(now0.getFullYear(), now0.getMonth(), now0.getDate() + n));
-  const [{ data: types }, { data: shifts }, { data: done }] = await Promise.all([
+  const [{ data: types }, { data: shifts }, { data: done }, { data: daysOff }] = await Promise.all([
     sb.from("shift_types").select("code, start_time"),
     sb.from("schedule").select("date, shift_code, is_medju_smena, is_leader").eq("employee_id", me.id).gte("date", day(-1)).lte("date", day(2)),
     sb.from("attendance").select("work_date, shift_code, checked_at").eq("employee_id", me.id).gte("work_date", day(-1)),
+    sb.from("swap_requests").select("date").eq("requester_id", me.id).eq("kind", "day_off").eq("status", "approved").gte("date", day(-1)),
   ]);
   const startOf = Object.fromEntries((types || []).map(t => [t.code, t.start_time]));
   // Smene sa početkom i krajem po beogradskom vremenu (smena traje 8 h): međusmena počinje 6 h kasnije,
@@ -212,7 +219,21 @@ async function mountCheckInButton(session) {
     const start = new Date(y, m - 1, d, h + (s.is_medju_smena ? 6 : leader ? -1 : 0), min);
     const att = (done || []).find(x => x.work_date === s.date && x.shift_code === s.shift_code);
     return { start, end: new Date(start.getTime() + 8 * 3600e3), att };
-  }).sort((x, y) => x.start - y.start);
+  });
+  // Office manager (08–16) / Accounting (15–23): pon–pet bez praznika i odobrenih slobodnih dana.
+  const office = typeof OFFICE_ROLES !== "undefined" && OFFICE_ROLES[me.funkcija];
+  if (office) {
+    const off = new Set((daysOff || []).map(r => r.date));
+    for (let n = -1; n <= 4; n++) {
+      const date = day(n);
+      if (!officeIsWorkday(date) || off.has(date)) continue;
+      const [y, m, d] = date.split("-").map(Number);
+      const start = new Date(y, m - 1, d, office.startHour, 0);
+      const att = (done || []).find(x => x.work_date === date && x.shift_code === office.code);
+      windows.push({ start, end: new Date(start.getTime() + 8 * 3600e3), att });
+    }
+  }
+  windows.sort((x, y) => x.start - y.start);
 
   const hhmm = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   const small = a.querySelector("small");
@@ -259,7 +280,7 @@ async function zmRefreshNavBadge(session, profile) {
         .eq("target_id", me.id).eq("status", "pending_worker");
       n += count || 0;
     }
-    if (profile && (profile.hr_manager || profile.role === "admin")) {
+    if (profile && (profile.hr_manager || isAdminProfile(profile))) {
       const { count } = await sb.from("swap_requests").select("id", { count: "exact", head: true }).eq("status", "pending_hr");
       n += count || 0;
     }
@@ -330,7 +351,7 @@ async function requireAdmin() {
     window.location.href = APP_BASE + "login.html";
     return null;
   }
-  if (!profile || profile.role !== "admin") {
+  if (!isAdminProfile(profile)) {
     window.location.href = APP_BASE + "index.html";
     return null;
   }
