@@ -42,7 +42,7 @@ function showResult({ kind, title, big = "", extra = "", text = "", retry = fals
 async function submitToken(token) {
   busy = true;
   tip.textContent = "Prijavljujem…";
-  const { data, error } = await sb.rpc("check_in", { p_token: token });
+  const { data, error } = await sb.rpc("check_in", { p_token: token, p_device: deviceId() });
   busy = false;
   if (error) {
     showResult({ kind: "err", title: "Prijava nije uspela", text: error.message, retry: true });
@@ -113,7 +113,11 @@ function scanFrame() {
 (async () => {
   const params = new URLSearchParams(location.search);
   const urlToken = params.get("t");
-  const { session } = await getSessionAndProfile();
+  const { session, profile } = await getSessionAndProfile();
+  if (session && profile && profile.role === "worker") {
+    const dev = await deviceCheck();
+    if (dev.status === "blocked") { deviceSignOutBlocked(dev.label); return; }
+  }
   if (!session) {
     // Posle prijave vraća se ovde; token iz linka bi do tada istekao, pa se skenira ponovo.
     location.href = APP_BASE + "login.html?next=dolazak.html";

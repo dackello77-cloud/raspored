@@ -42,10 +42,31 @@ form.addEventListener("submit", async (e) => {
     .eq("id", data.user.id)
     .single();
 
+  // Radnik: samo sa svog telefona (prvi telefon se upiše, drugi se odbija dok admin ne ukloni stari).
+  if (profileRow && profileRow.role === "worker") {
+    const dev = await deviceCheck();
+    if (dev.status === "blocked") {
+      await sb.auth.signOut();
+      errorBox.textContent = deviceBlockedMessage(dev.label);
+      errorBox.classList.remove("hidden");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Prijavi se";
+      return;
+    }
+  }
+
   window.location.href = afterLoginUrl(profileRow && profileRow.role);
 });
 
 (async () => {
+  try {
+    const blocked = sessionStorage.getItem("login-blocked");
+    if (blocked) {
+      sessionStorage.removeItem("login-blocked");
+      errorBox.textContent = blocked;
+      errorBox.classList.remove("hidden");
+    }
+  } catch (e) { /* nije bitno */ }
   const { session, profile } = await mountHeader("login");
   if (session && profile) {
     window.location.href = afterLoginUrl(profile.role);

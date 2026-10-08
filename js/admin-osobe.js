@@ -45,8 +45,27 @@ async function fetchEmployeesWithVacations() {
       if (!vacationsByEmp[v.employee_id]) vacationsByEmp[v.employee_id] = v;
     });
   }
-  return employees.map(e => ({ ...e, vacation: vacationsByEmp[e.id] || null }));
+  // Registrovani telefon (sql/migration_013_device_binding.sql) — greška = SQL još nije pokrenut.
+  const { data: devices } = await sb.from("user_devices").select("*");
+  const deviceByProfile = {};
+  (devices || []).forEach(d => { deviceByProfile[d.profile_id] = d; });
+  return employees.map(e => ({ ...e, vacation: vacationsByEmp[e.id] || null, device: deviceByProfile[e.profile_id] || null }));
 }
+
+function osobeShortDate(ts) {
+  const d = new Date(ts);
+  return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}.`;
+}
+// Red ispod korisničkog imena: koji telefon je vezan i da li je bilo pokušaja sa drugog.
+function deviceLineHtml(emp) {
+  if (!emp.profiles || emp.profiles.role !== "worker") return "";
+  const d = emp.device;
+  if (!d) return `<div class="emp-device muted">📱 telefon još nije vezan</div>`;
+  const blocked = d.blocked_at && new Date(d.blocked_at) > new Date(d.registered_at)
+    ? `<div class="emp-device warn">⚠ pokušaj sa drugog telefona ${osobeShortDate(d.blocked_at)}: ${zmSafe(d.blocked_label)}</div>` : "";
+  return `<div class="emp-device">📱 ${zmSafe(d.label || "telefon")}</div>${blocked}`;
+}
+function zmSafe(s) { return String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
 
 // Oznake pored imena: Administrator / Management (uloga) i HR (dodatak, ne menja funkciju).
 function roleTagsHtml(p) {
@@ -79,6 +98,7 @@ function buildEmployeeRow(emp) {
     <div>
       <div class="emp-name">${name}${roleTagsHtml(emp.profiles)}</div>
       <div class="emp-username">${username}</div>
+      <div class="emp-device-wrap">${deviceLineHtml(emp)}</div>
     </div>
     <div>
       <select class="f-funkcija">${optionsHTML(Object.entries(FUNKCIJA_LABELS), emp.funkcija)}</select>
@@ -187,6 +207,12 @@ function openEditPersonDialog(emp, row) {
       <label class="pw-check"><input type="checkbox" name="hr" /> HR manager</label>
       <div class="pw-hint">HR se dodaje uz postojeću ulogu — funkcija u rasporedu ostaje ista.</div>
       <label>Nova lozinka<input type="text" name="password" autocomplete="off" placeholder="Prazno = lozinka se ne menja" /></label>
+      ${p.role === "worker" ? `<div class="pw-device">
+        <div class="field-label" style="margin:0 0 4px;">Telefon</div>
+        <div class="pw-device-info">${emp.device ? `📱 ${zmSafe(emp.device.label)}<br><span class="muted">vezan od ${osobeShortDate(emp.device.registered_at)}</span>` : '<span class="muted">Telefon još nije vezan — vezaće se pri prvoj prijavi sa telefona.</span>'}</div>
+        ${emp.device ? `<button type="button" class="btn btn-danger pw-device-remove">Ukloni telefon</button>
+        <div class="pw-hint">Posle uklanjanja, prvi telefon sa kog se prijavi postaje njegov novi telefon.</div>` : ""}
+      </div>` : ""}
       <div class="pw-msg"></div>
       <div class="pw-actions">
         <button type="button" class="btn btn-ghost pw-cancel">Otkaži</button>
@@ -205,6 +231,20 @@ function openEditPersonDialog(emp, row) {
   const close = () => overlay.remove();
   overlay.querySelector(".pw-cancel").addEventListener("click", close);
   overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(); });
+
+  const removeBtn = overlay.querySelector(".pw-device-remove");
+  if (removeBtn) removeBtn.addEventListener("click", async () => {
+    if (!confirm(`Ukloniti telefon za ${(p.full_name || "").toUpperCase()}? Sledeći telefon sa kog se prijavi biće njegov.`)) return;
+    removeBtn.disabled = true;
+    const { error } = await sb.from("user_devices").delete().eq("profile_id", emp.profile_id);
+    if (error) { removeBtn.disabled = false; return show("Greška: " + error.message); }
+    emp.device = null;
+    row.querySelector(".emp-device-wrap").innerHTML = deviceLineHtml(emp);
+    overlay.querySelector(".pw-device-info").innerHTML = '<span class="muted">Telefon je uklonjen — novi će se vezati pri sledećoj prijavi.</span>';
+    removeBtn.nextElementSibling?.remove();
+    removeBtn.remove();
+    show("Telefon je uklonjen.", true);
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

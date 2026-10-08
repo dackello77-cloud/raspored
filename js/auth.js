@@ -12,6 +12,61 @@ async function getSessionAndProfile() {
   return { session, profile };
 }
 
+// ---------- Jedan telefon po radniku (sql/migration_013_device_binding.sql) ----------
+// Telefon pri prvom otvaranju dobije trajnu tajnu oznaku (čuva se u pregledaču). Server pamti
+// oznaku + model telefona i odbija prijavu sa drugog telefona dok admin ne ukloni stari.
+const DEVICE_KEY = "raspored-device-id";
+function deviceId() {
+  try {
+    let id = localStorage.getItem(DEVICE_KEY);
+    if (!id) {
+      id = "d-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2));
+      localStorage.setItem(DEVICE_KEY, id);
+    }
+    return id;
+  } catch (e) { return null; }
+}
+function deviceIsMobile() {
+  if (navigator.userAgentData && typeof navigator.userAgentData.mobile === "boolean" && navigator.userAgentData.mobile) return true;
+  return /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
+}
+// Model telefona koliko pregledač dozvoli: Android Chrome daje model (npr. SM-A525F), iPhone samo "iPhone".
+async function deviceLabel() {
+  const ua = navigator.userAgent;
+  let model = "", os = "";
+  try {
+    if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+      const h = await navigator.userAgentData.getHighEntropyValues(["model", "platformVersion"]);
+      model = h.model || "";
+      if (navigator.userAgentData.platform) os = `${navigator.userAgentData.platform} ${(h.platformVersion || "").split(".")[0]}`.trim();
+    }
+  } catch (e) { /* nije podržano */ }
+  if (/iPhone/.test(ua)) { model = model || "iPhone"; os = "iOS " + ((ua.match(/OS (\d+)[_.](\d+)/) || []).slice(1, 3).join(".") || ""); }
+  if (!model) { const m = ua.match(/Android [\d.]+; ([^;)]+)\)/); if (m && m[1] !== "K") model = m[1].trim(); }
+  if (!os) { const a = ua.match(/Android ([\d.]+)/); if (a) os = "Android " + a[1].split(".")[0]; }
+  const browser = /SamsungBrowser/.test(ua) ? "Samsung Internet" : /CriOS|Chrome/.test(ua) ? "Chrome" : /Firefox|FxiOS/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "";
+  const id = deviceId();
+  return [model || "Telefon", os, browser, id ? "oznaka " + id.slice(2, 8).toUpperCase() : ""].filter(Boolean).join(" · ");
+}
+// Vraća { status: ok|registered|blocked|computer|exempt|unknown, label }.
+async function deviceCheck() {
+  const id = deviceId();
+  if (!id) return { status: "unknown" };
+  try {
+    const { data, error } = await sb.rpc("device_register", { p_device: id, p_label: await deviceLabel(), p_mobile: deviceIsMobile() });
+    if (error) return { status: "unknown" }; // npr. SQL još nije pokrenut
+    return data || { status: "unknown" };
+  } catch (e) { return { status: "unknown" }; }
+}
+function deviceBlockedMessage(label) {
+  return `Tvoj nalog je vezan za drugi telefon${label ? ` (${label})` : ""}. Ako si promenio/la telefon, javi se administratoru da ukloni stari.`;
+}
+async function deviceSignOutBlocked(label) {
+  try { sessionStorage.setItem("login-blocked", deviceBlockedMessage(label)); } catch (e) { /* nije bitno */ }
+  await sb.auth.signOut();
+  window.location.href = APP_BASE + "login.html";
+}
+
 async function mountHeader(activeKey) {
   const mount = document.getElementById("app-header-mount");
   if (!mount) return { session: null, profile: null };
@@ -107,6 +162,9 @@ async function mountHeader(activeKey) {
     });
   }
 
+  if (session && profile && profile.role === "worker") {
+    deviceCheck().then(d => { if (d.status === "blocked") deviceSignOutBlocked(d.label); });
+  }
   if (session && !isManagement) zmRefreshNavBadge(session, profile);
   if (session && !isManagement) mountCheckInButton(session);
   if (typeof pushRefreshButton === "function") pushRefreshButton();
