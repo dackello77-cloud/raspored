@@ -9,9 +9,14 @@ let adminCurrentTab = "osobe";
 
 const ADMIN_TAB_KEYS = ["osobe", "plan", "rasporedi", "dolasci"];
 
+// Telefon: Osobe, Plan i Generisanje se ne prikazuju — admin tamo koristi samo Dolasci.
+const ADMIN_DESKTOP_ONLY = ["osobe", "plan", "rasporedi"];
+const adminIsPhone = () => window.matchMedia("(max-width: 700px)").matches;
+
 function adminTabFromHash() {
   const h = (location.hash || "").slice(1);
-  return ADMIN_TAB_KEYS.includes(h) ? h : "osobe";
+  const tab = ADMIN_TAB_KEYS.includes(h) ? h : (adminIsPhone() ? "dolasci" : "osobe");
+  return adminIsPhone() && ADMIN_DESKTOP_ONLY.includes(tab) ? "dolasci" : tab;
 }
 
 function switchAdminTab(key) {
@@ -28,6 +33,7 @@ function switchAdminTab(key) {
 // otvara dobija događaj "admin-tab-change" da ponovo učita podatke (odmori, aktivni, slava...).
 window.addEventListener("hashchange", async () => {
   const to = adminTabFromHash();
+  if (location.hash.slice(1) !== to) history.replaceState(null, "", "#" + to);
   const from = adminCurrentTab;
   if (from === to) return;
   if (from === "osobe" && typeof osobeSaveIfDirty === "function") await osobeSaveIfDirty();
@@ -39,7 +45,7 @@ window.addEventListener("hashchange", async () => {
   ADMIN_PROFILE = await requireAdmin();
   if (!ADMIN_PROFILE) return;
 
-  if (!location.hash) history.replaceState(null, "", "#osobe");
+  if (location.hash.slice(1) !== adminTabFromHash()) history.replaceState(null, "", "#" + adminTabFromHash());
   await mountHeader(`admin-${adminTabFromHash()}`);
   switchAdminTab(adminTabFromHash());
 

@@ -527,3 +527,9 @@ label.field-label {
 .shift-OM, .shift-AC { --sc: #1d4ed8; --sc-bg: #e8f1fd; --sc-line: #c3d7f5; }
 .mob-next-item.is-office .s, .wk-day.is-office .s { font-size: 17px; letter-spacing: -0.02em; }
 .mob-day-badge.is-office { min-width: 46px; font-size: 10.5px; }
+/* Admin na telefonu: bez Osobe u sistemu, Plan zaposlenih i Generisanje rasporeda */
+@media (max-width: 700px) {
+  .app-header nav a[data-admin-tab="osobe"],
+  .app-header nav a[data-admin-tab="plan"],
+  .app-header nav a[data-admin-tab="rasporedi"] { display: none; }
+}
