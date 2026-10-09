@@ -237,6 +237,7 @@ function absenceShow(list) {
     btn.disabled = true;
     const { error } = await sb.rpc("absence_answer", { p_id: q.id, p_answer: text });
     if (error) { msg.textContent = error.message; msg.className = "pw-msg err"; btn.disabled = false; return; }
+    sb.functions.invoke("send-push", { body: { absence_answer: q.id } }).catch(() => {}); // obaveštenje HR-u
     if (list.length > 1) return absenceShow(list.slice(1));
     lock.remove();
     document.body.classList.remove("abs-locked");

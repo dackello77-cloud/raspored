@@ -636,7 +636,8 @@ function dlOpenAskDialog({ emp, date, code, name }) {
     const msg = overlay.querySelector(".pw-msg");
     if (!text) { msg.textContent = "Upiši poruku."; msg.className = "pw-msg err"; return; }
     form.querySelector("[type=submit]").disabled = true;
-    const { error } = await sb.from("absence_queries").insert({ employee_id: emp, work_date: date, shift_code: code, question: text });
+    const { data: added, error } = await sb.from("absence_queries")
+      .insert({ employee_id: emp, work_date: date, shift_code: code, question: text }).select("id").single();
     if (error) {
       msg.textContent = /absence_queries/.test(error.message) && /exist|schema cache/.test(error.message)
         ? "Treba jednom pokrenuti sql/migration_016_absence_queries.sql u Supabase." : error.message;
@@ -644,6 +645,8 @@ function dlOpenAskDialog({ emp, date, code, name }) {
       form.querySelector("[type=submit]").disabled = false;
       return;
     }
+    // Obaveštenje na telefon radnika (funkcija send-push; ne čeka se odgovor).
+    sb.functions.invoke("send-push", { body: { absence: added.id } }).catch(() => {});
     close();
     dlBanner(`Pitanje je poslato — ${dlEsc(name)} mora da odgovori kad sledeći put otvori aplikaciju.`, "success");
     dlRefresh();
