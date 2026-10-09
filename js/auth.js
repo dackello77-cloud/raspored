@@ -106,6 +106,10 @@ async function mountHeader(activeKey) {
   if (isManagement) {
     navLinks.push(`<a href="${APP_BASE}dolasci.html" class="${activeKey === "dolasci" ? "active" : ""}">Dolasci</a>`);
   } else if (session) {
+    // HR manager (bez admin prava) vidi Dolasci kao posebnu stranicu.
+    if (profile && profile.hr_manager && !isAdminProfile(profile)) {
+      navLinks.push(`<a href="${APP_BASE}dolasci.html" class="${activeKey === "dolasci" ? "active" : ""}">Dolasci</a>`);
+    }
     navLinks.push(
       `<a href="${APP_BASE}zamene.html" class="${activeKey === "zamene" ? "active" : ""}">Zamene<span class="nav-badge" id="nav-zamene-badge" hidden></span></a>`
     );
@@ -172,6 +176,7 @@ async function mountHeader(activeKey) {
     deviceCheck().then(d => { if (d.status === "blocked") deviceSignOutBlocked(d.label); });
   }
   if (session && !isManagement) zmRefreshNavBadge(session, profile);
+  if (session && !isManagement) absenceCheck(session);
   if (session && !isManagement) mountCheckInButton(session);
   if (typeof pushRefreshButton === "function") pushRefreshButton();
 
@@ -179,6 +184,64 @@ async function mountHeader(activeKey) {
   if (passwordBtn) passwordBtn.addEventListener("click", () => openPasswordDialog(session.user.email));
 
   return { session, profile };
+}
+
+// ---------- Pitanje HR-a za izostanak (sql/migration_016_absence_queries.sql) ----------
+// Ako HR pita zašto radnik nije došao, prozor prekriva celu aplikaciju dok radnik ne odgovori.
+let absenceSession = null;
+async function absenceCheck(session) {
+  if (session) absenceSession = session;
+  if (!absenceSession || document.getElementById("abs-lock")) return;
+  try {
+    const { data: me } = await sb.from("employees").select("id").eq("profile_id", absenceSession.user.id).maybeSingle();
+    if (!me) return;
+    const { data, error } = await sb.from("absence_queries").select("id, work_date, shift_code, question, asked_at")
+      .eq("employee_id", me.id).is("answer", null).order("asked_at");
+    if (error || !data || !data.length) return;
+    absenceShow(data);
+  } catch (e) { /* tabela još ne postoji */ }
+}
+// Kad se aplikacija vrati iz pozadine (telefon), proveri ponovo.
+document.addEventListener("visibilitychange", () => { if (!document.hidden) absenceCheck(); });
+
+function absenceShow(list) {
+  const q = list[0];
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const [y, m, d] = q.work_date.split("-");
+  const shift = (typeof OFFICE_CODE_LABEL !== "undefined" && OFFICE_CODE_LABEL[q.shift_code]) || `${q.shift_code} smena`;
+  let lock = document.getElementById("abs-lock");
+  if (!lock) {
+    lock = document.createElement("div");
+    lock.id = "abs-lock";
+    lock.className = "abs-lock";
+    document.body.appendChild(lock);
+    document.body.classList.add("abs-locked");
+  }
+  lock.innerHTML = `
+    <form class="abs-box" novalidate>
+      <div class="abs-tag">Poruka od HR-a${list.length > 1 ? ` · 1 od ${list.length}` : ""}</div>
+      <h3>Izostanak ${+d}.${+m}.${y}. · ${esc(shift)}</h3>
+      <p class="abs-q">${esc(q.question)}</p>
+      <label>Tvoj odgovor<textarea name="a" required placeholder="Napiši zašto nisi došao/la..."></textarea></label>
+      <div class="pw-msg"></div>
+      <button type="submit" class="btn btn-primary">Pošalji odgovor</button>
+      <small class="abs-note">Aplikacija je dostupna kad odgovoriš.</small>
+    </form>`;
+  const form = lock.querySelector("form");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = form.querySelector(".pw-msg");
+    const text = form.a.value.trim();
+    if (!text) { msg.textContent = "Upiši odgovor."; msg.className = "pw-msg err"; return; }
+    const btn = form.querySelector("button");
+    btn.disabled = true;
+    const { error } = await sb.rpc("absence_answer", { p_id: q.id, p_answer: text });
+    if (error) { msg.textContent = error.message; msg.className = "pw-msg err"; btn.disabled = false; return; }
+    if (list.length > 1) return absenceShow(list.slice(1));
+    lock.remove();
+    document.body.classList.remove("abs-locked");
+  });
+  form.a.focus();
 }
 
 // Dugme "Dolazak" na dnu ekrana (telefon) — samo za naloge povezane sa zaposlenim.

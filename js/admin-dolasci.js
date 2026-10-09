@@ -73,6 +73,32 @@ async function dlFetchDaysOff(from, to) {
     .eq("kind", "day_off").eq("status", "approved").gte("date", from).lte("date", to);
   return new Set((data || []).map(r => `${r.requester_id}|${r.date}`));
 }
+// Pitanja za izostanak (sql/migration_016_absence_queries.sql): Map "employeeId|datum|smena" -> red.
+async function dlFetchAbsence(from, to) {
+  const { data, error } = await sb.from("absence_queries")
+    .select("id, employee_id, work_date, shift_code, question, asked_at, answer, answered_at")
+    .gte("work_date", from).lte("work_date", to);
+  return new Map((error ? [] : data || []).map(q => [`${q.employee_id}|${q.work_date}|${q.shift_code}`, q]));
+}
+// HR / admin mogu da pitaju; Management samo čita.
+function dlCanAsk() { return window.DL_CAN_ASK !== undefined ? !!window.DL_CAN_ASK : !window.DL_READONLY; }
+// Ispod reda "Bez prijave": dugme "Pitaj zašto", ili poslato pitanje i odgovor.
+function dlAbsHtml(q, empId, date, code, name) {
+  if (!q) {
+    return dlCanAsk()
+      ? `<div class="dl-abs"><button type="button" class="dl-ask" data-emp="${empId}" data-date="${date}" data-code="${code}" data-name="${dlEsc(name)}">✉ Pitaj zašto nije došao/la</button></div>`
+      : "";
+  }
+  const asked = DL_TIME_FMT.format(new Date(q.asked_at));
+  return `<div class="dl-abs${q.answer ? " answered" : ""}">
+    <div><b>Pitanje:</b> ${dlEsc(q.question)}</div>
+    ${q.answer
+      ? `<div><b>Odgovor:</b> ${dlEsc(q.answer)} <small>(${dlShortDate(q.answered_at.slice(0, 10))} ${DL_TIME_FMT.format(new Date(q.answered_at))})</small></div>`
+      : `<div class="dl-abs-wait">Čeka odgovor · poslato ${dlShortDate(q.asked_at.slice(0, 10))} u ${asked}</div>`}
+    ${dlCanAsk() && !q.answer ? `<button type="button" class="dl-ask-del" data-id="${q.id}">Povuci pitanje</button>` : ""}
+  </div>`;
+}
+
 function dlOfficeStart(date, code) {
   const [y, m, d] = date.split("-").map(Number);
   return new Date(y, m - 1, d, code === "OM" ? 8 : 15, 0);
@@ -89,7 +115,7 @@ async function dlLoadDay() {
     date === today ? `Danas · ${dlLongDate(date).split(", ")[1]}` : dlLongDate(date);
   if (!list.children.length) list.innerHTML = `<div class="dl-empty">Učitavanje…</div>`;
 
-  const [{ data: sched, error: e1 }, { data: att, error: e2 }, people, daysOff] = await Promise.all([
+  const [{ data: sched, error: e1 }, { data: att, error: e2 }, people, daysOff, sick, absence] = await Promise.all([
     sb.from("schedule")
       .select("id, date, shift_code, is_medju_smena, is_leader, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name))")
       .eq("date", date),
@@ -98,6 +124,8 @@ async function dlLoadDay() {
       .eq("work_date", date),
     dlFetchPeople(),
     dlFetchDaysOff(date, date),
+    sickFetch(date, date),
+    dlFetchAbsence(date, date),
   ]);
   if (e1 || e2) { list.innerHTML = `<div class="dl-empty dl-bad">Greška: ${dlEsc((e1 || e2).message)}</div>`; return; }
 
@@ -111,19 +139,23 @@ async function dlLoadDay() {
     else extra.push(a);
   });
 
-  const counts = { ok: 0, late: 0, miss: 0, wait: 0 };
+  const counts = { ok: 0, late: 0, miss: 0, wait: 0, sick: 0 };
   // Status jednog očekivanog dolaska; count=false za ponovljeni prikaz (HR grupa).
-  const status = (start, a, count) => {
+  // empId: zaposleni — na bolovanju bez prijave piše "Bolovanje" umesto "Bez prijave".
+  const status = (start, a, count, empId) => {
     const c = (k) => { if (count) counts[k]++; };
+    if (!a && empId && sickOn(sick, empId, date)) { c("sick"); return `<span class="dl-st sick">Bolovanje</span>`; }
     if (a) return a.late_minutes > 0 ? (c("late"), `<span class="dl-st late">Kasni ${a.late_minutes} min</span>`) : (c("ok"), `<span class="dl-st ok">Na vreme</span>`);
     if (start > now) { c("wait"); return `<span class="dl-st wait">Još nije počela</span>`; }
     if (!tracked) return `<span class="dl-st wait">Pre prijava</span>`;
     c("miss"); return `<span class="dl-st miss">Bez prijave</span>`;
   };
-  const row = (name, details, st, attId) => `<div class="dl-row">
+  // abs = [employeeId, smena] — kod "Bez prijave" ispod reda ide pitanje za izostanak.
+  const row = (name, details, st, attId, abs) => `<div class="dl-row">
       <div class="dl-who"><b>${dlEsc(name)}</b><small>${details}</small></div>
       ${st}
       ${attId && !window.DL_READONLY ? `<button class="dl-del" data-id="${attId}" type="button" title="Obriši prijavu" aria-label="Obriši prijavu">×</button>` : ""}
+      ${abs && st.includes("dl-st miss") ? dlAbsHtml(absence.get(`${abs[0]}|${date}|${abs[1]}`), abs[0], date, abs[1], name) : ""}
     </div>`;
   const came = (a) => a ? ` · došao/la ${DL_TIME_FMT.format(new Date(a.checked_at))}` : "";
   const group = (cls, title, sub, inner, isNow) =>
@@ -145,8 +177,8 @@ async function dlLoadDay() {
       const a = attAll.get(`${p.id}|${o.code}`);
       attLeft.delete(`${p.id}|${o.code}`);
       if (a) n++;
-      const st = daysOff.has(`${p.id}|${date}`) && !a ? `<span class="dl-st wait">Slobodan dan</span>` : status(start, a, true);
-      inner += row(p.name, `početak ${dlHHMM(start)}${came(a)}`, st, a && a.id);
+      const st = daysOff.has(`${p.id}|${date}`) && !a ? `<span class="dl-st wait">Slobodan dan</span>` : status(start, a, true, p.id);
+      inner += row(p.name, `početak ${dlHHMM(start)}${came(a)}`, st, a && a.id, [p.id, o.code]);
     });
     const isNow = date === today && now >= start && now < new Date(start.getTime() + 8 * 3600e3);
     return group("dl-office", o.label, `prijavljeno ${n}/${members.length}`, inner, isNow);
@@ -166,11 +198,11 @@ async function dlLoadDay() {
       const o = OFFICE_ROLES[p.funkcija];
       if (r) {
         const a = attAll.get(`${p.id}|${r.shift_code}`);
-        inner += row(p.name, `${dlShiftLabel(r.shift_code, r.is_medju_smena)} smena · početak ${dlHHMM(r.start)}${came(a)}`, status(r.start, a, false), null);
+        inner += row(p.name, `${dlShiftLabel(r.shift_code, r.is_medju_smena)} smena · početak ${dlHHMM(r.start)}${came(a)}`, status(r.start, a, false, p.id), null);
       } else if (o && workday && !daysOff.has(`${p.id}|${date}`)) {
         const start = dlOfficeStart(date, o.code);
         const a = attAll.get(`${p.id}|${o.code}`);
-        inner += row(p.name, `${o.label} · početak ${dlHHMM(start)}${came(a)}`, status(start, a, false), null);
+        inner += row(p.name, `${o.label} · početak ${dlHHMM(start)}${came(a)}`, status(start, a, false, p.id), null);
       } else {
         inner += row(p.name, daysOff.has(`${p.id}|${date}`) ? "slobodan dan" : "ne radi ovog dana", `<span class="dl-st wait">Slobodan</span>`, null);
       }
@@ -181,16 +213,17 @@ async function dlLoadDay() {
   html += officeGroup("accounting");
 
   DL_SHIFT_ORDER.forEach(code => {
+    const sickLast = (r) => sickOn(sick, r.employee_id, date) ? 1 : 0;
     const rows = schedRows.filter(r => r.shift_code === code)
-      .sort((a, b) => (a.is_medju_smena - b.is_medju_smena) || (dlIsLeader(b) - dlIsLeader(a)) || dlName(a).localeCompare(dlName(b), "sr"));
+      .sort((a, b) => (sickLast(a) - sickLast(b)) || (a.is_medju_smena - b.is_medju_smena) || (dlIsLeader(b) - dlIsLeader(a)) || dlName(a).localeCompare(dlName(b), "sr"));
     if (!rows.length) return;
     let n = 0, inner = "";
     rows.forEach(r => {
       const a = attAll.get(`${r.employee_id}|${code}`);
       attLeft.delete(`${r.employee_id}|${code}`);
       if (a) n++;
-      const role = r.is_medju_smena ? "Međusmena · " : dlIsLeader(r) ? "Lider · " : "";
-      inner += row(dlName(r), `${role}početak ${dlHHMM(r.start)}${came(a)}`, status(r.start, a, true), a && a.id);
+      const role = r.is_medju_smena ? "Međusmena · " : sickLast(r) ? "" : dlIsLeader(r) ? "Lider · " : "";
+      inner += row(dlName(r), `${role}početak ${dlHHMM(r.start)}${came(a)}`, status(r.start, a, true, r.employee_id), a && a.id, [r.employee_id, code]);
     });
     const isNow = current.date === date && current.code === code;
     html += group(`shift-${code}`, DL.shiftTypes[code]?.label || code, `prijavljeno ${n}/${rows.length}`, inner, isNow);
@@ -212,6 +245,7 @@ async function dlLoadDay() {
     `<span class="dl-st ok">Na vreme ${counts.ok}</span>`,
     `<span class="dl-st late">Kasnili ${counts.late}</span>`,
     `<span class="dl-st miss">Bez prijave ${counts.miss}</span>`,
+    counts.sick ? `<span class="dl-st sick">Bolovanje ${counts.sick}</span>` : "",
     counts.wait ? `<span class="dl-st wait">Tek dolaze ${counts.wait}</span>` : "",
     others.length ? `<span class="dl-st extra">Van rasporeda ${others.length}</span>` : "",
   ].join("") : "";
@@ -232,7 +266,7 @@ async function dlLoadMonth() {
   const from = `${year}-${dlPad(month)}-01`;
   const to = dlIso(new Date(year, month, 0));
 
-  const [{ data: sched, error: e1 }, { data: att, error: e2 }, staff, daysOff] = await Promise.all([
+  const [{ data: sched, error: e1 }, { data: att, error: e2 }, staff, daysOff, sick, absence] = await Promise.all([
     sb.from("schedule")
       .select("date, shift_code, is_medju_smena, is_leader, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name))")
       .gte("date", from).lte("date", to).range(0, 4999),
@@ -241,6 +275,8 @@ async function dlLoadMonth() {
       .gte("work_date", from).lte("work_date", to).range(0, 4999),
     dlFetchPeople(),
     dlFetchDaysOff(from, to),
+    sickFetch(from, to),
+    dlFetchAbsence(from, to),
   ]);
   if (e1 || e2) { listEl.innerHTML = `<div class="dl-empty dl-bad">Greška: ${dlEsc((e1 || e2).message)}</div>`; return; }
   if (DL.ym.year !== year || DL.ym.month !== month) return; // korisnik je u međuvremenu promenio mesec
@@ -248,7 +284,7 @@ async function dlLoadMonth() {
   const now = belgradeNow();
   const people = new Map();
   const person = (id, name) => {
-    if (!people.has(id)) people.set(id, { name, planned: 0, came: 0, onTime: 0, lateN: 0, lateMin: 0, missed: [], late: [], extra: [] });
+    if (!people.has(id)) people.set(id, { name, planned: 0, came: 0, onTime: 0, lateN: 0, lateMin: 0, missed: [], late: [], extra: [], sick: [], sickDays: 0 });
     return people.get(id);
   };
   const attByKey = new Map();
@@ -263,9 +299,9 @@ async function dlLoadMonth() {
     const a = attByKey.get(key);
     attByKey.delete(key);
     const started = dlPlannedStart(r.date, r.shift_code, r.is_medju_smena, dlIsLeader(r)) <= now;
-    if (!a && (!started || r.date < DL.startDate)) return;
+    if (!a && (!started || r.date < DL.startDate || sickOn(sick, r.employee_id, r.date))) return;
     p.planned++;
-    if (!a) { p.missed.push(r); return; }
+    if (!a) { p.missed.push({ ...r, q: absence.get(key) }); return; }
     p.came++;
     if (a.late_minutes > 0) { p.lateN++; p.lateMin += a.late_minutes; p.late.push(a); }
     else p.onTime++;
@@ -277,12 +313,13 @@ async function dlLoadMonth() {
     for (let d = new Date(year, month - 1, 1); d.getMonth() === month - 1; d.setDate(d.getDate() + 1)) {
       const date = dlIso(d);
       if (!officeIsWorkday(date) || daysOff.has(`${e.id}|${date}`)) continue;
+      if (sickOn(sick, e.id, date) && !attByKey.has(`${e.id}|${date}|${o.code}`)) continue;
       const key = `${e.id}|${date}|${o.code}`;
       const a = attByKey.get(key);
       attByKey.delete(key);
       if (!a && (dlOfficeStart(date, o.code) > now || date < DL.startDate)) continue;
       p.planned++;
-      if (!a) { p.missed.push({ date, shift_code: o.code, is_medju_smena: false }); continue; }
+      if (!a) { p.missed.push({ date, shift_code: o.code, is_medju_smena: false, q: absence.get(key) }); continue; }
       p.came++;
       if (a.late_minutes > 0) { p.lateN++; p.lateMin += a.late_minutes; p.late.push(a); }
       else p.onTime++;
@@ -290,11 +327,20 @@ async function dlLoadMonth() {
   });
   attByKey.forEach(a => person(a.employee_id, dlName(a)).extra.push(a));
 
+  // Bolovanja u ovom mesecu (period skraćen na mesec, broj kalendarskih dana).
+  const staffName = new Map(staff.map(e => [e.id, e.name]));
+  sick.forEach(r => {
+    const p = person(r.employee_id, staffName.get(r.employee_id) || "—");
+    const days = sickDaysIn(r, from, to);
+    p.sick.push({ from: r.date_from > from ? r.date_from : from, to: r.date_to < to ? r.date_to : to, days, whole: r });
+    p.sickDays += days;
+  });
+
   // Redosled kao u dnevnom pregledu: Office manager, HR, Accounting, pa ostali po imenu.
   const info = new Map(staff.map(e => [e.id, e]));
   const rank = (id) => { const e = info.get(id) || {}; return e.funkcija === "office_manager" ? 0 : e.hr ? 1 : e.funkcija === "accounting" ? 2 : 3; };
   people.forEach((p, id) => { p.rank = rank(id); p.tag = OFFICE_ROLES[(info.get(id) || {}).funkcija]?.label || ((info.get(id) || {}).hr ? "HR" : ""); });
-  const list = [...people.values()].filter(p => p.planned || p.extra.length)
+  const list = [...people.values()].filter(p => p.planned || p.extra.length || p.sickDays)
     .sort((a, b) => (a.rank - b.rank) || a.name.localeCompare(b.name, "sr"));
   list.forEach(p => {
     p.late.sort((a, b) => a.work_date.localeCompare(b.work_date));
@@ -308,21 +354,30 @@ async function dlLoadMonth() {
   totalsEl.innerHTML = list.length ? `
     <div class="dl-tile"><b>${planned ? Math.round(onTime / planned * 100) : 0}%</b><span>na vreme</span><small>${onTime} od ${planned} smena</small></div>
     <div class="dl-tile late"><b>${sum(p => p.lateN)}</b><span>kašnjenja</span><small>ukupno ${sum(p => p.lateMin)} min</small></div>
-    <div class="dl-tile miss"><b>${sum(p => p.missed.length)}</b><span>bez prijave</span><small>smena</small></div>` : "";
+    <div class="dl-tile miss"><b>${sum(p => p.missed.length)}</b><span>bez prijave</span><small>smena</small></div>
+    <div class="dl-tile sick"><b>${sum(p => p.sickDays)}</b><span>bolovanje</span><small>dana · ${list.filter(p => p.sickDays).length} osoba</small></div>` : "";
   noteEl.textContent = from <= DL.startDate && DL.startDate <= to
     ? `Prijave se vode od ${dlShortDate(DL.startDate)} — ranije smene se ne računaju.` : "";
   document.getElementById("dl-pdf").disabled = !list.length;
 
-  listEl.innerHTML = list.length ? list.map((p, i) => {
+  // Kategorija "Bolovanje": ko je, od kad do kad i koliko dana (u ovom mesecu).
+  const sickList = list.filter(p => p.sickDays);
+  const sickHtml = sickList.length ? `<div class="dl-sick-box"><div class="dl-sick-title">Bolovanje</div>${sickList.map(p =>
+    `<div class="dl-sick-row"><b>${dlEsc(p.name)}</b><span class="dl-st sick">${p.sickDays} ${p.sickDays === 1 ? "dan" : "dana"}</span>
+      <small>${p.sick.map(dlSickPeriod).join(", ")}</small></div>`).join("")}</div>` : "";
+
+  listEl.innerHTML = sickHtml + (list.length ? list.map((p, i) => {
     const badges = [
       p.lateN ? `<span class="dl-st late">Kasnio ${p.lateN}× · ${p.lateMin} min</span>` : "",
       p.missed.length ? `<span class="dl-st miss">Bez prijave ${p.missed.length}</span>` : "",
       p.extra.length ? `<span class="dl-st extra">Van rasporeda ${p.extra.length}</span>` : "",
+      p.sickDays ? `<span class="dl-st sick">Bolovanje ${p.sickDays} d</span>` : "",
     ].join("") || `<span class="dl-st ok">Uredno</span>`;
     const detail = [
       p.late.length ? `<b>Kašnjenja:</b> ${p.late.map(a => `${dlShortDate(a.work_date)} ${dlShiftLabel(a.shift_code, a.is_medju_smena)} (${a.late_minutes} min)`).join(", ")}` : "",
-      p.missed.length ? `<b>Bez prijave:</b> ${p.missed.map(r => `${dlShortDate(r.date)} ${dlShiftLabel(r.shift_code, r.is_medju_smena)}`).join(", ")}` : "",
+      p.missed.length ? `<b>Bez prijave:</b> ${p.missed.map(r => `${dlShortDate(r.date)} ${dlShiftLabel(r.shift_code, r.is_medju_smena)}${dlMissNote(r)}`).join(", ")}` : "",
       p.extra.length ? `<b>Van rasporeda:</b> ${p.extra.map(a => `${dlShortDate(a.work_date)} u ${DL_TIME_FMT.format(new Date(a.checked_at))}`).join(", ")}` : "",
+      p.sickDays ? `<b>Bolovanje:</b> ${p.sick.map(dlSickPeriod).join(", ")}` : "",
     ].filter(Boolean).join("<br>") || "Sve smene na vreme.";
     return `<div class="dl-person" data-i="${i}">
       <div class="dl-p-head">
@@ -332,7 +387,21 @@ async function dlLoadMonth() {
       </div>
       <div class="dl-p-detail" hidden>${detail}</div>
     </div>`;
-  }).join("") : `<div class="dl-empty">Nema podataka za ovaj mesec.</div>`;
+  }).join("") : `<div class="dl-empty">Nema podataka za ovaj mesec.</div>`);
+}
+
+// Uz izostanak: odgovor radnika ili "čeka odgovor".
+function dlMissNote(r, plain) {
+  if (!r.q) return "";
+  const text = r.q.answer ? `odgovor: ${r.q.answer}` : "čeka odgovor";
+  return plain ? ` (${text})` : ` <i class="dl-miss-note">(${dlEsc(text)})</i>`;
+}
+
+// "3.10.–7.10. (5 dana)"; ako bolovanje traje i van meseca, piše ceo period.
+function dlSickPeriod(s) {
+  const whole = s.whole.date_from !== s.from || s.whole.date_to !== s.to
+    ? ` — ukupno ${dlShortDate(s.whole.date_from)}–${dlShortDate(s.whole.date_to)}` : "";
+  return `${dlShortDate(s.from)}–${dlShortDate(s.to)} (${s.days} ${s.days === 1 ? "dan" : "dana"}${whole})`;
 }
 
 // ---------------- PDF ----------------
@@ -397,29 +466,45 @@ async function dlDownloadPdf() {
       (document.getElementById("dl-month-note").textContent ? ` · ${document.getElementById("dl-month-note").textContent}` : ""), 14, 24);
     doc.setTextColor(30); doc.setFontSize(10);
     doc.text(`Na vreme: ${planned ? Math.round(onTime / planned * 100) : 0}% (${onTime} od ${planned} smena)   ·   ` +
-      `Kašnjenja: ${sum(p => p.lateN)} (ukupno ${sum(p => p.lateMin)} min)   ·   Bez prijave: ${sum(p => p.missed.length)}`, 14, 31);
+      `Kašnjenja: ${sum(p => p.lateN)} (ukupno ${sum(p => p.lateMin)} min)   ·   Bez prijave: ${sum(p => p.missed.length)}   ·   Bolovanje: ${sum(p => p.sickDays)} dana`, 14, 31);
 
     const green = [30, 74, 58];
     const base = { font: "DejaVu", fontSize: 8.5, cellPadding: 1.8, lineColor: [228, 222, 208], lineWidth: 0.1 };
     doc.autoTable({
       startY: 36,
-      head: [["Zaposleni", "Smena", "Prijavljen", "Na vreme", "Kasnio", "Kašnjenje (min)", "Bez prijave", "Van rasporeda"]],
-      body: list.map(p => [p.name, p.planned, p.came, p.onTime, p.lateN, p.lateMin, p.missed.length, p.extra.length]),
+      head: [["Zaposleni", "Smena", "Prijavljen", "Na vreme", "Kasnio", "Kašnjenje (min)", "Bez prijave", "Van rasporeda", "Bolovanje (dana)"]],
+      body: list.map(p => [p.name, p.planned, p.came, p.onTime, p.lateN, p.lateMin, p.missed.length, p.extra.length, p.sickDays]),
       styles: base,
       headStyles: { fillColor: green, textColor: 255, fontStyle: "bold" },
-      columnStyles: { 0: { cellWidth: 52 }, 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" } },
+      columnStyles: { 0: { cellWidth: 44 }, 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" }, 8: { halign: "right" } },
       alternateRowStyles: { fillColor: [247, 246, 241] },
       didParseCell: (d) => {
         if (d.section !== "body") return;
         if ((d.column.index === 4 || d.column.index === 5) && +d.cell.raw > 0) d.cell.styles.textColor = [163, 90, 0];
         if (d.column.index === 6 && +d.cell.raw > 0) d.cell.styles.textColor = [192, 57, 43];
+        if (d.column.index === 8 && +d.cell.raw > 0) d.cell.styles.textColor = [107, 63, 184];
       },
     });
+
+    const sickRows = list.filter(p => p.sickDays).map(p => [p.name, p.sickDays, p.sick.map(dlSickPeriod).join(", ")]);
+    if (sickRows.length) {
+      let y = doc.lastAutoTable.finalY + 10;
+      if (y > 260) { doc.addPage(); y = 18; }
+      doc.setFont("DejaVu", "bold"); doc.setFontSize(11); doc.text("Bolovanje", 14, y);
+      doc.autoTable({
+        startY: y + 3,
+        head: [["Zaposleni", "Dana", "Period"]],
+        body: sickRows,
+        styles: base,
+        headStyles: { fillColor: green, textColor: 255, fontStyle: "bold" },
+        columnStyles: { 0: { cellWidth: 42 }, 1: { cellWidth: 16, halign: "right" } },
+      });
+    }
 
     const details = list.filter(p => p.late.length || p.missed.length || p.extra.length).map(p => [
       p.name,
       p.late.map(a => `${dlShortDate(a.work_date)} ${dlShiftLabel(a.shift_code, a.is_medju_smena)} (${a.late_minutes} min)`).join(", "),
-      [...p.missed.map(r => `${dlShortDate(r.date)} ${dlShiftLabel(r.shift_code, r.is_medju_smena)}`),
+      [...p.missed.map(r => `${dlShortDate(r.date)} ${dlShiftLabel(r.shift_code, r.is_medju_smena)}${dlMissNote(r, true)}`),
        ...p.extra.map(a => `${dlShortDate(a.work_date)} van rasporeda`)].join(", "),
     ]);
     if (details.length) {
@@ -482,6 +567,15 @@ function dlSetView(view) {
   document.querySelectorAll(".dl-tab").forEach(t => t.addEventListener("click", () => dlSetView(t.dataset.view)));
 
   document.getElementById("dl-day-list").addEventListener("click", async (e) => {
+    const ask = e.target.closest(".dl-ask");
+    if (ask) return dlOpenAskDialog(ask.dataset);
+    const askDel = e.target.closest(".dl-ask-del");
+    if (askDel) {
+      if (!confirm("Povući pitanje? Radnik ga više neće videti.")) return;
+      const { error } = await sb.from("absence_queries").delete().eq("id", askDel.dataset.id);
+      if (error) return dlBanner("Nije uspelo: " + dlEsc(error.message));
+      return dlRefresh();
+    }
     const btn = e.target.closest(".dl-del");
     if (!btn || !confirm("Obrisati ovu prijavu dolaska?")) return;
     const { error } = await sb.from("attendance").delete().eq("id", btn.dataset.id);
@@ -513,5 +607,48 @@ function dlSetView(view) {
 })();
 
 function dlRefresh() { dlLoadDay(); dlLoadMonth(); }
+
+// Prozor "Pitaj zašto nije došao/la" — poruka ide radniku; on mora da odgovori pri sledećem otvaranju aplikacije.
+function dlOpenAskDialog({ emp, date, code, name }) {
+  document.getElementById("dl-ask-dialog")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "dl-ask-dialog";
+  overlay.className = "pw-overlay";
+  overlay.innerHTML = `
+    <form class="pw-box" novalidate>
+      <h3>Pitaj: ${dlEsc(name)}</h3>
+      <div class="muted" style="font-size:12.5px">${dlLongDate(date)} · ${dlEsc(OFFICE_CODE_LABEL[code] || code + " smena")} — bez prijave dolaska</div>
+      <label>Poruka<textarea name="q" required>Nisi prijavio/la dolazak na posao ${dlShortDate(date)} (${dlEsc(OFFICE_CODE_LABEL[code] || code + " smena")}). Zašto nisi došao/la?</textarea></label>
+      <div class="pw-msg"></div>
+      <div class="pw-actions">
+        <button type="button" class="btn btn-ghost pw-cancel">Otkaži</button>
+        <button type="submit" class="btn btn-primary">Pošalji</button>
+      </div>
+    </form>`;
+  document.body.appendChild(overlay);
+  const form = overlay.querySelector("form");
+  const close = () => overlay.remove();
+  overlay.querySelector(".pw-cancel").addEventListener("click", close);
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(); });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = form.q.value.trim();
+    const msg = overlay.querySelector(".pw-msg");
+    if (!text) { msg.textContent = "Upiši poruku."; msg.className = "pw-msg err"; return; }
+    form.querySelector("[type=submit]").disabled = true;
+    const { error } = await sb.from("absence_queries").insert({ employee_id: emp, work_date: date, shift_code: code, question: text });
+    if (error) {
+      msg.textContent = /absence_queries/.test(error.message) && /exist|schema cache/.test(error.message)
+        ? "Treba jednom pokrenuti sql/migration_016_absence_queries.sql u Supabase." : error.message;
+      msg.className = "pw-msg err";
+      form.querySelector("[type=submit]").disabled = false;
+      return;
+    }
+    close();
+    dlBanner(`Pitanje je poslato — ${dlEsc(name)} mora da odgovori kad sledeći put otvori aplikaciju.`, "success");
+    dlRefresh();
+  });
+  form.q.focus();
+}
 document.addEventListener("admin-ready", () => { if (adminCurrentTab === "dolasci") dlRefresh(); });
 document.addEventListener("admin-tab-change", (e) => { if (e.detail.to === "dolasci") dlRefresh(); });

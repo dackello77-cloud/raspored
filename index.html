@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="css/style.css?v=20261008f" />
+<link rel="stylesheet" href="css/style.css?v=20261009b" />
 <style>
   .top-grid {
     display: grid;
@@ -213,6 +213,8 @@
   .day-row.day-off-for-search { border: 2.5px solid var(--green-dark); background: #fdf0ef; }
   .emp-chip.is-me { background: var(--green-darker); border-color: var(--green-darker); color: #fff; }
   .emp-chip.search-hit { background: #2459c9; border-color: #2459c9; color: #fff; }
+  /* bolovanje: osoba ostaje u rasporedu, samo svetlija */
+  .emp-chip.is-sick { opacity: 0.4; }
 
   /* Telefon: dan ide jedan ispod drugog, svaka smena sa svojom oznakom */
   @media (max-width: 820px) {
@@ -258,6 +260,7 @@
   .mob-person .role { margin-left: auto; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
   .mob-person.is-me { background: var(--green-darker); color: #fff; border-radius: 10px; padding-left: 10px; padding-right: 10px; border-bottom-color: transparent; }
   .mob-person.is-me .role { color: rgba(255,255,255,0.75); }
+  .mob-person.is-sick { opacity: 0.45; }
   .mob-sub { font-size: 13px; font-weight: 800; color: var(--sc); margin: 10px 0 2px; }
   .mob-empty { font-size: 15px; color: var(--text-muted); padding: 6px 2px; }
 
@@ -362,11 +365,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="js/supabase.js?v=20261008f"></script>
-  <script src="js/auth.js?v=20261008f"></script>
-  <script src="js/push.js?v=20261008f"></script>
-  <script src="js/constants.js?v=20261008f"></script>
-  <script src="js/swap-common.js?v=20261008f"></script>
-  <script src="js/raspored.js?v=20261008f"></script>
+  <script src="js/supabase.js?v=20261009b"></script>
+  <script src="js/auth.js?v=20261009b"></script>
+  <script src="js/push.js?v=20261009b"></script>
+  <script src="js/constants.js?v=20261009b"></script>
+  <script src="js/swap-common.js?v=20261009b"></script>
+  <script src="js/raspored.js?v=20261009b"></script>
 </body>
 </html>

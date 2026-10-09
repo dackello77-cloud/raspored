@@ -95,3 +95,22 @@ function officeIsWorkday(iso) {
   const d = new Date(iso + "T00:00:00");
   return d.getDay() >= 1 && d.getDay() <= 5 && !officeHolidays(d.getFullYear()).has(iso);
 }
+
+// ---------- Bolovanje (sql/migration_015_sick_leave.sql) ----------
+// Bolovanja koja se preklapaju sa periodom od–do (ISO datumi). Bez prijave / bez tabele -> [].
+async function sickFetch(from, to) {
+  const { data, error } = await sb.from("sick_leave").select("id, employee_id, date_from, date_to, note")
+    .lte("date_from", to).gte("date_to", from).order("date_from");
+  return error ? [] : (data || []);
+}
+// Bolovanje zaposlenog na taj dan (ili null).
+function sickOn(rows, employeeId, iso) {
+  return rows.find(r => r.employee_id === employeeId && r.date_from <= iso && iso <= r.date_to) || null;
+}
+// Broj kalendarskih dana bolovanja unutar perioda od–do.
+function sickDaysIn(row, from, to) {
+  const a = row.date_from > from ? row.date_from : from;
+  const b = row.date_to < to ? row.date_to : to;
+  return b < a ? 0 : Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000) + 1;
+}
+function sickFmt(iso) { const [y, m, d] = iso.split("-"); return `${+d}.${+m}.${y}.`; }

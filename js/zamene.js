@@ -94,5 +94,6 @@ zmOnDone = async (msg, isError) => {
     document.getElementById("zm-office-sub").textContent = `${office.label} · ${office.hours}, pon–pet. Zahtev ide HR manageru na odobrenje.`;
   }
   document.getElementById("zm-history-card").classList.toggle("zm-hidden", !ZM.isHR);
+  if (ZM.isHR) slInit();
   await zmLoadLists();
 })();

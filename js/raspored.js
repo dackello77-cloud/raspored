@@ -42,9 +42,10 @@ function renderChip(person, shiftCode) {
   const name = (person.full_name || person.username || "").toUpperCase();
   const ms = person.isMS && MS_LABEL[shiftCode] ? `<span class="ms-tag">${MS_LABEL[shiftCode]}</span>` : "";
   // shift lider / monitoring / postavljeni lider uvek ostaju na početku smene
-  const fixed = person.isLeader || funkcija === "shift_lider" || funkcija === "monitoring";
+  const fixed = !person.isSick && (person.isLeader || funkcija === "shift_lider" || funkcija === "monitoring");
   const isMe = RASPORED_ME && person.username && person.username.toLowerCase() === RASPORED_ME;
-  return `<span class="chip on-white emp-chip${isMe ? " is-me" : ""}${RASPORED_ME_EMP ? " can-swap" : ""}" data-name="${name.toLowerCase()}" data-emp="${person.employee_id}" data-shift="${person.shift_code}" data-funkcija="${funkcija}"${fixed ? ' data-fixed="1"' : ""}>
+  const sick = person.isSick ? ' title="Bolovanje"' : "";
+  return `<span class="chip on-white emp-chip${isMe ? " is-me" : ""}${person.isSick ? " is-sick" : ""}${RASPORED_ME_EMP ? " can-swap" : ""}"${sick} data-name="${name.toLowerCase()}" data-emp="${person.employee_id}" data-shift="${person.shift_code}" data-funkcija="${funkcija}"${fixed ? ' data-fixed="1"' : ""}>
     <span class="dot" style="background:${dot}"></span>${name}${ms}
   </span>`;
 }
@@ -88,23 +89,26 @@ async function fetchScheduleForMonth(year, month) {
   return data || [];
 }
 
-function groupByDateAndShift(rows) {
+// sick = bolovanja (sickFetch) — osoba ostaje u smeni, samo je označena kao na bolovanju.
+function groupByDateAndShift(rows, sick = []) {
   const map = {};
   for (const row of rows) {
     if (!map[row.date]) map[row.date] = { I: [], II: [], III: [] };
     const emp = row.employees;
+    const isSick = !!sickOn(sick, row.employee_id, row.date);
     map[row.date][row.shift_code].push({
       employee_id: row.employee_id,
       shift_code: row.shift_code,
-      isLeader: !!row.is_leader,
+      isLeader: !!row.is_leader && !isSick, // lider na bolovanju — vođstvo je preuzeo drugi (migration_015)
       isMS: !!row.is_medju_smena,
+      isSick,
       funkcija: emp ? emp.funkcija : "radnik",
       full_name: emp && emp.profiles ? emp.profiles.full_name : "",
       username: emp && emp.profiles ? emp.profiles.username : "",
     });
   }
   Object.values(map).forEach(day => {
-    Object.values(day).forEach(list => list.sort((a, b) => (b.isLeader - a.isLeader) || (funkcijaSortValue(a.funkcija) - funkcijaSortValue(b.funkcija))));
+    Object.values(day).forEach(list => list.sort((a, b) => (a.isSick - b.isSick) || (b.isLeader - a.isLeader) || (funkcijaSortValue(a.funkcija) - funkcijaSortValue(b.funkcija))));
   });
   return map;
 }
@@ -291,8 +295,9 @@ async function loadAndRenderMonths() {
   }
 
   for (const m of monthsToRender) {
-    const rows = await fetchScheduleForMonth(m.year, m.month);
-    const byDate = groupByDateAndShift(rows);
+    const { start, end } = monthRange(m.year, m.month);
+    const [rows, sick] = await Promise.all([fetchScheduleForMonth(m.year, m.month), sickFetch(start, end)]);
+    const byDate = groupByDateAndShift(rows, sick);
     container.appendChild(buildMonthSectionEl(m.year, m.month, byDate, shiftTypes, now));
   }
 
@@ -449,13 +454,14 @@ function mobTimeLabel(code, isMS) {
 
 async function mobLoad() {
   const now = belgradeNow();
-  const { data } = await sb
-    .from("schedule")
-    .select("date, shift_code, is_leader, is_medju_smena, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name, username))")
-    .gte("date", mobIso(mobAddDays(now, -1)))
-    .lte("date", mobIso(mobAddDays(now, 21)))
-    .order("date");
-  MOB.byDate = groupByDateAndShift(data || []);
+  const from = mobIso(mobAddDays(now, -1)), to = mobIso(mobAddDays(now, 21));
+  const [{ data }, sick] = await Promise.all([
+    sb.from("schedule")
+      .select("date, shift_code, is_leader, is_medju_smena, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name, username))")
+      .gte("date", from).lte("date", to).order("date"),
+    sickFetch(from, to),
+  ]);
+  MOB.byDate = groupByDateAndShift(data || [], sick);
   mobRender();
 }
 
@@ -463,16 +469,16 @@ function mobPeopleHtml(list, withData) {
   if (!list.length) return '<div class="mob-empty">Niko nije u rasporedu.</div>';
   // prijavljeni zaposleni je prvi u svojoj smeni (isto kao u tabeli)
   const meId = RASPORED_ME_EMP && RASPORED_ME_EMP.id;
-  list = [...list].sort((a, b) => (b.employee_id === meId) - (a.employee_id === meId));
+  list = [...list].sort((a, b) => (a.isSick - b.isSick) || ((b.employee_id === meId) - (a.employee_id === meId)));
   return list.map(p => {
     const dot = p.isLeader ? DOT_LEADER : p.isMS ? DOT_MS : (DOT_BY_FUNKCIJA[p.funkcija] || DOT_BY_FUNKCIJA.radnik);
     const name = (p.full_name || p.username || "").toUpperCase();
     const isMe = RASPORED_ME_EMP && p.employee_id === RASPORED_ME_EMP.id;
-    const role = p.isLeader ? "Lider" : p.funkcija === "shift_lider" ? "Shift lider" : p.funkcija === "monitoring" ? "Monitoring" : "";
+    const role = p.isSick ? "Bolovanje" : p.isLeader ? "Lider" : p.funkcija === "shift_lider" ? "Shift lider" : p.funkcija === "monitoring" ? "Monitoring" : "";
     const data = withData
       ? ` data-emp="${p.employee_id}" data-shift="${p.shift_code}" data-funkcija="${p.funkcija}" data-name="${name.toLowerCase()}"`
       : "";
-    return `<div class="mob-person${isMe ? " is-me" : ""}"${data}><span class="dot" style="background:${dot}"></span>${name}<span class="role">${role}</span></div>`;
+    return `<div class="mob-person${isMe ? " is-me" : ""}${p.isSick ? " is-sick" : ""}"${data}><span class="dot" style="background:${dot}"></span>${name}<span class="role">${role}</span></div>`;
   }).join("");
 }
 

@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="css/style.css?v=20261008f" />
+<link rel="stylesheet" href="css/style.css?v=20261009b" />
 <style>
   .zm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
   @media (max-width: 900px) { .zm-grid { grid-template-columns: 1fr; } }
@@ -29,6 +29,17 @@
   .zm-office-form .btn { align-self: flex-start; margin-top: 6px; }
   .zm-office-msg { font-size: 12.5px; }
   .zm-office-msg.err { color: var(--red-text); }
+  .sl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sl-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .sl-item + .sl-item { margin-top: 8px; }
+  .sl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .sl-head b { font-size: 14px; }
+  .sl-meta { font-size: 12.5px; color: var(--text-muted); }
+  .sl-edit { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; }
+  .sl-edit input { padding: 6px 8px; }
+  .sl-edit .btn { padding: 6px 12px; font-size: 12.5px; }
+  .sl-badge { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 99px; background: #f1f1ee; color: var(--text-muted); }
+  .sl-badge.now { background: #fde8e6; color: var(--red-text); }
 </style>
 </head>
 <body>
@@ -50,6 +61,26 @@
             <div class="zm-office-msg" id="zm-office-msg"></div>
             <button type="submit" class="btn btn-primary" id="zm-office-send" disabled>Pošalji zahtev</button>
           </form>
+        </section>
+
+        <section class="card zm-hidden" id="sl-card">
+          <h2>Bolovanje</h2>
+          <p class="muted sub">Kad se radnik javi da je na bolovanju, upiši period. Na rasporedu ostaje, ali je prikazan svetlije.</p>
+          <form class="zm-office-form" id="sl-form" novalidate>
+            <label class="field-label" for="sl-emp">Zaposleni</label>
+            <select id="sl-emp" required><option value="">Izaberi zaposlenog…</option></select>
+            <div class="sl-row">
+              <div class="zm-office-form"><label class="field-label" for="sl-from">Od</label><input type="date" id="sl-from" required /></div>
+              <div class="zm-office-form"><label class="field-label" for="sl-to">Do</label><input type="date" id="sl-to" required /></div>
+            </div>
+            <label class="field-label" for="sl-note">Napomena (nije obavezno)</label>
+            <input type="text" id="sl-note" placeholder="Npr. javio se telefonom" />
+            <div class="zm-office-msg" id="sl-msg"></div>
+            <button type="submit" class="btn btn-primary" id="sl-send" disabled>Upiši bolovanje</button>
+          </form>
+          <h2 style="margin-top:18px">Upisana bolovanja</h2>
+          <p class="muted sub">Tekuća, buduća i završena u poslednjih 60 dana. Kraj možeš da promeniš ako se bolovanje produži ili skrati.</p>
+          <div id="sl-list"><div class="zm-empty">Učitavanje...</div></div>
         </section>
 
         <section class="card">
@@ -82,11 +113,12 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="js/supabase.js?v=20261008f"></script>
-  <script src="js/auth.js?v=20261008f"></script>
-  <script src="js/push.js?v=20261008f"></script>
-  <script src="js/constants.js?v=20261008f"></script>
-  <script src="js/swap-common.js?v=20261008f"></script>
-  <script src="js/zamene.js?v=20261008f"></script>
+  <script src="js/supabase.js?v=20261009b"></script>
+  <script src="js/auth.js?v=20261009b"></script>
+  <script src="js/push.js?v=20261009b"></script>
+  <script src="js/constants.js?v=20261009b"></script>
+  <script src="js/swap-common.js?v=20261009b"></script>
+  <script src="js/zamene.js?v=20261009b"></script>
+  <script src="js/bolovanje.js?v=20261009b"></script>
 </body>
 </html>
