@@ -327,21 +327,24 @@ function zmChipMenu(ev, chip) {
 
   const myF = RASPORED_ME_EMP.funkcija, theirF = chip.dataset.funkcija;
   const target = { id: chip.dataset.emp, name: targetName, shift: chip.dataset.shift };
+  // Monitoring i shift lideri menjaju za jedan dan ili celu nedelju; radnici samo za jedan dan.
+  const weekly = myF === theirF && (myF === "monitoring" || myF === "shift_lider");
   let note = "";
-  if (myF !== "radnik" && myF !== "monitoring") note = "Zamenu mogu da traže radnici i monitoring.";
-  else if (theirF !== myF) note = myF === "monitoring" ? "Monitoring menja samo sa monitoringom." : "Zamena je moguća samo sa radnikom.";
+  if (!["radnik", "monitoring", "shift_lider"].includes(myF)) note = "Zamenu mogu da traže radnici, monitoring i shift lideri.";
+  else if (theirF !== myF) note = myF === "monitoring" ? "Monitoring menja samo sa monitoringom."
+    : myF === "shift_lider" ? "Shift lider menja samo sa shift liderom." : "Zamena je moguća samo sa radnikom.";
   else if (date < today) note = "Dan je prošao.";
   else if (!mine) note = "Tog dana ne radiš.";
   else if (mine.dataset.shift === chip.dataset.shift) note = "Radite istu smenu.";
 
   const items = [{
-    label: myF === "monitoring" && theirF === "monitoring" ? `Zamena sa ${targetName} — samo ovaj dan` : `Zamena sa ${targetName}`,
+    label: weekly ? `Zamena sa ${targetName} — samo ovaj dan` : `Zamena sa ${targetName}`,
     note,
     disabled: !!note,
     run: () => zmOpenSwapDialog(date, { id: RASPORED_ME_EMP.id, shift: mine.dataset.shift }, target),
   }];
-  // Monitoring: i zamena za celu nedelju (pon–ned), od danas ako je nedelja već počela.
-  if (myF === "monitoring" && theirF === "monitoring") {
+  // Monitoring i shift lideri: i zamena za celu nedelju (pon–ned), od danas ako je nedelja već počela.
+  if (weekly) {
     const sunday = zmWeekRange(date).to;
     items.push({
       label: `Zamena sa ${targetName} — cela nedelja`,
