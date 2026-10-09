@@ -21,12 +21,17 @@ let RDM_ACTIVE_EMPLOYEES = [];
 async function rdmLoadStaticData() {
   const [{ data: shiftTypes }, { data: employees }] = await Promise.all([
     sb.from("shift_types").select("*").order("sort_order"),
-    sb.from("employees").select("id, funkcija, profiles(full_name, username)").eq("active", true),
+    sb.from("employees").select("id, funkcija, slava_date, profiles(full_name, username)").eq("active", true),
   ]);
   RDM_SHIFT_TYPES = shiftTypes || [];
   RDM_ACTIVE_EMPLOYEES = (employees || [])
-    .map(e => ({ id: e.id, funkcija: e.funkcija, name: e.profiles?.full_name || "" }))
+    .map(e => ({ id: e.id, funkcija: e.funkcija, slava: e.slava_date, name: e.profiles?.full_name || "" }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Lični fond: u mesecu slave jedna smena manje (isto kao u generatoru).
+function rdmFondOf(e, month, fondTarget) {
+  return fondTarget - (e.slava && Number(e.slava.slice(5, 7)) === month ? 1 : 0);
 }
 
 async function rdmFetchSchedule(year, month) {
@@ -100,15 +105,15 @@ async function rdmRenderMonth(year, month, collapsedDefault) {
 }
 
 // Radnici kojima u ovom mesecu nedostaju smene do fonda, npr. "SASKA 12/21".
-function rdmRenderUnderfond(el, fondCounts, fondTarget) {
+function rdmRenderUnderfond(el, fondCounts, fondTarget, month) {
   if (!el) return;
   const short = RDM_ACTIVE_EMPLOYEES
-    .filter(e => e.funkcija === "radnik" && (fondCounts[e.id] || 0) < fondTarget)
-    .map(e => ({ name: e.name.toUpperCase(), n: fondCounts[e.id] || 0 }))
+    .filter(e => e.funkcija === "radnik" && (fondCounts[e.id] || 0) < rdmFondOf(e, month, fondTarget))
+    .map(e => ({ name: e.name.toUpperCase(), n: fondCounts[e.id] || 0, fond: rdmFondOf(e, month, fondTarget) }))
     .sort((a, b) => a.n - b.n || a.name.localeCompare(b.name));
   el.innerHTML = short.length
     ? `<span class="rdm-underfond-label">Manjak smena:</span>` +
-      short.map(x => `<span class="rdm-underfond-chip"><b>${x.name}</b> ${x.n}/${fondTarget}</span>`).join("")
+      short.map(x => `<span class="rdm-underfond-chip"><b>${x.name}</b> ${x.n}/${x.fond}</span>`).join("")
     : `<span class="rdm-underfond-ok">Svi radnici imaju pun fond (${fondTarget}).</span>`;
 }
 
@@ -127,7 +132,7 @@ async function rdmRenderMonthBody(body, year, month) {
   const fondCounts = {};
   rows.forEach(r => { fondCounts[r.employee_id] = (fondCounts[r.employee_id] || 0) + 1; });
   const fondTarget = monthFond(year, month);
-  rdmRenderUnderfond(body.parentElement && body.parentElement.querySelector(".rdm-underfond"), fondCounts, fondTarget);
+  rdmRenderUnderfond(body.parentElement && body.parentElement.querySelector(".rdm-underfond"), fondCounts, fondTarget, month);
 
   const frag = document.createDocumentFragment();
 
@@ -263,13 +268,14 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
     const existingInline = box.querySelector(".rdm-add-inline");
     if (existingInline) { existingInline.remove(); return; }
     const presentIds = new Set(people.map(p => p.employeeId));
+    const month = Number(dateStr.slice(5, 7));
     const available = RDM_ACTIVE_EMPLOYEES.filter(e => {
       if (presentIds.has(e.id)) return false;
-      if (e.funkcija === "radnik") return (fondCounts[e.id] || 0) < fondTarget;
+      if (e.funkcija === "radnik") return (fondCounts[e.id] || 0) < rdmFondOf(e, month, fondTarget);
       return true;
     });
     const labelFor = (e) => e.funkcija === "radnik"
-      ? `${e.name.toUpperCase()} (${fondCounts[e.id] || 0}/${fondTarget})`
+      ? `${e.name.toUpperCase()} (${fondCounts[e.id] || 0}/${rdmFondOf(e, month, fondTarget)})`
       : e.name.toUpperCase();
     const inline = document.createElement("div");
     inline.className = "rdm-add-inline";

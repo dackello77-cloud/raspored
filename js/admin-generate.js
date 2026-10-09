@@ -179,10 +179,13 @@ async function genHandleRun() {
     const weeks = computeWeeksOfMonth(year, month);
     const { forcedOff, weeklyOverridesMap, weeklyPlans } = await genFetchOverridesAndForcedOff(allIds, year, month, weeks);
 
-    // Slava je uvek slobodan dan (ako pada u ovaj mesec).
+    // Slava je uvek slobodan dan (ako pada u ovaj mesec) — i taj mesec radnik ima jednu smenu manje
+    // od fonda (31 dan: 20, 30 dana: 19, februar: 18).
+    const fondReduce = {};
     employees.forEach(e => {
       if (e.slava_date && Number(e.slava_date.slice(5, 7)) === month) {
         forcedOff[e.id].add(`${year}-${e.slava_date.slice(5)}`);
+        fondReduce[e.id] = 1;
       }
     });
 
@@ -224,7 +227,7 @@ async function genHandleRun() {
 
     const { scheduleMap: radniciMap, fondByEmployee, fondTarget, overfond, handoverFor } = generateRadniciSchedule(
       radnici, variant, year, month, weeks, weeklyOverridesMap, forcedOff, fixedMapAll,
-      { zamene, replacements, fixedNoVac, prevTail }
+      { zamene, replacements, fixedNoVac, prevTail, fondReduce }
     );
 
     const combined = genBuildCombinedMap(radniciMap, fixedMapAll, employees);
@@ -246,6 +249,15 @@ async function genHandleRun() {
     });
     const leaderKeys = assignWeekendLeaders(combined, employees, vikendLiderIds, Math.random, handoverLeaders);
     handoverLeaders.forEach(k => leaderKeys.add(k));
+    // Shift lider na slavi (radni dan): liderstvo u smeni koju bi radio preuzima čekirani radnik iz te smene.
+    const slavaGaps = [];
+    employees.forEach(e => {
+      if (e.funkcija !== "shift_lider" || !e.slava_date || Number(e.slava_date.slice(5, 7)) !== month) return;
+      const date = `${year}-${e.slava_date.slice(5)}`;
+      const shift = fixedNoVac[e.id] && fixedNoVac[e.id][date];
+      if (shift === "I" || shift === "II" || shift === "III") slavaGaps.push({ date, shift });
+    });
+    assignSlavaLeaders(combined, employees, vikendLiderIds, slavaGaps, leaderKeys);
 
     await sb.from("schedule").delete().gte("date", start).lte("date", end);
 
@@ -315,8 +327,10 @@ function genRenderResults(employees, radnici, liderMonitoring, combined, fondByE
   radnici.forEach(e => {
     const f = fondByEmployee[e.id] || { I: 0, II: 0, III: 0, total: 0 };
     const name = (e.profiles?.full_name || "").toUpperCase();
-    fondHtml += `<tr><td>${name}</td><td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="total">${f.total}</td></tr>`;
-    if (f.total < fondTarget) underfond.push(`${name} (${f.total}/${fondTarget})`);
+    const target = f.target || fondTarget;
+    const slava = target < fondTarget ? `<br/><span class="muted" style="font-weight:500;">Slava · fond ${target}</span>` : "";
+    fondHtml += `<tr><td>${name}${slava}</td><td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="total">${f.total}</td></tr>`;
+    if (f.total < target) underfond.push(`${name} (${f.total}/${target})`);
   });
 
   zamene.forEach(e => {
@@ -343,7 +357,7 @@ function genRenderResults(employees, radnici, liderMonitoring, combined, fondByE
 
   const overNames = [...radnici, ...zamene]
     .filter(e => (overfond || []).includes(e.id))
-    .map(e => `${(e.profiles?.full_name || "").toUpperCase()} (${fondByEmployee[e.id].total}/${fondTarget})`);
+    .map(e => `${(e.profiles?.full_name || "").toUpperCase()} (${fondByEmployee[e.id].total}/${fondByEmployee[e.id].target || fondTarget})`);
 
   // Smene sa manje radnika od minimuma (lideri/monitoring i zamena za lidera se ne računaju).
   const liderIds = new Set(liderMonitoring.map(e => e.id));
@@ -381,16 +395,18 @@ function genRenderResults(employees, radnici, liderMonitoring, combined, fondByE
 document.addEventListener("admin-ready", () => {
   const monthSelect = document.getElementById("gen-month");
   const yearInput = document.getElementById("gen-year");
+  // Podrazumevano: naredni mesec (decembar → januar naredne godine), isto kao Plan zaposlenih.
   const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
   MONTH_NAMES_SR.forEach((name, idx) => {
     const opt = document.createElement("option");
     opt.value = idx + 1;
     opt.textContent = name;
-    if (idx === now.getMonth()) opt.selected = true;
+    if (idx === next.getMonth()) opt.selected = true;
     monthSelect.appendChild(opt);
   });
-  yearInput.value = now.getFullYear();
+  yearInput.value = next.getFullYear();
 
   document.getElementById("gen-suggest-btn").addEventListener("click", genHandleSuggest);
   document.getElementById("gen-run-btn").addEventListener("click", genHandleRun);

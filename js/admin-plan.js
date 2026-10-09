@@ -287,7 +287,7 @@ function buildPlanRow(emp, weeks, dayOff, weeklyPlan, fond, gridTemplate, ctx) {
       <input type="date" class="p-dayoff" min="${monthMin}" max="${monthMax}" value="${dayOff ? dayOff.off_date : (slavaThisMonth || "")}" />
       ${!dayOff && slavaThisMonth ? '<div class="plan-slava-note">Slava</div>' : ""}
     </div>
-    <div class="plan-fond">${fond}</div>
+    <div class="plan-fond"${slavaThisMonth ? ' title="Slava — jedna smena manje"' : ""}>${slavaThisMonth ? fond - 1 : fond}</div>
     <div class="plan-ne-zajedno">
       ${emp.funkcija === "radnik" ? `<input type="checkbox" class="p-ne-zajedno" ${emp.ne_zajedno ? "checked" : ""} /> Da` : ""}
     </div>

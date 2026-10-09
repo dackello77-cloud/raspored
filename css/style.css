@@ -548,6 +548,18 @@ label.field-label {
   .app-header nav a[data-admin-tab="plan"],
   .app-header nav a[data-admin-tab="rasporedi"] { display: none; }
 }
+/* Admin na računaru: stranice za uređivanje rasporeda svetlo crvene, da se razlikuju od pregleda */
+@media (min-width: 701px) {
+  .app-header nav a[data-admin-tab="osobe"],
+  .app-header nav a[data-admin-tab="plan"],
+  .app-header nav a[data-admin-tab="rasporedi"] { background: #fde8e6; color: #a3241b; }
+  .app-header nav a[data-admin-tab="osobe"]:not(.active):hover,
+  .app-header nav a[data-admin-tab="plan"]:not(.active):hover,
+  .app-header nav a[data-admin-tab="rasporedi"]:not(.active):hover { background: #fbd5d1; }
+  .app-header nav a[data-admin-tab].active[data-admin-tab="osobe"],
+  .app-header nav a[data-admin-tab].active[data-admin-tab="plan"],
+  .app-header nav a[data-admin-tab].active[data-admin-tab="rasporedi"] { background: #c0392b; color: #fff; }
+}
 
 /* Pitanje HR-a za izostanak: prekriva celu aplikaciju dok radnik ne odgovori (js/auth.js absenceShow). */
 .abs-lock { position: fixed; inset: 0; z-index: 10000; background: var(--bg, #f6f5f0); display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }

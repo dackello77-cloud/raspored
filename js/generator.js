@@ -388,6 +388,7 @@ const GENERATOR_ATTEMPTS = 300;
 //   replacements: [{replacerId, vacationerId, dates: [dateStr]}] — dani odmora koje zamena preuzima
 //   fixedNoVac:   employeeId -> {dateStr: smena} — raspored lidera/monitoringa kao da nisu na odmoru
 //                 (kad zamena menja lidera ili monitoring)
+//   fondReduce:   employeeId -> broj smena manje od fonda meseca (npr. slava u ovom mesecu -> 1)
 function generateRadniciSchedule(radnici, variant, year, month, weeks, weeklyOverridesMap, forcedOff, monitoringFixedForOverrides, opts) {
   opts = { ...(opts || {}) };
   const baseCycle = buildBaseCycle(variant, radnici.length);
@@ -407,6 +408,8 @@ function generateRadniciSchedule(radnici, variant, year, month, weeks, weeklyOve
 function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOverridesMap, forcedOff, monitoringFixedForOverrides, rng, opts) {
   const nDays = daysInMonth(year, month);
   const fondTarget = monthFond(year, month);
+  // Lični fond: fond meseca umanjen za slavu (opts.fondReduce).
+  const fondOf = (id) => fondTarget - ((opts.fondReduce && opts.fondReduce[id]) || 0);
   const N = radnici.length;
   const zamene = opts.zamene || [];
   const everyone = [...radnici, ...zamene];
@@ -624,7 +627,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
   function tryFill(d, code, allowWeekend, requireAttach, pool = radnici) {
     const options = [];
     pool.forEach(emp => {
-      if (total[emp.id] >= fondTarget) return;
+      if (total[emp.id] >= fondOf(emp.id)) return;
       candidateEdits(emp.id, d, code, requireAttach).forEach(c => options.push({ id: emp.id, ...c }));
     });
     options.forEach(o => { o.tie = rng ? rng() : 0; });
@@ -766,7 +769,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
 
   // ---------- Faza 4 — višak smena ----------
   everyone.forEach(emp => {
-    for (let d = 1; d <= nDays && total[emp.id] > fondTarget; d++) {
+    for (let d = 1; d <= nDays && total[emp.id] > fondOf(emp.id); d++) {
       const satSunMon = dow[d] === 6 || dow[d] === 0 || dow[d] === 1;
       if (!satSunMon || get(emp.id, d) !== "III" || isProtected(emp.id, d)) continue;
       const exactlyTwoFree = d + 3 <= nDays && get(emp.id, d + 1) === "OFF" && get(emp.id, d + 2) === "OFF" && isWorkShift(get(emp.id, d + 3));
@@ -783,12 +786,13 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
       II: vals.filter(v => v === "II").length,
       III: vals.filter(v => v === "III").length,
       total: total[emp.id],
+      target: fondOf(emp.id),
     };
   });
-  const overfond = everyone.filter(e => total[e.id] > fondTarget).map(e => e.id);
+  const overfond = everyone.filter(e => total[e.id] > fondOf(e.id)).map(e => e.id);
 
   let deficit = 0;
-  radnici.forEach(e => { deficit += Math.max(0, fondTarget - total[e.id]); });
+  radnici.forEach(e => { deficit += Math.max(0, fondOf(e.id) - total[e.id]); });
   let weekendExtra = 0;
   for (let d = 1; d <= nDays; d++) {
     if (!weekendLike[d]) continue;
@@ -841,11 +845,39 @@ function assignWeekendLeaders(combined, employees, vikendLiderIds, random = Math
   return leaders;
 }
 
+// Shift lider ima slavu (obavezno slobodan) radnim danom -> u smeni koju bi radio liderstvo preuzima
+// radnik iz te smene: prvo čekirani "Vikend lider" (onaj ko je najmanje puta bio lider), inače bilo koji radnik.
+// gaps: [{date, shift}]; leaders: Set "employeeId|dateStr" (dopunjuje se).
+function assignSlavaLeaders(combined, employees, vikendLiderIds, gaps, leaders, random = Math.random) {
+  const funkcijaById = {};
+  employees.forEach(e => { funkcijaById[e.id] = e.funkcija; });
+  const timesLeader = {};
+  leaders.forEach(k => { const id = k.split("|")[0]; timesLeader[id] = (timesLeader[id] || 0) + 1; });
+  const pick = arr => arr[Math.floor(random() * arr.length)];
+  gaps.forEach(({ date, shift }) => {
+    const people = Object.keys(combined).filter(id => combined[id][date] === shift);
+    if (people.some(id => funkcijaById[id] === "shift_lider" || leaders.has(`${id}|${date}`))) return;
+    const radnici = people.filter(id => funkcijaById[id] === "radnik");
+    if (!radnici.length) return;
+    const checked = radnici.filter(id => vikendLiderIds.has(id));
+    let chosen;
+    if (checked.length) {
+      const least = Math.min(...checked.map(id => timesLeader[id] || 0));
+      chosen = pick(checked.filter(id => (timesLeader[id] || 0) === least));
+    } else {
+      chosen = pick(radnici);
+    }
+    timesLeader[chosen] = (timesLeader[chosen] || 0) + 1;
+    leaders.add(`${chosen}|${date}`);
+  });
+  return leaders;
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     buildBaseCycle, SHIFT_VARIANTS, findVariant, daysInMonth, monthFond, dateKey,
     isoWeekNumber, orthodoxEasterDate, isHolidayOrWeekendLike,
     generateFixedFunctionSchedule, generateRadniciSchedule, liderShiftForWeek,
-    fixedScheduleForWeek, assignWeekendLeaders,
+    fixedScheduleForWeek, assignWeekendLeaders, assignSlavaLeaders,
   };
 }
