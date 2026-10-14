@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="../css/style.css?v=20261014j" />
+<link rel="stylesheet" href="../css/style.css?v=20261014k" />
 <style>
 
   .add-form-grid {
@@ -326,6 +326,11 @@
   .gen-draft-head h2 { margin: 0 0 4px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
   .gen-draft-head p { margin: 0; font-size: 12px; max-width: 620px; }
   .gen-draft-actions { display: flex; gap: 8px; }
+  .bk-card { margin-top: 16px; }
+  .bk-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .bk-head p { max-width: 640px; }
+  .bk-table td { vertical-align: middle; }
+  .bk-table .btn { padding: 4px 12px; font-size: 12px; }
   .gen-balance { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
   .gen-balance summary { cursor: pointer; font-size: 13px; font-weight: 700; }
   .gen-balance-body { margin-top: 10px; font-size: 12px; }
@@ -442,6 +447,17 @@
             <div id="employees-list"><div class="empty-note muted">Učitavanje...</div></div>
           </div>
         </div>
+      </div>
+
+      <div class="card bk-card">
+        <div class="bk-head">
+          <div>
+            <h2 style="margin:0 0 2px;font-size:15px;">Rezervne kopije</h2>
+            <p class="muted" style="margin:0;font-size:12px;">Kopija svih podataka (osobe, rasporedi, nacrti, odmori, zahtevi, dolasci, bolovanja) pravi se automatski svake nedelje u noći. Čuva se poslednjih 12. Preuzmite povremeno jednu i na računar.</p>
+          </div>
+          <button type="button" class="btn btn-primary" id="bk-create">Napravi kopiju sada</button>
+        </div>
+        <div id="bk-list"><div class="empty-note muted">Učitavanje...</div></div>
       </div>
     </section>
 
@@ -600,17 +616,18 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/supabase.js?v=20261014j"></script>
-  <script src="../js/auth.js?v=20261014j"></script>
-  <script src="../js/push.js?v=20261014j"></script>
-  <script src="../js/account.js?v=20261014j"></script>
-  <script src="../js/constants.js?v=20261014j"></script>
-  <script src="../js/admin-shell.js?v=20261014j"></script>
-  <script src="../js/admin-osobe.js?v=20261014j"></script>
-  <script src="../js/admin-plan.js?v=20261014j"></script>
-  <script src="../js/generator.js?v=20261014j"></script>
-  <script src="../js/admin-generate.js?v=20261014j"></script>
-  <script src="../js/admin-rasporedi.js?v=20261014j"></script>
-  <script src="../js/admin-dolasci.js?v=20261014j"></script>
+  <script src="../js/supabase.js?v=20261014k"></script>
+  <script src="../js/auth.js?v=20261014k"></script>
+  <script src="../js/push.js?v=20261014k"></script>
+  <script src="../js/account.js?v=20261014k"></script>
+  <script src="../js/constants.js?v=20261014k"></script>
+  <script src="../js/admin-shell.js?v=20261014k"></script>
+  <script src="../js/admin-osobe.js?v=20261014k"></script>
+  <script src="../js/admin-backup.js?v=20261014k"></script>
+  <script src="../js/admin-plan.js?v=20261014k"></script>
+  <script src="../js/generator.js?v=20261014k"></script>
+  <script src="../js/admin-generate.js?v=20261014k"></script>
+  <script src="../js/admin-rasporedi.js?v=20261014k"></script>
+  <script src="../js/admin-dolasci.js?v=20261014k"></script>
 </body>
 </html>
