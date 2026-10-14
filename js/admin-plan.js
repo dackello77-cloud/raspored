@@ -378,10 +378,11 @@ function buildPlanRow(emp, weeks, dayOff, weeklyPlan, fond, gridTemplate, ctx) {
 
     // Otčekirano — ukloni i sve dodeljene zamene te osobe u ovom mesecu,
     // inače bi je stranica pri sledećem učitavanju ponovo čekirala.
+    // Red se briše ceo: nosi funkciju osobe koju je menjala (npr. shift_lider), a ne njenu.
     if (!e.target.checked) {
       const { error } = await sb
         .from("weekly_plans")
-        .update({ replacing_employee_id: null })
+        .delete()
         .eq("employee_id", emp.id)
         .eq("year", ctx.year)
         .eq("month", ctx.month)
@@ -435,7 +436,9 @@ function buildPlanRow(emp, weeks, dayOff, weeklyPlan, fond, gridTemplate, ctx) {
 
   row.querySelectorAll(".plan-repl-clear").forEach(btn => {
     btn.addEventListener("click", async () => {
-      const { error } = await sb.from("weekly_plans").update({ replacing_employee_id: null }).eq("id", btn.dataset.rowId);
+      // Red zamene se briše ceo — nosi funkciju osobe na odmoru (npr. shift_lider), pa bi
+      // zamena inače i dalje te nedelje bila "lider" umesto radnik.
+      const { error } = await sb.from("weekly_plans").delete().eq("id", btn.dataset.rowId);
       if (error) {
         planShowBanner("Greška: " + error.message, "error");
         return;
@@ -443,10 +446,10 @@ function buildPlanRow(emp, weeks, dayOff, weeklyPlan, fond, gridTemplate, ctx) {
       // nađi red u lokalnim podacima i osveži samo zamenu i osobu na odmoru
       const touched = [];
       Object.entries(ctx.weeklyPlansMap).forEach(([empId, weeksObj]) => {
-        Object.values(weeksObj).forEach(wp => {
+        Object.entries(weeksObj).forEach(([weekNo, wp]) => {
           if (wp.id === btn.dataset.rowId) {
             touched.push(empId, wp.replacing_employee_id);
-            wp.replacing_employee_id = null;
+            delete weeksObj[weekNo];
           }
         });
       });
