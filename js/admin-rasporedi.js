@@ -85,7 +85,31 @@ async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule") {
   sticky.className = "rdm-month-sticky";
   const header = document.createElement("div");
   header.className = "month-header";
-  header.innerHTML = `<span>${MONTH_NAMES_SR[month - 1]} ${year}</span><span class="toggle-label">${collapsedDefault ? "Prikaži" : "Sakrij"}</span>`;
+  // Objavljeni NAREDNI mesec može da se obriše (npr. greškom objavljen); tekući i završeni ne mogu.
+  const now = belgradeNow();
+  const isFuture = tbl === "schedule" && (year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth() + 1));
+  header.innerHTML = `<span>${MONTH_NAMES_SR[month - 1]} ${year}</span><span class="month-header-actions">` +
+    (isFuture ? `<button type="button" class="month-delete-btn">Obriši mesec</button>` : "") +
+    `<span class="toggle-label">${collapsedDefault ? "Prikaži" : "Sakrij"}</span></span>`;
+  const delBtn = header.querySelector(".month-delete-btn");
+  if (delBtn) {
+    delBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const label = `${MONTH_NAMES_SR[month - 1]} ${year}`;
+      const ok = await rdmConfirm(
+        `Obrisati ceo objavljeni raspored za <b>${label}</b>?`,
+        "Radnici ga više neće videti. Mesec možete ponovo da generišete i objavite u Generisanju.",
+        "Obriši mesec"
+      );
+      if (!ok) return;
+      const { start, end } = rdmMonthRange(year, month);
+      const { error } = await sb.from("schedule").delete().gte("date", start).lte("date", end);
+      if (error) { rdmShowBanner("Brisanje nije uspelo: " + error.message, "error"); return; }
+      await sb.from("settings").delete().eq("key", `objavljeno_${year}_${month}`);
+      rdmShowBanner(`Raspored za ${label} je obrisan.`, "success");
+      await rdmLoadAllMonths();
+    });
+  }
   sticky.appendChild(header);
   const underfond = document.createElement("div");
   underfond.className = "rdm-underfond";

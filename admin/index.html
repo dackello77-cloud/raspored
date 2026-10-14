@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="../css/style.css?v=20261014h" />
+<link rel="stylesheet" href="../css/style.css?v=20261014j" />
 <style>
 
   .add-form-grid {
@@ -227,6 +227,10 @@
     box-shadow: 0 10px 12px -12px rgba(22, 58, 45, 0.35);
   }
   .rdm-month-sticky .month-header { margin-bottom: 6px; }
+  .month-header-actions { display: flex; align-items: center; gap: 8px; }
+  .month-delete-btn { border: 1px solid rgba(255,255,255,0.5); background: rgba(190, 40, 40, 0.85); color: #fff;
+    font: inherit; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; cursor: pointer; }
+  .month-delete-btn:hover { background: rgb(170, 30, 30); }
   .rdm-underfond {
     display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
     padding: 0 4px; font-size: 11.5px;
@@ -322,6 +326,16 @@
   .gen-draft-head h2 { margin: 0 0 4px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
   .gen-draft-head p { margin: 0; font-size: 12px; max-width: 620px; }
   .gen-draft-actions { display: flex; gap: 8px; }
+  .gen-balance { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+  .gen-balance summary { cursor: pointer; font-size: 13px; font-weight: 700; }
+  .gen-balance-body { margin-top: 10px; font-size: 12px; }
+  .bal-table th span { font-weight: 500; font-size: 10.5px; color: var(--text-muted); }
+  .bal-table td:not(:first-child), .bal-table th:not(:first-child) { text-align: center; }
+  .bal-table tfoot td { font-weight: 700; border-top: 2px solid var(--line); }
+  .bal-high { background: var(--red-soft); color: var(--red-text); font-weight: 700; }
+  .bal-low { background: var(--green-pill); color: var(--green-darker); font-weight: 700; }
+  .bal-note { margin: 8px 0 0; font-size: 11.5px; }
+  .bal-note span { padding: 0 4px; border-radius: 4px; }
   .draft-badge { background: #e0a43a; color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 6px; }
   .swap-box { max-width: 460px; display: flex; flex-direction: column; gap: 10px; }
   .swap-box .confirm-actions { margin-top: 6px; }
@@ -586,17 +600,17 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/supabase.js?v=20261014h"></script>
-  <script src="../js/auth.js?v=20261014h"></script>
-  <script src="../js/push.js?v=20261014h"></script>
-  <script src="../js/account.js?v=20261014h"></script>
-  <script src="../js/constants.js?v=20261014h"></script>
-  <script src="../js/admin-shell.js?v=20261014h"></script>
-  <script src="../js/admin-osobe.js?v=20261014h"></script>
-  <script src="../js/admin-plan.js?v=20261014h"></script>
-  <script src="../js/generator.js?v=20261014h"></script>
-  <script src="../js/admin-generate.js?v=20261014h"></script>
-  <script src="../js/admin-rasporedi.js?v=20261014h"></script>
-  <script src="../js/admin-dolasci.js?v=20261014h"></script>
+  <script src="../js/supabase.js?v=20261014j"></script>
+  <script src="../js/auth.js?v=20261014j"></script>
+  <script src="../js/push.js?v=20261014j"></script>
+  <script src="../js/account.js?v=20261014j"></script>
+  <script src="../js/constants.js?v=20261014j"></script>
+  <script src="../js/admin-shell.js?v=20261014j"></script>
+  <script src="../js/admin-osobe.js?v=20261014j"></script>
+  <script src="../js/admin-plan.js?v=20261014j"></script>
+  <script src="../js/generator.js?v=20261014j"></script>
+  <script src="../js/admin-generate.js?v=20261014j"></script>
+  <script src="../js/admin-rasporedi.js?v=20261014j"></script>
+  <script src="../js/admin-dolasci.js?v=20261014j"></script>
 </body>
 </html>

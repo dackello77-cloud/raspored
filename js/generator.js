@@ -344,16 +344,58 @@ function minCostAssignment(cost) {
   return assign;
 }
 
+// ------------------------------------------------------------
+// RAVNOMERNA RASPODELA kroz mesece
+// history: employeeId -> { wk, iii } = prosečan broj vikend/praznik smena i III smena mesečno
+// u prethodnim mesecima. Ko je imao više od proseka, dobija poziciju u krugu (i dopune) sa manje
+// vikenda / III u ovom mesecu — ali pravila niza i nastavak iz prošlog meseca uvek imaju prednost.
+// ------------------------------------------------------------
+const FAIR_WEIGHT_WK = 3;
+const FAIR_WEIGHT_III = 1.5;
+
+function fairnessDeviation(radnici, history) {
+  if (!history) return null;
+  const withHist = radnici.filter(e => history[e.id]);
+  if (withHist.length < 2) return null;
+  const avg = (k) => withHist.reduce((a, e) => a + history[e.id][k], 0) / withHist.length;
+  const aw = avg("wk"), ai = avg("iii");
+  const dev = {};
+  radnici.forEach(e => {
+    const h = history[e.id];
+    dev[e.id] = h ? { wk: h.wk - aw, iii: h.iii - ai } : { wk: 0, iii: 0 };
+  });
+  return dev;
+}
+
 // Za svakog redovnog radnika bira poziciju u krugu za 1. u mesecu (svaka pozicija tačno jednom,
 // da svaki dan i dalje ima minimum po smeni) tako da se niz iz prošlog meseca nastavi.
 // Bez podataka iz prošlog meseca: radnik 1 kreće od početka kruga 1., radnik 2 od 2. itd.
-function chooseStartPositions(radnici, cycle, prevTail) {
+// fair (opciono): { dev, weekendDays: [d], nDays } — dodaje cenu za neravnomernu raspodelu.
+function chooseStartPositions(radnici, cycle, prevTail, fair) {
   const N = radnici.length;
   const startPos = {};
   const tailOf = (id) => (prevTail && prevTail[id]) || {};
   const hasPrev = radnici.some(e => Object.values(tailOf(e.id)).some(isWorkShift));
+  // Koliko vikend/praznik i III smena bi radnik imao u mesecu kad krene od pozicije pos.
+  const fairCost = (id, pos) => {
+    if (!fair || !fair.dev[id]) return 0;
+    let wk = 0, iii = 0;
+    for (let d = 1; d <= fair.nDays; d++) {
+      const v = cycle[(pos + d - 1) % N];
+      if (isWorkShift(v) && fair.weekendDays.includes(d)) wk++;
+      if (v === "III") iii++;
+    }
+    return FAIR_WEIGHT_WK * wk * fair.dev[id].wk + FAIR_WEIGHT_III * iii * fair.dev[id].iii;
+  };
   if (!hasPrev) {
-    radnici.forEach((e, idx) => { startPos[e.id] = ((-idx % N) + N) % N; });
+    const defaultPos = (idx) => ((-idx % N) + N) % N;
+    if (!fair) {
+      radnici.forEach((e, idx) => { startPos[e.id] = defaultPos(idx); });
+      return startPos;
+    }
+    const cost = radnici.map((e, idx) => cycle.map((_, pos) => fairCost(e.id, pos) + (pos === defaultPos(idx) ? 0 : 0.01)));
+    const assign = minCostAssignment(cost);
+    radnici.forEach((e, i) => { startPos[e.id] = assign[i]; });
     return startPos;
   }
   const cost = radnici.map(e => {
@@ -371,7 +413,7 @@ function chooseStartPositions(radnici, cycle, prevTail) {
           if (cycle[(((pos + k - 1) % N) + N) % N] !== (tail[k] || "OFF")) c += 1;
         }
       }
-      return c;
+      return c + fairCost(e.id, pos);
     });
   });
   const assign = minCostAssignment(cost);
@@ -389,18 +431,41 @@ const GENERATOR_ATTEMPTS = 300;
 //   fixedNoVac:   employeeId -> {dateStr: smena} — raspored lidera/monitoringa kao da nisu na odmoru
 //                 (kad zamena menja lidera ili monitoring)
 //   fondReduce:   employeeId -> broj smena manje od fonda meseca (npr. slava u ovom mesecu -> 1)
+//   history:      employeeId -> {wk, iii} prosek po mesecu iz ranijih meseci (ravnomerna raspodela)
 function generateRadniciSchedule(radnici, variant, year, month, weeks, weeklyOverridesMap, forcedOff, monitoringFixedForOverrides, opts) {
   opts = { ...(opts || {}) };
+  const nDays = daysInMonth(year, month);
+  const weekendDays = [];
+  for (let d = 1; d <= nDays; d++) if (isHolidayOrWeekendLike(new Date(year, month - 1, d))) weekendDays.push(d);
+  opts.fairDev = fairnessDeviation(radnici, opts.history);
   const baseCycle = buildBaseCycle(variant, radnici.length);
-  if (baseCycle) opts.startPos = chooseStartPositions(radnici, baseCycle, opts.prevTail);
+  if (baseCycle) {
+    opts.startPos = chooseStartPositions(radnici, baseCycle, opts.prevTail,
+      opts.fairDev ? { dev: opts.fairDev, weekendDays, nDays } : null);
+  }
+  // Među podjednako dobrim pokušajima bira onaj gde vikende i III više dobijaju oni koji su ih ranije imali manje.
+  const fairScore = (res) => {
+    if (!opts.fairDev) return 0;
+    let f = 0;
+    radnici.forEach(e => {
+      const dev = opts.fairDev[e.id];
+      for (let d = 1; d <= nDays; d++) {
+        const v = res.scheduleMap[e.id][dateKey(year, month, d)];
+        if (isWorkShift(v) && weekendDays.includes(d)) f += FAIR_WEIGHT_WK * dev.wk;
+        if (v === "III") f += FAIR_WEIGHT_III * dev.iii;
+      }
+    });
+    return f;
+  };
   let best = null;
-  let bestScore = Infinity;
+  let bestScore = Infinity, bestFair = Infinity;
   for (let attempt = 0; attempt < GENERATOR_ATTEMPTS; attempt++) {
     const rng = attempt === 0 ? null : seededRandom(attempt);
     const res = generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOverridesMap, forcedOff, monitoringFixedForOverrides, rng, opts);
     const score = res.deficit * 1000 + res.overfond.length * 100 + res.weekendExtra;
-    if (score < bestScore) { best = res; bestScore = score; }
-    if (res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0) break;
+    const fair = fairScore(res);
+    if (score < bestScore || (score === bestScore && fair < bestFair)) { best = res; bestScore = score; bestFair = fair; }
+    if (!opts.fairDev && res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0) break;
   }
   return best;
 }
@@ -631,7 +696,8 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
       candidateEdits(emp.id, d, code, requireAttach).forEach(c => options.push({ id: emp.id, ...c }));
     });
     options.forEach(o => { o.tie = rng ? rng() : 0; });
-    options.sort((a, b) => total[a.id] - total[b.id] || a.pref - b.pref || a.tie - b.tie);
+    const fairOf = (id) => (opts.fairDev && opts.fairDev[id]) ? (weekendLike[d] ? opts.fairDev[id].wk : 0) + (code === "III" ? opts.fairDev[id].iii : 0) : 0;
+    options.sort((a, b) => total[a.id] - total[b.id] || a.pref - b.pref || fairOf(a.id) - fairOf(b.id) || a.tie - b.tie);
     for (const o of options) {
       if (editAllowed(o.id, o.edits, allowWeekend)) {
         applyEdits(o.id, o.edits);

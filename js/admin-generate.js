@@ -86,6 +86,42 @@ async function genFetchPrevTail(employeeIds, year, month) {
   return tail;
 }
 
+// Ravnomerna raspodela: koliko je ko u prethodnih 6 meseci prosečno mesečno radio vikend/praznik
+// i III smena (generator to uzima u obzir). Meseci u kojima osoba nije radila se ne računaju.
+// Mesec koji još nije objavljen čita se iz nacrta.
+const GEN_HISTORY_MONTHS = 6;
+async function genFetchRows(tbl, ids, from, to) {
+  const out = [];
+  for (let i = 0; ; i += 1000) {
+    const { data, error } = await sb.from(tbl).select("employee_id, date, shift_code")
+      .in("employee_id", ids).gte("date", from).lte("date", to).order("date").range(i, i + 999);
+    if (error || !data) break;
+    out.push(...data);
+    if (data.length < 1000) break;
+  }
+  return out;
+}
+
+async function genFetchHistory(ids, year, month) {
+  if (!ids.length) return null;
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const from = iso(new Date(year, month - 1 - GEN_HISTORY_MONTHS, 1));
+  const to = iso(new Date(year, month - 1, 0));
+  const [pub, draft] = await Promise.all([genFetchRows("schedule", ids, from, to), genFetchRows("schedule_draft", ids, from, to)]);
+  const draftMonths = new Set(draft.map(r => r.date.slice(0, 7)));
+  const rows = [...pub.filter(r => !draftMonths.has(r.date.slice(0, 7))), ...draft];
+  const per = {}; // id -> { months: Set, wk, iii }
+  rows.forEach(r => {
+    const h = per[r.employee_id] || (per[r.employee_id] = { months: new Set(), wk: 0, iii: 0 });
+    h.months.add(r.date.slice(0, 7));
+    if (isHolidayOrWeekendLike(new Date(r.date + "T00:00:00"))) h.wk++;
+    if (r.shift_code === "III") h.iii++;
+  });
+  const history = {};
+  Object.entries(per).forEach(([id, h]) => { history[id] = { wk: h.wk / h.months.size, iii: h.iii / h.months.size }; });
+  return Object.keys(history).length ? history : null;
+}
+
 // Zamenski radnici meseca: čekirani u "Plan zaposlenih" (settings "zamene_GGGG_M")
 // + svi koji imaju dodeljenu zamenu u weekly_plans tog meseca.
 async function genFetchZameneIds(year, month) {
@@ -226,10 +262,11 @@ async function genHandleRun() {
     const fixedNoVac = generateFixedFunctionSchedule(employees, weeks, noForcedOff, overridesNoVac, liderIndexOffset);
 
     const prevTail = await genFetchPrevTail([...radnici, ...zamene].map(e => e.id), year, month);
+    const history = await genFetchHistory(radnici.map(e => e.id), year, month);
 
     const { scheduleMap: radniciMap, fondByEmployee, fondTarget, overfond, handoverFor } = generateRadniciSchedule(
       radnici, variant, year, month, weeks, weeklyOverridesMap, forcedOff, fixedMapAll,
-      { zamene, replacements, fixedNoVac, prevTail, fondReduce }
+      { zamene, replacements, fixedNoVac, prevTail, fondReduce, history }
     );
 
     const combined = genBuildCombinedMap(radniciMap, fixedMapAll, employees);
@@ -425,6 +462,8 @@ async function genShowDraft(year, month, scrollTo) {
         <button type="button" class="btn btn-primary" id="gen-draft-publish">Objavi raspored</button>
       </div>
     </div>`;
+  box.appendChild(genBuildBalance(year, month));
+
   const search = document.createElement("div");
   search.className = "rdm-search-bar";
   search.innerHTML = `<input type="text" placeholder="Pronađi zaposlenog..." autocomplete="off" /><div class="rdm-search-info muted"></div>`;
@@ -442,6 +481,48 @@ async function genShowDraft(year, month, scrollTo) {
     await genShowDraft(year, month);
   });
   if (scrollTo) box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// Pregled ravnomernosti: prosek vikend/praznik i III smena mesečno (prethodnih 6 meseci) i koliko
+// ih radnik ima u ovom nacrtu. Računa se svaki put kad se otvori (posle ručnih izmena je tačno).
+function genBuildBalance(year, month) {
+  const det = document.createElement("details");
+  det.className = "gen-balance";
+  det.innerHTML = `<summary>Ravnoteža vikenda i III smena — poslednjih ${GEN_HISTORY_MONTHS} meseci i ovaj nacrt</summary><div class="gen-balance-body muted">Učitavanje...</div>`;
+  det.addEventListener("toggle", async () => {
+    if (!det.open) return;
+    const bodyEl = det.querySelector(".gen-balance-body");
+    const radnici = RDM_ACTIVE_EMPLOYEES.filter(e => e.funkcija === "radnik");
+    const ids = radnici.map(e => e.id);
+    const { start, end } = rdmMonthRange(year, month);
+    const [history, rows] = await Promise.all([genFetchHistory(ids, year, month), genFetchRows("schedule_draft", ids, start, end)]);
+    const now = {};
+    rows.forEach(r => {
+      const n = now[r.employee_id] || (now[r.employee_id] = { wk: 0, iii: 0 });
+      if (isHolidayOrWeekendLike(new Date(r.date + "T00:00:00"))) n.wk++;
+      if (r.shift_code === "III") n.iii++;
+    });
+    const avg = (k, src) => { const v = radnici.map(e => (src[e.id] || {})[k]).filter(x => x !== undefined); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; };
+    const H = history || {};
+    const aw = avg("wk", H), ai = avg("iii", H), nw = avg("wk", now), ni = avg("iii", now);
+    // Crveno: i ranije iznad proseka i sada iznad proseka (ili obrnuto zeleno) — tu bi ručna zamena pomogla.
+    const mark = (hist, cur, ha, ca) => (hist !== undefined && hist > ha + 0.5 && cur > ca + 0.5) ? "bal-high" : (hist !== undefined && hist < ha - 0.5 && cur < ca - 0.5) ? "bal-low" : "";
+    const f1 = (x) => x === undefined ? "—" : x.toFixed(1);
+    const list = radnici.map(e => ({ e, h: H[e.id], n: now[e.id] || { wk: 0, iii: 0 } }))
+      .sort((a, b) => ((b.h ? b.h.wk : 0) + b.n.wk) - ((a.h ? a.h.wk : 0) + a.n.wk));
+    bodyEl.className = "gen-balance-body";
+    bodyEl.innerHTML = `
+      <table class="gen-table bal-table">
+        <thead><tr><th>Radnik</th><th>Vikend/praznik<br><span>prosek mesečno</span></th><th>Vikend/praznik<br><span>ovaj nacrt</span></th><th>III smena<br><span>prosek mesečno</span></th><th>III smena<br><span>ovaj nacrt</span></th></tr></thead>
+        <tbody>${list.map(({ e, h, n }) => `<tr>
+          <td>${e.name.toUpperCase()}</td>
+          <td>${f1(h && h.wk)}</td><td class="${mark(h && h.wk, n.wk, aw, nw)}">${n.wk}</td>
+          <td>${f1(h && h.iii)}</td><td class="${mark(h && h.iii, n.iii, ai, ni)}">${n.iii}</td></tr>`).join("")}</tbody>
+        <tfoot><tr><td>Prosek</td><td>${aw.toFixed(1)}</td><td>${nw.toFixed(1)}</td><td>${ai.toFixed(1)}</td><td>${ni.toFixed(1)}</td></tr></tfoot>
+      </table>
+      <p class="muted bal-note"><span class="bal-high">crveno</span> = i ranije i sada iznad proseka · <span class="bal-low">zeleno</span> = i ranije i sada ispod proseka — tu ručna zamena najviše pomaže. Generator ovo već uzima u obzir koliko pravila dozvoljavaju.</p>`;
+  });
+  return det;
 }
 
 async function genPublishDraft(year, month, published) {
