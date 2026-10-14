@@ -581,3 +581,9 @@ body.abs-locked > *:not(.abs-lock) { visibility: hidden; }
 .reminder-box label.reminder-opt:has(input:checked) { border-color: var(--green-dark); background: var(--bg-soft); }
 .reminder-box label.reminder-opt input { width: auto; margin: 0; }
 .reminder-box .pw-msg .btn { margin-top: 8px; width: 100%; }
+
+/* Smene u kalendaru telefona */
+.cal-box .cal-note { margin: -4px 0 2px; font-size: 12px; }
+.cal-links { display: flex; flex-direction: column; gap: 8px; }
+.cal-links .cal-btn { text-align: center; text-decoration: none; }
+.cal-links .cal-help { margin: 2px 0 0; font-size: 11.5px; }

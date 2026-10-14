@@ -127,6 +127,7 @@ async function mountHeader(activeKey) {
       </div>
       <button class="btn-password btn-push" id="push-btn" type="button">🔕 Uključi obaveštenja</button>
       <button class="btn-password btn-push" id="reminder-btn" type="button" hidden>⏰ Podsetnik za smenu</button>
+      <button class="btn-password btn-push" id="calendar-btn" type="button" hidden>📅 Smene u kalendaru telefona</button>
       <button class="btn-password" id="password-btn" type="button">Promeni lozinku</button>
       <button class="btn-logout" id="logout-btn" type="button">Odjava</button>
     `
@@ -375,6 +376,8 @@ async function reminderMountButton() {
   const label = (v) => `⏰ Podsetnik: ${(REMINDER_OPTIONS.find(o => o.v === v) || REMINDER_OPTIONS[0]).short}`;
   btn.textContent = label(data.value);
   btn.hidden = false;
+  const calBtn = document.getElementById("calendar-btn");
+  if (calBtn) { calBtn.hidden = false; calBtn.addEventListener("click", openCalendarDialog); }
   btn.addEventListener("click", () => openReminderDialog(btn.dataset.value || data.value, (v) => {
     btn.dataset.value = v;
     btn.textContent = label(v);
@@ -424,6 +427,63 @@ function openReminderDialog(current, onSaved) {
       return;
     }
     close();
+  });
+}
+
+// ---------- Smene u kalendaru telefona (sql/migration_022_calendar.sql + Edge funkcija "calendar") ----------
+const CALENDAR_FN_HOST = SUPABASE_URL.replace(/^https:\/\//, "") + "/functions/v1/calendar";
+
+async function openCalendarDialog() {
+  document.getElementById("calendar-dialog")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "calendar-dialog";
+  overlay.className = "pw-overlay";
+  overlay.innerHTML = `
+    <div class="pw-box cal-box">
+      <h3>Smene u kalendaru telefona</h3>
+      <p class="muted cal-note">Tvoje smene se pojavljuju u kalendaru telefona i same se osvežavaju (zamene, novi meseci).
+        Link je lični — ne šalji ga drugima.</p>
+      <div class="cal-links muted">Učitavanje...</div>
+      <div class="pw-msg"></div>
+      <div class="pw-actions">
+        <button type="button" class="btn btn-ghost cal-reset">Napravi novi link</button>
+        <button type="button" class="btn btn-primary pw-cancel">Zatvori</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.querySelector(".pw-cancel").addEventListener("click", close);
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(); });
+  const msg = overlay.querySelector(".pw-msg");
+  const links = overlay.querySelector(".cal-links");
+
+  const render = (token) => {
+    const webcal = `webcal://${CALENDAR_FN_HOST}?t=${token}`;
+    const https = `https://${CALENDAR_FN_HOST}?t=${token}`;
+    links.className = "cal-links";
+    links.innerHTML = `
+      <a class="btn btn-primary cal-btn" href="${webcal}">iPhone — dodaj u Kalendar</a>
+      <a class="btn btn-primary cal-btn" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}" target="_blank" rel="noopener">Google kalendar (Android)</a>
+      <button type="button" class="btn btn-ghost cal-btn cal-copy">Kopiraj link</button>
+      <p class="muted cal-help">Google: ako se na telefonu ne otvori, otvori ovaj prozor na računaru (isti nalog) i klikni dugme — smene se zatim pojave i u kalendaru na telefonu.
+        Google osvežava kalendar sporije (do nekoliko sati), iPhone češće.</p>`;
+    links.querySelector(".cal-copy").addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(https); msg.textContent = "Link je kopiran."; msg.className = "pw-msg ok"; }
+      catch (e) { prompt("Kopiraj link:", https); }
+    });
+  };
+
+  const { data, error } = await sb.rpc("calendar_link_get");
+  if (error) { links.textContent = "Kalendar trenutno nije dostupan: " + error.message; return; }
+  render(data);
+
+  overlay.querySelector(".cal-reset").addEventListener("click", async () => {
+    if (!confirm("Napraviti novi link? Stari link prestaje da radi — kalendar ćeš morati da dodaš ponovo.")) return;
+    const { data: t, error: err } = await sb.rpc("calendar_link_reset");
+    if (err) { msg.textContent = "Greška: " + err.message; msg.className = "pw-msg err"; return; }
+    render(t);
+    msg.textContent = "Napravljen je novi link. Dodaj kalendar ponovo, a stari obriši iz kalendara.";
+    msg.className = "pw-msg ok";
   });
 }
 
