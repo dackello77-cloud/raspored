@@ -797,9 +797,31 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
   // Pored preuzetih smena (odmor), zamena radi u blokovima: najviše 5 dana rada,
   // pa 2 slobodna. Dani se idu redom da bi se blokovi nizali; smena se bira tamo
   // gde ima mesta do maksimuma (redosled smena isti kao za redovne radnike).
+  // Smena za dan: prvo ista kao juče (blok se nastavlja), pa ona koju je zamena najmanje radila
+  // (da ne dobije npr. samo III kad je III prva u redosledu popunjavanja), pa gde ima više mesta.
   if (zamene.length) {
     const allCodes = phases.flat();
-    fillRounds(allCodes, () => true, true, false, zamene, variant.maxs, false);
+    zamene.forEach(emp => {
+      const mine = (code) => { let n = 0; for (let x = 1; x <= nDays; x++) if (get(emp.id, x) === code) n++; return n; };
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (let d = 1; d <= nDays; d++) {
+          if (total[emp.id] >= fondOf(emp.id)) return;
+          if (get(emp.id, d) !== "OFF" || isProtected(emp.id, d)) continue;
+          const prev = get(emp.id, d - 1);
+          // Razlika od 1 smene se ne računa — tu pokušaji (rng) biraju različito, pa pobedi najbolji raspored.
+          const tie = {};
+          allCodes.forEach(c => { tie[c] = rng ? rng() : 0; });
+          const usedLess = (a, b) => (Math.abs(mine(a) - mine(b)) >= 2 ? mine(a) - mine(b) : 0);
+          const order = allCodes.slice().sort((a, b) =>
+            (b === prev) - (a === prev) || usedLess(a, b) || tie[a] - tie[b] ||
+            (variant.maxs[b] - counts[d][b]) - (variant.maxs[a] - counts[d][a]));
+          const code = order.find(c => counts[d][c] < variant.maxs[c] && editAllowed(emp.id, { [d]: c }, true));
+          if (code) { applyEdits(emp.id, { [d]: code }); changed = true; }
+        }
+      }
+    });
   }
 
   // ---------- Faza 2 — radni dani do maksimuma ----------
@@ -859,7 +881,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
   const overfond = everyone.filter(e => total[e.id] > fondOf(e.id)).map(e => e.id);
 
   let deficit = 0;
-  radnici.forEach(e => { deficit += Math.max(0, fondOf(e.id) - total[e.id]); });
+  everyone.forEach(e => { deficit += Math.max(0, fondOf(e.id) - total[e.id]); }); // i zamene imaju pun fond
   let weekendExtra = 0;
   for (let d = 1; d <= nDays; d++) {
     if (!weekendLike[d]) continue;
