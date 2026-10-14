@@ -126,6 +126,7 @@ async function mountHeader(activeKey) {
         <div class="username">${profile.username}</div>
       </div>
       <button class="btn-password btn-push" id="push-btn" type="button">🔕 Uključi obaveštenja</button>
+      <button class="btn-password btn-push" id="reminder-btn" type="button" hidden>⏰ Podsetnik za smenu</button>
       <button class="btn-password" id="password-btn" type="button">Promeni lozinku</button>
       <button class="btn-logout" id="logout-btn" type="button">Odjava</button>
     `
@@ -179,6 +180,7 @@ async function mountHeader(activeKey) {
   if (session && !isManagement) absenceCheck(session);
   if (session && !isManagement) mountCheckInButton(session);
   if (typeof pushRefreshButton === "function") pushRefreshButton();
+  if (session && !isManagement) reminderMountButton();
 
   const passwordBtn = document.getElementById("password-btn");
   if (passwordBtn) passwordBtn.addEventListener("click", () => openPasswordDialog(session.user.email));
@@ -356,6 +358,75 @@ async function zmRefreshNavBadge(session, profile) {
 }
 
 // Promena sopstvene lozinke (i admin i radnik). Stara lozinka se proverava ponovnom prijavom.
+// ---------- Podsetnik pred smenu (sql/migration_020_shift_reminders.sql) ----------
+// Samo za zaposlene u smenama; svako bira kada mu stiže push pred smenu.
+const REMINDER_OPTIONS = [
+  { v: "off", label: "Isključen", short: "isključen" },
+  { v: "evening", label: "Veče pre smene (u 20:00)", short: "veče pre" },
+  { v: "2h", label: "2 sata pre početka", short: "2 h pre" },
+  { v: "1h", label: "1 sat pre početka", short: "1 h pre" },
+];
+
+async function reminderMountButton() {
+  const btn = document.getElementById("reminder-btn");
+  if (!btn) return;
+  const { data, error } = await sb.rpc("shift_reminder_get");
+  if (error || !data || !data.eligible) return; // npr. migracija još nije pokrenuta, ili nije u smenama
+  const label = (v) => `⏰ Podsetnik: ${(REMINDER_OPTIONS.find(o => o.v === v) || REMINDER_OPTIONS[0]).short}`;
+  btn.textContent = label(data.value);
+  btn.hidden = false;
+  btn.addEventListener("click", () => openReminderDialog(btn.dataset.value || data.value, (v) => {
+    btn.dataset.value = v;
+    btn.textContent = label(v);
+  }));
+}
+
+function openReminderDialog(current, onSaved) {
+  document.getElementById("reminder-dialog")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "reminder-dialog";
+  overlay.className = "pw-overlay";
+  overlay.innerHTML = `
+    <form class="pw-box reminder-box" novalidate>
+      <h3>Podsetnik za smenu</h3>
+      <p class="muted reminder-note">Obaveštenje na telefon pred svaku tvoju smenu. Lideri dobijaju vreme dolaska sat ranije.</p>
+      ${REMINDER_OPTIONS.map(o => `<label class="reminder-opt"><input type="radio" name="rem" value="${o.v}" ${o.v === current ? "checked" : ""} />${o.label}</label>`).join("")}
+      <div class="pw-msg"></div>
+      <div class="pw-actions">
+        <button type="button" class="btn btn-ghost pw-cancel">Otkaži</button>
+        <button type="submit" class="btn btn-primary pw-save">Sačuvaj</button>
+      </div>
+    </form>`;
+  document.body.appendChild(overlay);
+  const form = overlay.querySelector("form");
+  const msg = overlay.querySelector(".pw-msg");
+  const close = () => overlay.remove();
+  overlay.querySelector(".pw-cancel").addEventListener("click", close);
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(); });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const v = form.rem.value;
+    const saveBtn = form.querySelector(".pw-save");
+    saveBtn.disabled = true;
+    const { error } = await sb.rpc("shift_reminder_set", { p_value: v });
+    saveBtn.disabled = false;
+    if (error) { msg.textContent = "Greška: " + error.message; msg.className = "pw-msg err"; return; }
+    onSaved(v);
+    // Podsetnik stiže samo na uređaj sa uključenim obaveštenjima.
+    const pushBtn = document.getElementById("push-btn");
+    if (v !== "off" && pushBtn && !pushBtn.dataset.on && typeof pushEnable === "function") {
+      msg.innerHTML = 'Sačuvano. Na ovom telefonu obaveštenja nisu uključena — <button type="button" class="btn btn-primary reminder-push">Uključi obaveštenja</button>';
+      msg.className = "pw-msg ok";
+      msg.querySelector(".reminder-push").addEventListener("click", async () => { await pushEnable(); close(); });
+      saveBtn.hidden = true;
+      overlay.querySelector(".pw-cancel").textContent = "Zatvori";
+      return;
+    }
+    close();
+  });
+}
+
 function openPasswordDialog(email) {
   document.getElementById("pw-dialog")?.remove();
   const overlay = document.createElement("div");

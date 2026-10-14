@@ -573,3 +573,11 @@ body.abs-locked > *:not(.abs-lock) { visibility: hidden; }
 .abs-box textarea { min-height: 90px; resize: vertical; font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; color: var(--text, #222); }
 .abs-box .btn { width: 100%; padding: 12px; font-size: 15px; }
 .abs-note { text-align: center; color: var(--text-muted); font-size: 12px; }
+
+/* Podsetnik za smenu (dijalog iz menija) */
+.reminder-box .reminder-note { margin: -4px 0 2px; font-size: 12px; }
+.reminder-box label.reminder-opt { flex-direction: row; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--text);
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+.reminder-box label.reminder-opt:has(input:checked) { border-color: var(--green-dark); background: var(--bg-soft); }
+.reminder-box label.reminder-opt input { width: auto; margin: 0; }
+.reminder-box .pw-msg .btn { margin-top: 8px; width: 100%; }
