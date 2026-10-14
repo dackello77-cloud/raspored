@@ -573,7 +573,8 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     const violations = () => countSeqViolations(st, d - 7, d + 7, false);
     const before = violations();
     const fits = () => countSeqViolations(x => (x === d ? value : st(x)), d - 7, d + 7, false) <= before;
-    if (!fits()) {
+    // Zamena za lidera preuzima njegovu nedelju kakva jeste (pon–pet ista smena) — pravila za radnike ne važe.
+    if (counted && !fits()) {
       // Sudar dve zamene (prethodni dan III, ovaj dan I/II): bolje je pustiti jednu III juče
       // (1 dan za drugog radnika) nego preskočiti dva dana danas i sutra (2 slobodna posle III).
       const prevKey = d > 1 ? dateKey(year, month, d - 1) : null;

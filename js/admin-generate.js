@@ -48,6 +48,9 @@ async function genFetchOverridesAndForcedOff(employeeIds, year, month, weeks) {
   });
 
   (weeklyPlans || []).forEach(row => {
+    // Red zamene nosi funkciju osobe koju menja (npr. shift_lider) — to nije promena funkcije
+    // zamene; njene smene te nedelje dolaze iz preuzimanja (opts.replacements).
+    if (row.replacing_employee_id) return;
     if (!weeklyOverridesMap[row.employee_id]) weeklyOverridesMap[row.employee_id] = {};
     weeklyOverridesMap[row.employee_id][row.week_number] = row.funkcija_for_week;
   });
