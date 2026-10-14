@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="../css/style.css?v=20261009h" />
+<link rel="stylesheet" href="../css/style.css?v=20261014g" />
 <style>
 
   .add-form-grid {
@@ -219,6 +219,8 @@
   }
   .rdm-search-bar input { width: 260px; }
   .rdm-search-bar #rasporedi-search-info { font-size: 12px; }
+  .rdm-search-bar .rdm-search-info { font-size: 12px; }
+  .gen-draft .rdm-search-bar, .gen-draft .rdm-month-sticky { background: #fff; }
   .rdm-month-sticky {
     position: sticky; top: 117px; z-index: 20;
     background: var(--bg); padding: 6px 0 8px; margin-bottom: 4px;
@@ -315,6 +317,21 @@
   .confirm-detail { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
   .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
   .btn-danger-solid { background: var(--red-strong); color: #fff; }
+  .gen-draft { margin-bottom: 16px; border: 2px dashed #e0a43a; }
+  .gen-draft-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .gen-draft-head h2 { margin: 0 0 4px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .gen-draft-head p { margin: 0; font-size: 12px; max-width: 620px; }
+  .gen-draft-actions { display: flex; gap: 8px; }
+  .draft-badge { background: #e0a43a; color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 6px; }
+  .swap-box { max-width: 460px; display: flex; flex-direction: column; gap: 10px; }
+  .swap-box .confirm-actions { margin-top: 6px; }
+  .swap-label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .swap-select { font-size: 13px; padding: 8px 10px; font-variant-numeric: tabular-nums; }
+  .swap-pattern { font-weight: 700; color: var(--text); letter-spacing: 0.04em; }
+  .swap-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .swap-table th { text-align: left; font-size: 11px; color: var(--text-muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  .swap-table td { padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .swap-warn { margin: 6px 0 0; }
   .btn-danger-solid:hover { background: var(--red-text); }
 
   .rdm-x-btn {
@@ -490,6 +507,8 @@
         </div>
       </div>
 
+      <div class="card gen-draft" id="gen-draft" style="display:none;"></div>
+
       <div class="card" style="margin-bottom:16px;">
         <h2 style="margin:0 0 2px;font-size:15px;">Tekući i naredni rasporedi</h2>
         <p class="muted" style="margin:0 0 16px;font-size:12px;">Tekući mesec je otvoren. Naredni generisani meseci otvaraju se klikom na naslov.</p>
@@ -567,17 +586,17 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/supabase.js?v=20261009h"></script>
-  <script src="../js/auth.js?v=20261009h"></script>
-  <script src="../js/push.js?v=20261009h"></script>
-  <script src="../js/account.js?v=20261009h"></script>
-  <script src="../js/constants.js?v=20261009h"></script>
-  <script src="../js/admin-shell.js?v=20261009h"></script>
-  <script src="../js/admin-osobe.js?v=20261009h"></script>
-  <script src="../js/admin-plan.js?v=20261009h"></script>
-  <script src="../js/generator.js?v=20261009h"></script>
-  <script src="../js/admin-generate.js?v=20261009h"></script>
-  <script src="../js/admin-rasporedi.js?v=20261009h"></script>
-  <script src="../js/admin-dolasci.js?v=20261009h"></script>
+  <script src="../js/supabase.js?v=20261014g"></script>
+  <script src="../js/auth.js?v=20261014g"></script>
+  <script src="../js/push.js?v=20261014g"></script>
+  <script src="../js/account.js?v=20261014g"></script>
+  <script src="../js/constants.js?v=20261014g"></script>
+  <script src="../js/admin-shell.js?v=20261014g"></script>
+  <script src="../js/admin-osobe.js?v=20261014g"></script>
+  <script src="../js/admin-plan.js?v=20261014g"></script>
+  <script src="../js/generator.js?v=20261014g"></script>
+  <script src="../js/admin-generate.js?v=20261014g"></script>
+  <script src="../js/admin-rasporedi.js?v=20261014g"></script>
+  <script src="../js/admin-dolasci.js?v=20261014g"></script>
 </body>
 </html>

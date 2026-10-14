@@ -62,12 +62,14 @@ async function genFetchPrevTail(employeeIds, year, month) {
   const firstTail = new Date(lastPrev);
   firstTail.setDate(firstTail.getDate() - 6);
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const { data, error } = await sb
-    .from("schedule")
+  // Ako prethodni mesec još nije objavljen, nastavlja se iz njegovog nacrta.
+  const fetchTail = (tbl) => sb.from(tbl)
     .select("employee_id, date, shift_code")
     .in("employee_id", employeeIds)
     .gte("date", iso(firstTail))
     .lte("date", iso(lastPrev));
+  const draft = await fetchTail("schedule_draft");
+  const { data, error } = draft.data && draft.data.length ? draft : await fetchTail("schedule");
   if (error) {
     console.error(error);
     return {};
@@ -259,7 +261,8 @@ async function genHandleRun() {
     });
     assignSlavaLeaders(combined, employees, vikendLiderIds, slavaGaps, leaderKeys);
 
-    await sb.from("schedule").delete().gte("date", start).lte("date", end);
+    // Upisuje se u NACRT — glavna strana i radnici ga ne vide dok se ne klikne "Objavi raspored".
+    await sb.from("schedule_draft").delete().gte("date", start).lte("date", end);
 
     const rows = [];
     Object.entries(combined).forEach(([employeeId, dayMap]) => {
@@ -276,7 +279,7 @@ async function genHandleRun() {
 
     for (let i = 0; i < rows.length; i += 400) {
       const chunk = rows.slice(i, i + 400);
-      const { error } = await sb.from("schedule").insert(chunk);
+      const { error } = await sb.from("schedule_draft").insert(chunk);
       if (error) {
         genShowBanner("Greška pri upisu rasporeda: " + error.message, "error");
         return;
@@ -290,11 +293,8 @@ async function genHandleRun() {
     );
 
     genRenderResults(employees, radnici, liderMonitoring, combined, fondByEmployee, fondTarget, year, month, overfond, zamene, variant, handoverFor);
-    genShowBanner(`Raspored za ${MONTH_NAMES_SR[month - 1]} ${year} je generisan i sačuvan.`, "success");
-
-    const container = document.getElementById("rasporedi-months");
-    delete container.dataset.loaded;
-    await rdmLoadAllMonths();
+    genShowBanner(`Nacrt rasporeda za ${MONTH_NAMES_SR[month - 1]} ${year} je napravljen. Sredite ga ispod pa kliknite „Objavi raspored“.`, "success");
+    await genShowDraft(year, month, true);
   } catch (err) {
     console.error(err);
     genShowBanner("Raspored nije napravljen: " + err.message, "error");
@@ -392,6 +392,83 @@ function genRenderResults(employees, radnici, liderMonitoring, combined, fondByE
       : "");
 }
 
+// ---------- Nacrt: ručno sređivanje pa objava ----------
+function genSelectedMonth() {
+  return {
+    year: parseInt(document.getElementById("gen-year").value, 10),
+    month: parseInt(document.getElementById("gen-month").value, 10),
+  };
+}
+
+async function genShowDraft(year, month, scrollTo) {
+  const box = document.getElementById("gen-draft");
+  const { start, end } = rdmMonthRange(year, month);
+  const [{ count }, { count: published }] = await Promise.all([
+    sb.from("schedule_draft").select("id", { count: "exact", head: true }).gte("date", start).lte("date", end),
+    sb.from("schedule").select("id", { count: "exact", head: true }).gte("date", start).lte("date", end),
+  ]);
+  const sel = genSelectedMonth();
+  if (sel.year !== year || sel.month !== month) return; // u međuvremenu izabran drugi mesec
+  if (!count) { box.style.display = "none"; box.innerHTML = ""; return; }
+
+  await rdmLoadStaticData();
+  const label = `${MONTH_NAMES_SR[month - 1]} ${year}`;
+  box.innerHTML = `
+    <div class="gen-draft-head">
+      <div>
+        <h2><span class="draft-badge">NACRT</span> ${label}</h2>
+        <p class="muted">Vidi ga samo admin. Sredite raspored (desni klik, +, ✕) pa kliknite „Objavi raspored“ —
+          tek tada se pojavljuje na glavnoj strani i radnici dobijaju obaveštenje.${published ? ` <b>Objava će zameniti trenutno objavljeni raspored za ${label}.</b>` : ""}</p>
+      </div>
+      <div class="gen-draft-actions">
+        <button type="button" class="btn btn-ghost" id="gen-draft-delete">Obriši nacrt</button>
+        <button type="button" class="btn btn-primary" id="gen-draft-publish">Objavi raspored</button>
+      </div>
+    </div>`;
+  const search = document.createElement("div");
+  search.className = "rdm-search-bar";
+  search.innerHTML = `<input type="text" placeholder="Pronađi zaposlenog..." autocomplete="off" /><div class="rdm-search-info muted"></div>`;
+  box.appendChild(search);
+  search.querySelector("input").addEventListener("input", (e) => rdmApplySearch(e.target.value, box, search.querySelector(".rdm-search-info")));
+  box.appendChild(await rdmRenderMonth(year, month, false, "schedule_draft"));
+  box.style.display = "";
+
+  box.querySelector("#gen-draft-publish").addEventListener("click", () => genPublishDraft(year, month, published));
+  box.querySelector("#gen-draft-delete").addEventListener("click", async () => {
+    const ok = await rdmConfirm(`Obrisati nacrt za <b>${label}</b>?`, "Objavljeni raspored se ne menja.");
+    if (!ok) return;
+    await sb.from("schedule_draft").delete().gte("date", start).lte("date", end);
+    genShowBanner(`Nacrt za ${label} je obrisan.`, "success");
+    await genShowDraft(year, month);
+  });
+  if (scrollTo) box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function genPublishDraft(year, month, published) {
+  const label = `${MONTH_NAMES_SR[month - 1]} ${year}`;
+  const ok = await rdmConfirm(
+    `Objaviti raspored za <b>${label}</b>?`,
+    (published ? `Trenutno objavljeni raspored za ${label} biće zamenjen. ` : "") +
+      "Raspored se pojavljuje na glavnoj strani, a radnici dobijaju obaveštenje na telefon.",
+    "Objavi", "btn-primary"
+  );
+  if (!ok) return;
+  const btn = document.getElementById("gen-draft-publish");
+  btn.disabled = true;
+  btn.textContent = "Objavljujem...";
+  const { error } = await sb.rpc("schedule_publish", { p_year: year, p_month: month });
+  if (error) {
+    genShowBanner("Objava nije uspela: " + error.message, "error");
+    btn.disabled = false;
+    btn.textContent = "Objavi raspored";
+    return;
+  }
+  sb.functions.invoke("send-push", { body: { published: { year, month } } }).catch(console.error);
+  genShowBanner(`Raspored za ${label} je objavljen.`, "success");
+  await genShowDraft(year, month);
+  await rdmLoadAllMonths();
+}
+
 document.addEventListener("admin-ready", () => {
   const monthSelect = document.getElementById("gen-month");
   const yearInput = document.getElementById("gen-year");
@@ -410,7 +487,9 @@ document.addEventListener("admin-ready", () => {
 
   document.getElementById("gen-suggest-btn").addEventListener("click", genHandleSuggest);
   document.getElementById("gen-run-btn").addEventListener("click", genHandleRun);
-  monthSelect.addEventListener("change", genResetSuggest);
-  yearInput.addEventListener("input", genResetSuggest);
+  const showSelectedDraft = () => { const m = genSelectedMonth(); if (m.year && m.month) genShowDraft(m.year, m.month); };
+  monthSelect.addEventListener("change", () => { genResetSuggest(); showSelectedDraft(); });
+  yearInput.addEventListener("input", () => { genResetSuggest(); showSelectedDraft(); });
   genUpdateRunBtn();
+  showSelectedDraft(); // nacrt započet ranije ostaje i posle osvežavanja stranice
 });

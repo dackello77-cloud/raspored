@@ -34,11 +34,12 @@ function rdmFondOf(e, month, fondTarget) {
   return fondTarget - (e.slava && Number(e.slava.slice(5, 7)) === month ? 1 : 0);
 }
 
-async function rdmFetchSchedule(year, month) {
+// tbl: "schedule" (objavljeni raspored) ili "schedule_draft" (nacrt u Generisanju — vidi ga samo admin).
+async function rdmFetchSchedule(year, month, tbl = "schedule") {
   const { start, end } = rdmMonthRange(year, month);
   const { data, error } = await sb
-    .from("schedule")
-    .select("id, date, shift_code, is_leader, is_medju_smena, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name, username))")
+    .from(tbl)
+    .select(`id, date, shift_code, is_leader, is_medju_smena, employee_id, employees!${tbl}_employee_id_fkey(funkcija, profiles(full_name, username))`)
     .gte("date", start)
     .lte("date", end)
     .order("date");
@@ -65,18 +66,19 @@ function rdmGroup(rows) {
   return map;
 }
 
-async function rdmSetLeader(date, shiftCode, scheduleId, employeeId, newState) {
+async function rdmSetLeader(tbl, date, shiftCode, scheduleId, employeeId, newState) {
   if (newState) {
-    await sb.from("schedule").update({ is_leader: false }).eq("date", date).eq("shift_code", shiftCode);
+    await sb.from(tbl).update({ is_leader: false }).eq("date", date).eq("shift_code", shiftCode);
   }
-  await sb.from("schedule").update({ is_leader: newState }).eq("id", scheduleId);
+  await sb.from(tbl).update({ is_leader: newState }).eq("id", scheduleId);
 }
 
-async function rdmRenderMonth(year, month, collapsedDefault) {
+async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule") {
   const wrap = document.createElement("div");
   wrap.className = "rdm-month-wrap";
   wrap.dataset.year = year;
   wrap.dataset.month = month;
+  wrap.dataset.table = tbl;
 
   // Zaglavlje meseca + manjak smena — zakačeno na vrhu dok se skroluje kroz mesec.
   const sticky = document.createElement("div");
@@ -122,7 +124,8 @@ async function rdmRenderMonthBody(body, year, month) {
   // (bez skoka stranice). "Učitavanje..." samo pri prvom prikazu meseca.
   const isRefresh = !!body.querySelector(".rdm-day-block");
   if (!isRefresh) body.innerHTML = '<div class="empty-note muted">Učitavanje...</div>';
-  const rows = await rdmFetchSchedule(year, month);
+  const tbl = (body.parentElement && body.parentElement.dataset.table) || "schedule";
+  const rows = await rdmFetchSchedule(year, month, tbl);
   const byDate = rdmGroup(rows);
   const { lastDay } = rdmMonthRange(year, month);
   const now = belgradeNow();
@@ -152,7 +155,7 @@ async function rdmRenderMonthBody(body, year, month) {
     block.appendChild(label);
 
     RDM_SHIFT_TYPES.forEach(st => {
-      block.appendChild(rdmBuildShiftBox(dateStr, st, (byDate[dateStr] && byDate[dateStr][st.code]) || [], body, fondCounts, fondTarget));
+      block.appendChild(rdmBuildShiftBox(dateStr, st, (byDate[dateStr] && byDate[dateStr][st.code]) || [], body, fondCounts, fondTarget, tbl));
     });
 
     frag.appendChild(block);
@@ -162,10 +165,17 @@ async function rdmRenderMonthBody(body, year, month) {
   body.replaceChildren(frag);
   if (isRefresh) window.scrollTo(0, scrollY);
 
-  rdmApplySearch(document.getElementById("rasporedi-search").value);
+  // Nacrt (Generisanje) ima svoju pretragu, objavljeni meseci svoju.
+  const draft = body.closest("#gen-draft");
+  if (draft) {
+    const inp = draft.querySelector(".rdm-search-bar input");
+    rdmApplySearch(inp ? inp.value : "", draft, draft.querySelector(".rdm-search-info"));
+  } else {
+    rdmApplySearch(document.getElementById("rasporedi-search").value);
+  }
 }
 
-function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarget) {
+function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarget, tbl) {
   const box = document.createElement("div");
   box.className = `rdm-shift-box shift-${shiftType.code}`;
   box.dataset.shiftCode = shiftType.code;
@@ -209,7 +219,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
     const row = document.createElement("div");
     row.className = `rdm-emp-row ${p.isLeader ? "is-leader" : ""} ${p.isMS ? "is-ms" : ""}`;
     row.dataset.name = p.name.toLowerCase();
-    row.title = "Desni klik: Lider / Međusmena";
+    row.title = RDM_SWAP_FUNKCIJE.includes(p.funkcija) ? "Desni klik: Zamena" : "Desni klik: Lider / Međusmena / Zamena";
     const dot = p.isLeader ? DOT_LEADER : p.isMS ? DOT_MS : (DOT_BY_FUNKCIJA[p.funkcija] || DOT_BY_FUNKCIJA.radnik);
     row.innerHTML = `
       <span class="dot" style="background:${dot}"></span>
@@ -224,7 +234,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
         `${shiftType.label} · ${d}.${m}.${y}.`
       );
       if (!ok) return;
-      await sb.from("schedule").delete().eq("id", p.scheduleId);
+      await sb.from(tbl).delete().eq("id", p.scheduleId);
       await rerender();
     });
 
@@ -232,7 +242,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
       ev.preventDefault();
       const items = [];
       if (p.isLeader) {
-        items.push({ label: "Ukloni lidera", run: () => rdmSetLeader(dateStr, shiftType.code, p.scheduleId, p.employeeId, false) });
+        items.push({ label: "Ukloni lidera", run: () => rdmSetLeader(tbl, dateStr, shiftType.code, p.scheduleId, p.employeeId, false) });
       } else if (!leaderAllowed) {
         // radni dan — opcija Lider se ne prikazuje
       } else if (hasLeader) {
@@ -241,22 +251,31 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
         items.push({
           label: "Lider", dot: DOT_LEADER,
           run: async () => {
-            if (p.isMS) await sb.from("schedule").update({ is_medju_smena: false }).eq("id", p.scheduleId);
-            await rdmSetLeader(dateStr, shiftType.code, p.scheduleId, p.employeeId, true);
+            if (p.isMS) await sb.from(tbl).update({ is_medju_smena: false }).eq("id", p.scheduleId);
+            await rdmSetLeader(tbl, dateStr, shiftType.code, p.scheduleId, p.employeeId, true);
           },
         });
       }
-      if (MS_LABEL[shiftType.code]) {
+      // Međusmena samo za radnike (ne za shift lidere i monitoring); "Ukloni" ostaje ako je već postavljena.
+      if (MS_LABEL[shiftType.code] && (!RDM_SWAP_FUNKCIJE.includes(p.funkcija) || p.isMS)) {
         if (p.isMS) {
-          items.push({ label: "Ukloni međusmenu", run: () => sb.from("schedule").update({ is_medju_smena: false }).eq("id", p.scheduleId) });
+          items.push({ label: "Ukloni međusmenu", run: () => sb.from(tbl).update({ is_medju_smena: false }).eq("id", p.scheduleId) });
         } else if (hasMS) {
           items.push({ label: `Međusmena (${MS_LABEL[shiftType.code]})`, dot: DOT_MS, disabled: true, note: msP.name.toUpperCase() });
         } else {
           items.push({
             label: `Međusmena (${MS_LABEL[shiftType.code]})`, dot: DOT_MS,
-            run: () => sb.from("schedule").update({ is_medju_smena: true, is_leader: false }).eq("id", p.scheduleId),
+            run: () => sb.from(tbl).update({ is_medju_smena: true, is_leader: false }).eq("id", p.scheduleId),
           });
         }
+      }
+      // Isto kao kad se sami menjaju: radnik ⇄ radnik samo za taj dan;
+      // shift lider ⇄ shift lider i monitoring ⇄ monitoring za dan ili celu nedelju.
+      if (p.funkcija === "radnik" || RDM_SWAP_FUNKCIJE.includes(p.funkcija)) {
+        items.push({ label: "⇄ Zameni smenu sa...", run: () => rdmSwapDialog(p, dateStr, false, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
+      }
+      if (RDM_SWAP_FUNKCIJE.includes(p.funkcija)) {
+        items.push({ label: "⇄ Zameni celu nedelju sa...", run: () => rdmSwapDialog(p, dateStr, true, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
       }
       rdmOpenContextMenu(ev.clientX, ev.clientY, p.name.toUpperCase(), items, rerender);
     });
@@ -283,7 +302,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
     inline.querySelector("select").addEventListener("change", async (e) => {
       const empId = e.target.value;
       if (!empId) return;
-      const { error } = await sb.from("schedule").insert({ date: dateStr, shift_code: shiftType.code, employee_id: empId });
+      const { error } = await sb.from(tbl).insert({ date: dateStr, shift_code: shiftType.code, employee_id: empId });
       if (error) {
         rdmShowBanner("Greška: " + error.message, "error");
         return;
@@ -296,8 +315,168 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
   return box;
 }
 
+// ---------- Zamena shift lider / monitoring (desni klik) ----------
+const RDM_SWAP_FUNKCIJE = ["shift_lider", "monitoring"];
+
+function rdmAddDays(dateStr, n) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${rdmPad2(d.getMonth() + 1)}-${rdmPad2(d.getDate())}`;
+}
+function rdmFmtDay(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  return `${DOW_SR[d.getDay()]} ${rdmPad2(d.getDate())}.${rdmPad2(d.getMonth() + 1)}.`;
+}
+const rdmShiftBadge = (code) => code ? `<span class="shift-badge s-${code}">${code}</span>` : '<span class="muted">slobodan</span>';
+
+// Dan: samo taj datum. Nedelja: pon–ned nedelje u kojoj je datum.
+// Dani kad oboje rade istu smenu ostaju kakvi jesu; ako radi samo jedan, smena prelazi na drugog.
+// U nacrtu se menjaju samo dani tog meseca; susedni (objavljeni) dani služe samo za proveru pravila.
+async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoadAllMonths) {
+  const dow = (new Date(dateStr + "T00:00:00").getDay() + 6) % 7; // 0 = ponedeljak
+  const days = (week ? Array.from({ length: 7 }, (_, i) => rdmAddDays(dateStr, i - dow)) : [dateStr])
+    .filter(d => tbl === "schedule" || d.slice(0, 7) === dateStr.slice(0, 7));
+  // ±6 dana oko zamene — dovoljno za proveru "max 5 zaredom" i "2 slobodna posle III".
+  const from = rdmAddDays(days[0], -6), to = rdmAddDays(days[days.length - 1], 6);
+  const candidates = RDM_ACTIVE_EMPLOYEES.filter(e => e.funkcija === p.funkcija && e.id !== p.employeeId);
+  const ids = [p.employeeId, ...candidates.map(e => e.id)];
+
+  const { data: fetched, error } = await sb.from(tbl)
+    .select("id, date, shift_code, employee_id")
+    .in("employee_id", ids).gte("date", from).lte("date", to);
+  if (error) { rdmShowBanner("Greška: " + error.message, "error"); return; }
+  let rows = fetched;
+  if (tbl !== "schedule") {
+    const month = dateStr.slice(0, 7);
+    const { data: around } = await sb.from("schedule")
+      .select("date, shift_code, employee_id")
+      .in("employee_id", ids).gte("date", from).lte("date", to);
+    rows = [...fetched.filter(r => r.date.slice(0, 7) === month), ...(around || []).filter(r => r.date.slice(0, 7) !== month)];
+  }
+
+  const shiftOf = (emp, d) => (rows.find(r => r.employee_id === emp && r.date === d) || {}).shift_code || null;
+  const A = p.employeeId, nameA = p.name.toUpperCase();
+  const pattern = (emp) => days.map(d => shiftOf(emp, d) || "–").join(" ");
+
+  // Šta se menja i koja pravila bi posle zamene bila prekršena (samo ona koja dotiču promenjene dane):
+  // posle III ne sme I/II sledeći dan, posle III dva slobodna dana, najviše 5 radnih dana zaredom.
+  const span = [];
+  for (let d = from; d <= to; d = rdmAddDays(d, 1)) span.push(d);
+  const plan = (B, nameB) => {
+    const changed = days.filter(d => shiftOf(A, d) !== shiftOf(B, d));
+    const touches = (...ds) => ds.some(d => changed.includes(d));
+    const warnings = [];
+    [[A, B, nameA], [B, A, nameB]].forEach(([emp, other, nm]) => {
+      const sh = span.map(d => changed.includes(d) ? shiftOf(other, d) : shiftOf(emp, d));
+      for (let i = 1; i < span.length; i++) {
+        const prev = sh[i - 1], cur = sh[i];
+        if (prev === "III" && (cur === "I" || cur === "II") && touches(span[i - 1], span[i])) {
+          warnings.push(`${nm} bi ${rdmFmtDay(span[i])} radio/la ${cur} smenu odmah posle III.`);
+        }
+        // III, slobodan, pa opet posao → samo jedan slobodan dan posle III
+        if (i + 1 < span.length && prev === "III" && !cur && sh[i + 1] && touches(span[i - 1], span[i], span[i + 1])) {
+          warnings.push(`${nm} bi posle III imao/la samo jedan slobodan dan (${rdmFmtDay(span[i])}), a ${rdmFmtDay(span[i + 1])} radi ${sh[i + 1]} smenu.`);
+        }
+      }
+      // Najviše 5 radnih dana zaredom
+      for (let i = 0; i < span.length; ) {
+        if (!sh[i]) { i++; continue; }
+        let j = i;
+        while (j + 1 < span.length && sh[j + 1]) j++;
+        const run = span.slice(i, j + 1);
+        if (run.length > 5 && touches(...run)) {
+          warnings.push(`${nm} bi radio/la ${run.length} dana zaredom (${rdmFmtDay(run[0])} – ${rdmFmtDay(run[run.length - 1])}), dozvoljeno je najviše 5.`);
+        }
+        i = j + 1;
+      }
+    });
+    return { changed, warnings };
+  };
+
+  const title = week
+    ? `Zamena cele nedelje (${rdmFmtDay(days[0])} – ${rdmFmtDay(days[6])})`
+    : `Zamena smene · ${rdmFmtDay(dateStr)}`;
+  const optLabel = (e) => week ? `${e.name.toUpperCase()}  ·  ${pattern(e.id)}` : e.name.toUpperCase(); // dan: smena je u naslovu grupe
+
+  const optHtml = (e) => {
+    const same = !plan(e.id, "").changed.length;
+    return `<option value="${e.id}" ${same ? "disabled" : ""}>${optLabel(e)}${same ? " (isto)" : ""}</option>`;
+  };
+  // Dan: grupisano po smeni tog dana (I, II, III), slobodni na dnu. Nedelja: po imenu.
+  const optionsHtml = week ? candidates.map(optHtml).join("") : [
+    ...RDM_SHIFT_TYPES.map(st => [`${st.label}`, candidates.filter(e => shiftOf(e.id, dateStr) === st.code)]),
+    ["Slobodni", candidates.filter(e => !shiftOf(e.id, dateStr))],
+  ].filter(([, list]) => list.length)
+    .map(([label, list]) => `<optgroup label="${label}">${list.map(optHtml).join("")}</optgroup>`).join("");
+
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-overlay";
+  overlay.innerHTML = `
+    <div class="confirm-box swap-box" role="dialog" aria-modal="true">
+      <div class="confirm-msg">${title}</div>
+      <div class="confirm-detail">${nameA}: ${week ? `<span class="swap-pattern">${pattern(A)}</span>` : rdmShiftBadge(shiftOf(A, dateStr))}</div>
+      <label class="swap-label">Zameni sa
+        <select class="swap-select">
+          <option value="">Izaberite ${{ monitoring: "monitoring", shift_lider: "shift lidera", radnik: "radnika" }[p.funkcija]}...</option>
+          ${optionsHtml}
+        </select>
+      </label>
+      <div class="swap-preview"></div>
+      <div class="confirm-actions">
+        <button type="button" class="btn btn-ghost" data-v="0">Odustani</button>
+        <button type="button" class="btn btn-primary" data-v="1" disabled>Zameni</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const sel = overlay.querySelector(".swap-select");
+  const preview = overlay.querySelector(".swap-preview");
+  const okBtn = overlay.querySelector('button[data-v="1"]');
+  const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay || e.target.closest('button[data-v="0"]')) close(); });
+
+  let current = null;
+  sel.addEventListener("change", () => {
+    const B = sel.value;
+    if (!B) { preview.innerHTML = ""; okBtn.disabled = true; current = null; return; }
+    const nameB = candidates.find(e => e.id === B).name.toUpperCase();
+    current = { B, nameB, ...plan(B, nameB) };
+    preview.innerHTML = `
+      <table class="swap-table">
+        <thead><tr><th>Dan</th><th>${nameA}</th><th>${nameB}</th></tr></thead>
+        <tbody>${current.changed.map(d => `<tr><td>${rdmFmtDay(d)}</td>
+          <td>${rdmShiftBadge(shiftOf(A, d))} → ${rdmShiftBadge(shiftOf(B, d))}</td>
+          <td>${rdmShiftBadge(shiftOf(B, d))} → ${rdmShiftBadge(shiftOf(A, d))}</td></tr>`).join("")}</tbody>
+      </table>
+      ${current.warnings.length ? `<div class="banner error swap-warn">⚠ ${current.warnings.join("<br>⚠ ")}</div>` : ""}`;
+    okBtn.disabled = false;
+    okBtn.textContent = current.warnings.length ? "Ipak zameni" : "Zameni";
+  });
+
+  okBtn.addEventListener("click", async () => {
+    if (!current) return;
+    okBtn.disabled = true;
+    okBtn.textContent = "Menjam...";
+    const { B, nameB, changed } = current;
+    let errors = 0;
+    for (const d of changed) {
+      const rowsA = rows.filter(r => r.employee_id === A && r.date === d);
+      const rowsB = rows.filter(r => r.employee_id === B && r.date === d);
+      for (const r of rowsA) { const { error } = await sb.from(tbl).update({ employee_id: B }).eq("id", r.id); if (error) errors++; }
+      for (const r of rowsB) { const { error } = await sb.from(tbl).update({ employee_id: A }).eq("id", r.id); if (error) errors++; }
+    }
+    close();
+    rdmShowBanner(errors
+      ? `Zamena delimično uspela (${errors} grešaka) — proverite raspored.`
+      : `Zamena ${nameA} ⇄ ${nameB} uspešna (${changed.length} ${changed.length === 1 ? "dan" : "dana"}).`, errors ? "error" : "success");
+    await onDone();
+  });
+  sel.focus();
+}
+
 // Prozor za potvrdu (Da / Ne). Vraća Promise<boolean>.
-function rdmConfirm(message, detail) {
+function rdmConfirm(message, detail, okLabel = "Ukloni", okClass = "btn-danger-solid") {
   return new Promise(resolve => {
     const overlay = document.createElement("div");
     overlay.className = "confirm-overlay";
@@ -307,7 +486,7 @@ function rdmConfirm(message, detail) {
         ${detail ? `<div class="confirm-detail">${detail}</div>` : ""}
         <div class="confirm-actions">
           <button type="button" class="btn btn-ghost" data-v="0">Odustani</button>
-          <button type="button" class="btn btn-danger-solid" data-v="1">Ukloni</button>
+          <button type="button" class="btn ${okClass}" data-v="1">${okLabel}</button>
         </div>
       </div>`;
     const close = (v) => { overlay.remove(); document.removeEventListener("keydown", onKey); resolve(v); };
@@ -447,22 +626,21 @@ async function rdmHandleReplace() {
   await rdmLoadAllMonths();
 }
 
-function rdmApplySearch(term) {
+function rdmApplySearch(term, root = document.getElementById("rasporedi-months"), info = document.getElementById("rasporedi-search-info")) {
   const t = term.trim().toLowerCase();
   let count = 0;
-  document.querySelectorAll("#rasporedi-months .rdm-emp-row").forEach(row => {
+  root.querySelectorAll(".rdm-emp-row").forEach(row => {
     const match = !t || row.dataset.name === t;
     row.classList.toggle("search-hit", !!t && match);
     if (t && match && row.offsetParent !== null) count++;
   });
 
   // Obeleži dane kad traženi radnik NE RADI (nema ni jednu smenu tog dana) drugom bojom.
-  document.querySelectorAll("#rasporedi-months .rdm-day-block").forEach(block => {
+  root.querySelectorAll(".rdm-day-block").forEach(block => {
     const hasMatch = !t || block.querySelector(`.rdm-emp-row[data-name="${t}"]`);
     block.classList.toggle("rdm-day-off-for-search", !!t && !hasMatch);
   });
 
-  const info = document.getElementById("rasporedi-search-info");
   if (info) {
     if (!t) info.textContent = "";
     else if (count) info.textContent = `${term.trim().toUpperCase()}: ${count} smena u prikazanim (otvorenim) mesecima`;
