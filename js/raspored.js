@@ -131,7 +131,8 @@ function buildMonthSectionEl(year, month, byDate, shiftTypes, isRealToday) {
   const subheader = document.createElement("div");
   subheader.className = "shift-subheader";
   const columns = scheduleColumns(shiftTypes);
-  subheader.innerHTML = `<div></div>` + columns.map(col => col.kind === "shift" ? `
+  const searchVal = (document.getElementById("filter-search")?.value || "").replace(/"/g, "&quot;");
+  subheader.innerHTML = `<div class="sub-search-wrap"><input type="text" class="sub-search" placeholder="Pronađi..." value="${searchVal}" /></div>` + columns.map(col => col.kind === "shift" ? `
     <div class="shift-col shift-${col.st.code}">
       <span class="shift-icon">${SHIFT_ICON_SVG[col.st.code] || ""}</span>
       <span><div class="shift-name">${col.st.label}</div><div class="shift-part">${SHIFT_PART_OF_DAY[col.st.code] || ""}</div></span>
@@ -726,7 +727,17 @@ function startClock(shiftTypes) {
 
   yearSelect.addEventListener("change", loadAndRenderMonths);
   monthSelect.addEventListener("change", loadAndRenderMonths);
-  document.getElementById("filter-search").addEventListener("input", (e) => applySearchFilter(e.target.value));
+  // Glavna pretraga i pretraga u fiksiranom zaglavlju su uvek iste
+  const syncSearch = (val, src) => {
+    const main = document.getElementById("filter-search");
+    if (main !== src) main.value = val;
+    document.querySelectorAll(".sub-search").forEach(el => { if (el !== src) el.value = val; });
+    applySearchFilter(val);
+  };
+  document.getElementById("filter-search").addEventListener("input", (e) => syncSearch(e.target.value, e.target));
+  document.getElementById("months-container").addEventListener("input", (e) => {
+    if (e.target.classList.contains("sub-search")) syncSearch(e.target.value, e.target);
+  });
   document.getElementById("filter-upcoming").addEventListener("click", () => {
     const container = document.getElementById("months-container");
     container.dataset.showUpcoming = container.dataset.showUpcoming === "1" ? "0" : "1";

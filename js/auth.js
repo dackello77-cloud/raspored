@@ -73,11 +73,30 @@ async function deviceSignOutBlocked(label) {
   window.location.href = APP_BASE + "login.html";
 }
 
+// ---------- Računar samo za admina i HR ----------
+// Ostali (radnici, Office manager, Accounting, Management) koriste aplikaciju samo na telefonu/tabletu.
+// iPad Safari se predstavlja kao Mac, zato ga prepoznajemo po ekranu na dodir.
+function deviceIsDesktop() {
+  if (deviceIsMobile() || /Android|iPad|Tablet/i.test(navigator.userAgent)) return false;
+  if (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) return false;
+  return true;
+}
+function desktopAllowed(p) { return !!p && (isAdminProfile(p) || !!p.hr_manager || p.role === "terminal"); }
+const DESKTOP_BLOCKED_MSG = "Na računaru mogu da se prijave samo administrator i HR manager. Prijavi se preko mobilne aplikacije na telefonu.";
+function desktopBlocked(p) { return !!p && deviceIsDesktop() && !desktopAllowed(p); }
+
 async function mountHeader(activeKey) {
   const mount = document.getElementById("app-header-mount");
   if (!mount) return { session: null, profile: null };
 
   const { session, profile } = await getSessionAndProfile();
+  // Već prijavljen na računaru, a nije admin/HR → odjava i poruka na stranici za prijavu.
+  if (session && desktopBlocked(profile)) {
+    try { sessionStorage.setItem("login-blocked", DESKTOP_BLOCKED_MSG); } catch (e) { /* nije bitno */ }
+    await sb.auth.signOut();
+    window.location.href = APP_BASE + "login.html";
+    return { session: null, profile: null };
+  }
   // Tablet na ulazu ne koristi ostatak aplikacije.
   if (profile && profile.role === "terminal") { window.location.href = APP_BASE + "terminal.html"; return { session: null, profile: null }; }
   // Management vidi samo stranicu Dolasci.

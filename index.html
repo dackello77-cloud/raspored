@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-<link rel="stylesheet" href="css/style.css?v=20261014o" />
+<link rel="stylesheet" href="css/style.css?v=20261015a" />
 <style>
   .top-grid {
     display: grid;
@@ -111,6 +111,10 @@
     z-index: 5;
     background: linear-gradient(#fff 85%, rgba(255,255,255,0));
   }
+  .sub-search-wrap { display: flex; align-items: center; }
+  .sub-search-wrap .sub-search {
+    width: 100%; min-width: 0; font-size: 12px; padding: 7px 9px; border-radius: 10px;
+  }
   .shift-col {
     display: flex;
     align-items: center;
@@ -143,8 +147,8 @@
     display: grid;
     grid-template-columns: 112px 1fr 118px 1fr 118px 1fr;
     gap: 10px;
-    padding: 6px 8px;
-    margin: 0 0 4px;
+    padding: 4px 8px;
+    margin: 0 0 2px;
     border-radius: 14px;
     border: 1.5px solid transparent;
     align-items: stretch;
@@ -177,18 +181,18 @@
     background: var(--sc-bg);
     border-left: 3px solid var(--sc);
     border-radius: 10px;
-    padding: 8px 10px;
-    min-height: 44px;
+    padding: 4px 10px;
+    min-height: 32px;
   }
   .day-row .shift-cell .empty { color: var(--text-muted); font-size: 11px; }
   /* Zaposleni u rasporedu — zbijeniji prikaz */
   .day-row .shift-cell { gap: 4px; }
-  .day-row .chip { font-size: 10.5px; padding: 3px 8px; gap: 4px; }
-  .day-row .chip .dot { width: 6px; height: 6px; }
+  .day-row .chip { font-size: 11.5px; padding: 2px 6px; gap: 5px; border-radius: 6px; }
+  .day-row .chip .dot { width: 8px; height: 8px; }
   /* Međusmena — uža kolona između smena */
   .shift-col.ms-col { padding: 9px 8px; gap: 6px; border-top-width: 3px; }
   .shift-col.ms-col .shift-icon { width: 13px; height: 13px; }
-  .day-row .shift-cell.ms-cell { padding: 8px 6px; }
+  .day-row .shift-cell.ms-cell { padding: 4px 6px; }
   .shift-col.ms-col .shift-name { font-size: 11.5px; }
   .shift-col.ms-col .shift-time { margin-left: 0; font-size: 11px; color: var(--text-muted); }
   .day-row .shift-cell.ms-cell { border-left-style: dashed; justify-content: center; }
@@ -365,11 +369,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="js/supabase.js?v=20261014o"></script>
-  <script src="js/auth.js?v=20261014o"></script>
-  <script src="js/push.js?v=20261014o"></script>
-  <script src="js/constants.js?v=20261014o"></script>
-  <script src="js/swap-common.js?v=20261014o"></script>
-  <script src="js/raspored.js?v=20261014o"></script>
+  <script src="js/supabase.js?v=20261015a"></script>
+  <script src="js/auth.js?v=20261015a"></script>
+  <script src="js/push.js?v=20261015a"></script>
+  <script src="js/constants.js?v=20261015a"></script>
+  <script src="js/swap-common.js?v=20261015a"></script>
+  <script src="js/raspored.js?v=20261015a"></script>
 </body>
 </html>

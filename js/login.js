@@ -38,9 +38,19 @@ form.addEventListener("submit", async (e) => {
 
   const { data: profileRow } = await sb
     .from("profiles")
-    .select("role, admin_access")
+    .select("role, admin_access, hr_manager")
     .eq("id", data.user.id)
     .single();
+
+  // Na računaru samo admin i HR manager; ostali samo preko telefona.
+  if (desktopBlocked(profileRow)) {
+    await sb.auth.signOut();
+    errorBox.textContent = DESKTOP_BLOCKED_MSG;
+    errorBox.classList.remove("hidden");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Prijavi se";
+    return;
+  }
 
   // Radnik: samo sa svog telefona (prvi telefon se upiše, drugi se odbija dok admin ne ukloni stari).
   if (profileRow && PHONE_ROLES.includes(profileRow.role)) {
