@@ -269,12 +269,10 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
   const main = people.filter(p => !p.isMS).sort((a, b) => (b.isLeader - a.isLeader) || byFunkcija(a, b));
   const ms = people.filter(p => p.isMS).sort(byFunkcija);
   const leaderP = people.find(p => p.isLeader);
-  const msP = people.find(p => p.isMS); // u međusmeni može biti samo 1 radnik
   const hasLeader = !!leaderP;
   // Lider se postavlja samo vikendom/praznikom — radnim danima smenu vodi shift lider po funkciji.
   const leaderAllowed = isHolidayOrWeekendLike(new Date(dateStr + "T00:00:00")) &&
     !people.some(p => p.funkcija === "shift_lider");
-  const hasMS = !!msP;
   const rerender = () => rdmRenderMonthBody(body, parseInt(body.parentElement.dataset.year, 10), parseInt(body.parentElement.dataset.month, 10));
 
   const shiftBody = document.createElement("div");
@@ -295,7 +293,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
       ? "chip on-white emp-chip"
       : `rdm-emp-row ${p.isLeader ? "is-leader" : ""} ${p.isMS ? "is-ms" : ""}`;
     row.dataset.name = p.name.toLowerCase();
-    row.title = RDM_SWAP_FUNKCIJE.includes(p.funkcija) ? "Desni klik: Zamena" : "Desni klik: Lider / Međusmena / Zamena";
+    row.title = RDM_SWAP_FUNKCIJE.includes(p.funkcija) ? "Desni klik: Zamena / Prebaci" : "Desni klik: Lider / Zamena / Prebaci";
     const dot = p.isLeader ? DOT_LEADER : p.isMS ? DOT_MS : (DOT_BY_FUNKCIJA[p.funkcija] || DOT_BY_FUNKCIJA.radnik);
     row.innerHTML = asTable
       ? `<span class="dot" style="background:${dot}"></span>${p.name.toUpperCase()}<button type="button" class="rdm-x-btn" title="Ukloni iz smene">✕</button>`
@@ -333,19 +331,6 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
             await rdmSetLeader(tbl, dateStr, shiftType.code, p.scheduleId, p.employeeId, true);
           },
         });
-      }
-      // Međusmena samo za radnike (ne za shift lidere i monitoring); "Ukloni" ostaje ako je već postavljena.
-      if (MS_LABEL[shiftType.code] && (!RDM_SWAP_FUNKCIJE.includes(p.funkcija) || p.isMS)) {
-        if (p.isMS) {
-          items.push({ label: "Ukloni međusmenu", run: () => sb.from(tbl).update({ is_medju_smena: false }).eq("id", p.scheduleId) });
-        } else if (hasMS) {
-          items.push({ label: `Međusmena (${MS_LABEL[shiftType.code]})`, dot: DOT_MS, disabled: true, note: msP.name.toUpperCase() });
-        } else {
-          items.push({
-            label: `Međusmena (${MS_LABEL[shiftType.code]})`, dot: DOT_MS,
-            run: () => sb.from(tbl).update({ is_medju_smena: true, is_leader: false }).eq("id", p.scheduleId),
-          });
-        }
       }
       // Isto kao kad se sami menjaju: radnik ⇄ radnik samo za taj dan;
       // shift lider ⇄ shift lider i monitoring ⇄ monitoring za dan ili celu nedelju.
