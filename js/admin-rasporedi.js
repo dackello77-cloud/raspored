@@ -114,6 +114,22 @@ async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule") {
   const underfond = document.createElement("div");
   underfond.className = "rdm-underfond";
   sticky.appendChild(underfond);
+  // Nacrt se prikazuje kao tabela sa glavne strane (red po danu, kolona po smeni) — kako će izgledati radnicima.
+  if (tbl === "schedule_draft") {
+    const sub = document.createElement("div");
+    sub.className = "shift-subheader";
+    sub.innerHTML = `<div></div>` + rdmTableColumns().map(col => col.kind === "shift" ? `
+      <div class="shift-col shift-${col.st.code}">
+        <span class="shift-icon">${SHIFT_ICON_SVG[col.st.code] || ""}</span>
+        <span><div class="shift-name">${col.st.label}</div><div class="shift-part">${SHIFT_PART_OF_DAY[col.st.code] || ""}</div></span>
+        <span class="shift-time">${col.st.start_time.slice(0, 5)}–${col.st.end_time.slice(0, 5)}</span>
+      </div>` : `
+      <div class="shift-col ms-col shift-MS">
+        <span class="shift-icon">${RDM_MS_ICON_SVG}</span>
+        <span><div class="shift-name">Međusmena</div><div class="shift-time">${col.time}</div></span>
+      </div>`).join("");
+    sticky.appendChild(sub);
+  }
   wrap.appendChild(sticky);
 
   const body = document.createElement("div");
@@ -143,12 +159,25 @@ function rdmRenderUnderfond(el, fondCounts, fondTarget, month) {
     : `<span class="rdm-underfond-ok">Svi radnici imaju pun fond (${fondTarget}).</span>`;
 }
 
+const RDM_MS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>';
+
+// Kolone tabele (kao na glavnoj strani): I, MS (13–21), II, MS (21–05), III
+function rdmTableColumns() {
+  const cols = [];
+  RDM_SHIFT_TYPES.forEach(st => {
+    cols.push({ kind: "shift", st });
+    if (MS_LABEL[st.code]) cols.push({ kind: "ms", code: st.code, time: MS_LABEL[st.code].replace("MS ", "") });
+  });
+  return cols;
+}
+
 async function rdmRenderMonthBody(body, year, month) {
   // Posle izmene: stari prikaz ostaje dok se novi ne učita, pa se zameni na istom mestu
   // (bez skoka stranice). "Učitavanje..." samo pri prvom prikazu meseca.
-  const isRefresh = !!body.querySelector(".rdm-day-block");
+  const isRefresh = !!body.querySelector(".rdm-day-block, .day-row");
   if (!isRefresh) body.innerHTML = '<div class="empty-note muted">Učitavanje...</div>';
   const tbl = (body.parentElement && body.parentElement.dataset.table) || "schedule";
+  const asTable = tbl === "schedule_draft";
   const rows = await rdmFetchSchedule(year, month, tbl);
   const byDate = rdmGroup(rows);
   const { lastDay } = rdmMonthRange(year, month);
@@ -170,16 +199,23 @@ async function rdmRenderMonthBody(body, year, month) {
     const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
 
     const block = document.createElement("div");
-    block.className = `rdm-day-block ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""}`;
+    block.className = `${asTable ? "day-row" : "rdm-day-block"} ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""}`;
     block.dataset.date = dateStr;
 
     const label = document.createElement("div");
-    label.className = "rdm-day-label";
-    label.innerHTML = `<span class="dnum">${rdmPad2(d)}</span><span class="dow">${DOW_SR[dateObj.getDay()]}</span>${isToday ? '<span class="today-badge">Danas</span>' : ""}`;
+    if (asTable) {
+      label.className = "date-label";
+      label.innerHTML = `<span class="dnum">${rdmPad2(d)}</span><span class="dmeta"><span class="dow">${DOW_SR[dateObj.getDay()]}</span>` +
+        `<span class="dmon">${MONTH_NAMES_SR[month - 1].slice(0, 3)}</span>${isToday ? '<span class="today-badge">Danas</span>' : ""}</span>`;
+    } else {
+      label.className = "rdm-day-label";
+      label.innerHTML = `<span class="dnum">${rdmPad2(d)}</span><span class="dow">${DOW_SR[dateObj.getDay()]}</span>${isToday ? '<span class="today-badge">Danas</span>' : ""}`;
+    }
     block.appendChild(label);
 
     RDM_SHIFT_TYPES.forEach(st => {
-      block.appendChild(rdmBuildShiftBox(dateStr, st, (byDate[dateStr] && byDate[dateStr][st.code]) || [], body, fondCounts, fondTarget, tbl));
+      const cells = rdmBuildShiftBox(dateStr, st, (byDate[dateStr] && byDate[dateStr][st.code]) || [], body, fondCounts, fondTarget, tbl, asTable);
+      [].concat(cells).forEach(c => block.appendChild(c));
     });
 
     frag.appendChild(block);
@@ -199,20 +235,33 @@ async function rdmRenderMonthBody(body, year, month) {
   }
 }
 
-function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarget, tbl) {
+// asTable: ćelije za tabelu (kao glavna strana) — vraća [ćelija smene, ćelija međusmene].
+function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarget, tbl, asTable = false) {
   const box = document.createElement("div");
-  box.className = `rdm-shift-box shift-${shiftType.code}`;
+  const timeLabel = `${shiftType.start_time.slice(0,5)}–${shiftType.end_time.slice(0,5)}`;
+  box.className = asTable ? `shift-cell shift-${shiftType.code}` : `rdm-shift-box shift-${shiftType.code}`;
   box.dataset.shiftCode = shiftType.code;
 
-  const head = document.createElement("div");
-  head.className = "rdm-shift-head";
-  head.innerHTML = `<span><span class="shift-icon">${SHIFT_ICON_SVG[shiftType.code] || ""}</span>${shiftType.label} <span class="time">${shiftType.start_time.slice(0,5)}–${shiftType.end_time.slice(0,5)}</span></span>`;
   const addBtn = document.createElement("button");
   addBtn.type = "button";
   addBtn.className = "rdm-add-btn";
   addBtn.textContent = "+";
-  head.appendChild(addBtn);
-  box.appendChild(head);
+  addBtn.title = "Dodaj u smenu";
+  let msCell = null;
+  if (asTable) {
+    box.dataset.label = `${shiftType.label} · ${timeLabel}`;
+    if (MS_LABEL[shiftType.code]) {
+      msCell = document.createElement("div");
+      msCell.className = "shift-cell ms-cell shift-MS";
+      msCell.dataset.label = `Međusmena · ${MS_LABEL[shiftType.code].replace("MS ", "")}`;
+    }
+  } else {
+    const head = document.createElement("div");
+    head.className = "rdm-shift-head";
+    head.innerHTML = `<span><span class="shift-icon">${SHIFT_ICON_SVG[shiftType.code] || ""}</span>${shiftType.label} <span class="time">${timeLabel}</span></span>`;
+    head.appendChild(addBtn);
+    box.appendChild(head);
+  }
 
   // Lider na vrhu smene, pa ostali po funkciji; međusmena ide u posebnu kolonu skroz desno.
   const byFunkcija = (a, b) => funkcijaSortValue(a.funkcija) - funkcijaSortValue(b.funkcija);
@@ -237,15 +286,19 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
     msCol.className = "rdm-ms-col";
     shiftBody.appendChild(msCol);
   }
-  box.appendChild(shiftBody);
+  if (!asTable) box.appendChild(shiftBody);
 
   [...main, ...ms].forEach(p => {
-    const row = document.createElement("div");
-    row.className = `rdm-emp-row ${p.isLeader ? "is-leader" : ""} ${p.isMS ? "is-ms" : ""}`;
+    const row = document.createElement(asTable ? "span" : "div");
+    row.className = asTable
+      ? "chip on-white emp-chip"
+      : `rdm-emp-row ${p.isLeader ? "is-leader" : ""} ${p.isMS ? "is-ms" : ""}`;
     row.dataset.name = p.name.toLowerCase();
     row.title = RDM_SWAP_FUNKCIJE.includes(p.funkcija) ? "Desni klik: Zamena" : "Desni klik: Lider / Međusmena / Zamena";
     const dot = p.isLeader ? DOT_LEADER : p.isMS ? DOT_MS : (DOT_BY_FUNKCIJA[p.funkcija] || DOT_BY_FUNKCIJA.radnik);
-    row.innerHTML = `
+    row.innerHTML = asTable
+      ? `<span class="dot" style="background:${dot}"></span>${p.name.toUpperCase()}<button type="button" class="rdm-x-btn" title="Ukloni iz smene">✕</button>`
+      : `
       <span class="dot" style="background:${dot}"></span>
       <span class="nm">${p.name.toUpperCase()}${p.isMS && MS_LABEL[shiftType.code] ? ` <span class="ms-tag">${MS_LABEL[shiftType.code]}</span>` : ""}</span>
       <button type="button" class="rdm-x-btn" title="Ukloni iz smene">✕</button>
@@ -304,8 +357,18 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
       rdmOpenContextMenu(ev.clientX, ev.clientY, p.name.toUpperCase(), items, rerender);
     });
 
-    (p.isMS ? shiftBody.querySelector(".rdm-ms-col") : mainCol).appendChild(row);
+    if (asTable) (p.isMS && msCell ? msCell : box).appendChild(row);
+    else (p.isMS ? shiftBody.querySelector(".rdm-ms-col") : mainCol).appendChild(row);
   });
+
+  if (asTable) {
+    if (!main.length) box.insertAdjacentHTML("beforeend", '<span class="empty">—</span>');
+    box.appendChild(addBtn);
+    if (msCell && !ms.length) {
+      msCell.classList.add("is-empty");
+      msCell.innerHTML = '<span class="empty">—</span>';
+    }
+  }
 
   addBtn.addEventListener("click", () => {
     const existingInline = box.querySelector(".rdm-add-inline");
@@ -336,7 +399,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
     box.appendChild(inline);
   });
 
-  return box;
+  return msCell ? [box, msCell] : box;
 }
 
 // ---------- Zamena shift lider / monitoring (desni klik) ----------
@@ -653,15 +716,15 @@ async function rdmHandleReplace() {
 function rdmApplySearch(term, root = document.getElementById("rasporedi-months"), info = document.getElementById("rasporedi-search-info")) {
   const t = term.trim().toLowerCase();
   let count = 0;
-  root.querySelectorAll(".rdm-emp-row").forEach(row => {
+  root.querySelectorAll(".rdm-emp-row, .emp-chip").forEach(row => {
     const match = !t || row.dataset.name === t;
     row.classList.toggle("search-hit", !!t && match);
     if (t && match && row.offsetParent !== null) count++;
   });
 
   // Obeleži dane kad traženi radnik NE RADI (nema ni jednu smenu tog dana) drugom bojom.
-  root.querySelectorAll(".rdm-day-block").forEach(block => {
-    const hasMatch = !t || block.querySelector(`.rdm-emp-row[data-name="${t}"]`);
+  root.querySelectorAll(".rdm-day-block, .day-row").forEach(block => {
+    const hasMatch = !t || block.querySelector(`.rdm-emp-row[data-name="${t}"], .emp-chip[data-name="${t}"]`);
     block.classList.toggle("rdm-day-off-for-search", !!t && !hasMatch);
   });
 
