@@ -214,7 +214,7 @@ async function rdmRenderMonthBody(body, year, month) {
     block.appendChild(label);
 
     RDM_SHIFT_TYPES.forEach(st => {
-      const cells = rdmBuildShiftBox(dateStr, st, (byDate[dateStr] && byDate[dateStr][st.code]) || [], body, fondCounts, fondTarget, tbl, asTable);
+      const cells = rdmBuildShiftBox(dateStr, st, (byDate[dateStr] && byDate[dateStr][st.code]) || [], body, fondCounts, fondTarget, tbl, asTable, byDate[dateStr] || {});
       [].concat(cells).forEach(c => block.appendChild(c));
     });
 
@@ -236,7 +236,8 @@ async function rdmRenderMonthBody(body, year, month) {
 }
 
 // asTable: ćelije za tabelu (kao glavna strana) — vraća [ćelija smene, ćelija međusmene].
-function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarget, tbl, asTable = false) {
+// dayData: svi ljudi tog dana po smenama (za "Prebaci u" — da li je međusmena već zauzeta).
+function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarget, tbl, asTable = false, dayData = {}) {
   const box = document.createElement("div");
   const timeLabel = `${shiftType.start_time.slice(0,5)}–${shiftType.end_time.slice(0,5)}`;
   box.className = asTable ? `shift-cell shift-${shiftType.code}` : `rdm-shift-box shift-${shiftType.code}`;
@@ -354,6 +355,28 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
       if (RDM_SWAP_FUNKCIJE.includes(p.funkcija)) {
         items.push({ label: "⇄ Zameni celu nedelju sa...", run: () => rdmSwapDialog(p, dateStr, true, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
       }
+      // Brzo prebacivanje u drugu smenu ili međusmenu istog dana (lider se skida).
+      // Međusmena samo za radnike i samo ako je slobodna.
+      const moves = [];
+      RDM_SHIFT_TYPES.forEach(st => {
+        moves.push({ code: st.code, ms: false, label: st.label });
+        if (MS_LABEL[st.code] && !RDM_SWAP_FUNKCIJE.includes(p.funkcija)) moves.push({ code: st.code, ms: true, label: MS_LABEL[st.code] });
+      });
+      const moveItems = moves
+        .filter(mv => !(mv.code === shiftType.code && mv.ms === p.isMS))
+        .map(mv => {
+          const taken = mv.ms && (dayData[mv.code] || []).find(x => x.isMS && x.scheduleId !== p.scheduleId);
+          return taken
+            ? { label: mv.label, dot: DOT_MS, disabled: true, note: taken.name.toUpperCase() }
+            : {
+                label: mv.label, dot: mv.ms ? DOT_MS : `var(--s${{ I: 1, II: 2, III: 3 }[mv.code]})`,
+                run: async () => {
+                  const { error } = await sb.from(tbl).update({ shift_code: mv.code, is_medju_smena: mv.ms, is_leader: false }).eq("id", p.scheduleId);
+                  if (error) rdmShowBanner("Prebacivanje nije uspelo: " + error.message, "error");
+                },
+              };
+        });
+      if (moveItems.length) items.push({ header: "PREBACI U" }, ...moveItems);
       rdmOpenContextMenu(ev.clientX, ev.clientY, p.name.toUpperCase(), items, rerender);
     });
 
@@ -601,7 +624,7 @@ function rdmOpenContextMenu(x, y, title, items, afterRun) {
   menu.id = "rdm-context-menu";
   menu.className = "ctx-menu";
   menu.innerHTML = `<div class="ctx-title">${title}</div>` + (items.length
-    ? items.map((it, i) => `<button type="button" data-i="${i}" ${it.disabled ? "disabled" : ""}>${it.dot ? `<span class="dot" style="background:${it.dot}"></span>` : '<span class="dot"></span>'}<span>${it.label}${it.note ? `<span class="ctx-note">Već postavljen: ${it.note}</span>` : ""}</span></button>`).join("")
+    ? items.map((it, i) => it.header ? `<div class="ctx-title ctx-section">${it.header}</div>` : `<button type="button" data-i="${i}" ${it.disabled ? "disabled" : ""}>${it.dot ? `<span class="dot" style="background:${it.dot}"></span>` : '<span class="dot"></span>'}<span>${it.label}${it.note ? `<span class="ctx-note">Već postavljen: ${it.note}</span>` : ""}</span></button>`).join("")
     : '<div class="ctx-empty">Nema dostupnih opcija</div>');
   document.body.appendChild(menu);
   const r = menu.getBoundingClientRect();
