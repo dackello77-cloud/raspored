@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Odmori — Raspored App</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#1e4a3a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Raspored" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2" />
+<link rel="icon" type="image/png" href="icons/icon-192.png?v=2" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="css/style.css?v=20261015a" />
+<style>
+  .od-wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .card h2 { margin: 0 0 2px; font-size: 15px; }
+  .card .sub { margin: 0 0 14px; font-size: 12px; }
+  .od-hidden { display: none !important; }
+  .od-admin-form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+  .od-admin-form > div { display: flex; flex-direction: column; }
+  .od-admin-current { font-size: 13px; margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .zm-office-msg { font-size: 12.5px; margin-top: 8px; }
+  .zm-office-msg.err { color: var(--red-text); }
+  .od-info { font-size: 13px; margin-bottom: 12px; }
+  .od-none { padding: 28px 10px; text-align: center; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+  .od-terms { display: flex; flex-direction: column; gap: 8px; }
+  .od-term { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; display: grid;
+    grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.4fr) auto; gap: 10px; align-items: center; background: #fff; }
+  .od-term.is-mine { border-color: var(--green-dark); background: var(--green-light); }
+  .od-term-head { display: flex; flex-direction: column; }
+  .od-term-head b { font-size: 13px; }
+  .od-term-head span { font-size: 12.5px; color: var(--text-muted); }
+  .od-people { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12.5px; }
+  .od-person { background: var(--bg-soft); border-radius: 99px; padding: 3px 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+  .od-person small { font-weight: 500; color: var(--text-muted); }
+  .od-remove { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 15px; padding: 0 2px; }
+  .od-remove:hover { color: var(--red-text); }
+  .od-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+  .od-actions .btn { padding: 7px 14px; font-size: 12.5px; }
+  .od-state { font-size: 12px; font-weight: 700; }
+  .od-state.mine { color: var(--green-darker); }
+  .od-state.locked { color: var(--text-muted); }
+  @media (max-width: 700px) {
+    .od-term { grid-template-columns: 1fr; }
+    .od-actions { justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+  <header class="app-header" id="app-header-mount"></header>
+
+  <main class="page">
+    <div class="od-wrap">
+      <div id="od-banner"></div>
+
+      <section class="card od-hidden" id="od-admin-card">
+        <h2>Aktiviraj termine za odmor</h2>
+        <p class="muted sub">Od datuma objave zaposleni biraju termin. Termin traje 2 nedelje, svaki sledeći kreće nedelju kasnije. Broj termina = radnici + shift lideri + monitoring, + 3.</p>
+        <form class="od-admin-form" id="od-admin-form" novalidate>
+          <div><label class="field-label" for="od-publish">Datum objave</label><input type="date" id="od-publish" required /></div>
+          <div><label class="field-label" for="od-start">Odmori kreću (ponedeljak)</label><input type="date" id="od-start" required /></div>
+          <button type="submit" class="btn btn-primary">Aktiviraj termine</button>
+        </form>
+        <div class="zm-office-msg" id="od-admin-msg"></div>
+        <div class="od-admin-current" id="od-admin-current"></div>
+      </section>
+
+      <section class="card">
+        <h2>Termini za odmor</h2>
+        <div class="od-info muted" id="od-info"></div>
+        <div class="od-terms" id="od-terms"><div class="od-none">Učitavanje...</div></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase.js?v=20261015a"></script>
+  <script src="js/auth.js?v=20261018a"></script>
+  <script src="js/push.js?v=20261015a"></script>
+  <script src="js/constants.js?v=20261015a"></script>
+  <script src="js/swap-common.js?v=20261015a"></script>
+  <script src="js/odmori.js?v=20261018a"></script>
+</body>
+</html>

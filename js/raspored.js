@@ -409,7 +409,32 @@ zmOnDone = async (msg, isError) => {
 // ---------- Mobilni prikaz (telefon) ----------
 // Bez prijave: ko sada radi. Prijavljeni zaposleni: naredne 3 smene, ko sada radi,
 // i njegovih narednih 20 dana. Dodir na dan otvara ceo raspored za taj dan.
-const MOB = { byDate: {}, shiftTypes: [], officeOff: new Set() };
+const MOB = { byDate: {}, shiftTypes: [], officeOff: new Set(), vacRound: null };
+
+// Kartica "Termini za odmor aktivni" (sql/migration_025_odmori.sql): od datuma objave dok ne počne
+// prvi termin, dok zaposleni ne izabere termin ili ne klikne na karticu (pamti se po terminima).
+const MOB_VAC_ROLES = ["radnik", "shift_lider", "monitoring", "accounting", "office_manager"];
+function mobVacSeenKey(id) { return `odmori-videno-${id}`; }
+async function mobLoadVacCard(me) {
+  if (!me || !MOB_VAC_ROLES.includes(me.funkcija)) return;
+  const { data: rounds } = await sb.from("vacation_rounds").select("id, publish_date, start_date")
+    .eq("active", true).order("created_at", { ascending: false }).limit(1);
+  const r = rounds && rounds[0];
+  const today = mobIso(belgradeNow());
+  if (!r || today < r.publish_date || today >= r.start_date) return;
+  try { if (localStorage.getItem(mobVacSeenKey(r.id))) return; } catch (e) { /* bez pamćenja */ }
+  const { data: pick } = await sb.from("vacation_picks").select("id").eq("round_id", r.id).eq("employee_id", me.id).maybeSingle();
+  if (pick) return;
+  MOB.vacRound = r;
+  mobRender();
+}
+// Klik na karticu: više se ne prikazuje, link vodi na stranicu Odmori.
+document.addEventListener("click", (ev) => {
+  const card = ev.target.closest(".mob-vac-card");
+  if (!card) return;
+  try { localStorage.setItem(mobVacSeenKey(card.dataset.round), "1"); } catch (e) { /* bez pamćenja */ }
+  MOB.vacRound = null;
+});
 
 function mobIso(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
 function mobAddDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
@@ -506,6 +531,14 @@ function mobRender() {
 
   // Moje smene (sa početkom/krajem) — za "naredne 3" i "narednih 20 dana".
   const mine = mobOfficeDays(now, today);
+  if (MOB.vacRound) {
+    const [y, m, d] = MOB.vacRound.start_date.split("-");
+    html += `<a class="mob-card mob-vac-card" href="${APP_BASE}odmori.html" data-round="${MOB.vacRound.id}">
+        <span class="mob-vac-icon">🏖️</span>
+        <span class="mob-vac-text"><b>Termini za odmor aktivni</b><small>Odmori od ${+d}.${+m}.${y}. — izaberi svoj termin</small></span>
+        <span class="mob-vac-go">›</span>
+      </a>`;
+  }
   if (RASPORED_ME_EMP || RASPORED_ME_OFFICE) {
     if (RASPORED_ME_EMP) Object.entries(MOB.byDate).forEach(([date, day]) => {
       ["I", "II", "III"].forEach(code => (day[code] || []).forEach(p => {
@@ -694,6 +727,7 @@ function startClock(shiftTypes) {
       MOB.officeOff = new Set((off || []).map(r => r.date));
     }
     zmLoadInbox(profile);
+    mobLoadVacCard(me);
   }
 
   const now = belgradeNow();

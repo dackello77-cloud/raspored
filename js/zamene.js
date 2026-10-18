@@ -95,5 +95,6 @@ zmOnDone = async (msg, isError) => {
   }
   document.getElementById("zm-history-card").classList.toggle("zm-hidden", !ZM.isHR);
   if (ZM.isHR) slInit();
+  fpInit(ZM.me, profile);
   await zmLoadLists();
 })();

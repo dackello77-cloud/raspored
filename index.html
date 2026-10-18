@@ -243,6 +243,13 @@
     body:not(.show-full) .raspored-card { display: none; }
   }
   .mob-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-sm); padding: 14px; }
+  .mob-vac-card { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text);
+    background: #fff7e6; border-color: #f5d9ad; border-left: 4px solid #c26a06; }
+  .mob-vac-icon { font-size: 26px; flex: none; }
+  .mob-vac-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .mob-vac-text b { font-size: 15px; font-weight: 800; }
+  .mob-vac-text small { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+  .mob-vac-go { font-size: 26px; color: #c26a06; font-weight: 700; flex: none; }
   .mob-title { font-size: 13px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
   .mob-title .mob-clock { font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--text); font-variant-numeric: tabular-nums; }
 
@@ -370,10 +377,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/supabase.js?v=20261015a"></script>
-  <script src="js/auth.js?v=20261015a"></script>
+  <script src="js/auth.js?v=20261018a"></script>
   <script src="js/push.js?v=20261015a"></script>
   <script src="js/constants.js?v=20261015a"></script>
   <script src="js/swap-common.js?v=20261015a"></script>
-  <script src="js/raspored.js?v=20261015a"></script>
+  <script src="js/raspored.js?v=20261018a"></script>
 </body>
 </html>

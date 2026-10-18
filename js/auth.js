@@ -130,7 +130,8 @@ async function mountHeader(activeKey) {
       navLinks.push(`<a href="${APP_BASE}dolasci.html" class="${activeKey === "dolasci" ? "active" : ""}">Dolasci</a>`);
     }
     navLinks.push(
-      `<a href="${APP_BASE}zamene.html" class="${activeKey === "zamene" ? "active" : ""}">Zamene<span class="nav-badge" id="nav-zamene-badge" hidden></span></a>`
+      `<a href="${APP_BASE}zamene.html" class="${activeKey === "zamene" ? "active" : ""}">Zamene<span class="nav-badge" id="nav-zamene-badge" hidden></span></a>`,
+      `<a href="${APP_BASE}odmori.html" class="${activeKey === "odmori" ? "active" : ""}">Odmori</a>`
     );
   } else {
     navLinks.push(

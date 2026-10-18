@@ -40,6 +40,19 @@
   .sl-edit .btn { padding: 6px 12px; font-size: 12.5px; }
   .sl-badge { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 99px; background: #f1f1ee; color: var(--text-muted); }
   .sl-badge.now { background: #fde8e6; color: var(--red-text); }
+  .fp-current { font-size: 13px; margin-bottom: 12px; }
+  .fp-box { max-width: 420px; }
+  .fp-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+  .fp-dow { font-size: 10.5px; font-weight: 800; color: var(--text-muted); text-align: center; padding-bottom: 2px; }
+  .fp-day { border: 1px solid var(--border); background: #fff; border-radius: 9px; padding: 6px 0 4px; font: inherit; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 1px; color: var(--text); }
+  .fp-day b { font-size: 14px; }
+  .fp-day small { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+  .fp-day:hover:not([disabled]) { background: var(--bg-soft); border-color: var(--green-dark); }
+  .fp-day.mine { background: var(--green-dark); border-color: var(--green-dark); color: #fff; cursor: default; }
+  .fp-day.mine small { color: #fff; }
+  .fp-day.full { background: #f1f1ee; color: var(--text-muted); cursor: not-allowed; opacity: 0.7; }
+  .fp-day[disabled]:not(.full) { cursor: wait; }
 </style>
 </head>
 <body>
@@ -50,6 +63,13 @@
     <div class="zm-hint">Zamenu tražiš na stranici <a href="index.html">Raspored</a>: desni klik na radnika iz druge smene → <b>Zamena</b> (monitoring i shift lideri: za jedan dan ili celu nedelju), a desni klik na sebe → <b>Slobodan dan</b>.</div>
     <div class="zm-grid">
       <div class="zm-col">
+        <section class="card zm-hidden" id="fp-card">
+          <h2>Slobodan dan — naredni mesec</h2>
+          <p class="muted sub" id="fp-sub"></p>
+          <div class="fp-current" id="fp-current">Učitavanje...</div>
+          <button type="button" class="btn btn-primary" id="fp-open">Slobodan</button>
+        </section>
+
         <section class="card zm-hidden" id="zm-office-card">
           <h2>Zatraži slobodan dan</h2>
           <p class="muted sub" id="zm-office-sub">Zahtev ide HR manageru na odobrenje.</p>
@@ -114,11 +134,12 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/supabase.js?v=20261015a"></script>
-  <script src="js/auth.js?v=20261015a"></script>
+  <script src="js/auth.js?v=20261018a"></script>
   <script src="js/push.js?v=20261015a"></script>
   <script src="js/constants.js?v=20261015a"></script>
   <script src="js/swap-common.js?v=20261015a"></script>
-  <script src="js/zamene.js?v=20261015a"></script>
+  <script src="js/zamene.js?v=20261018a"></script>
   <script src="js/bolovanje.js?v=20261015a"></script>
+  <script src="js/slobodan.js?v=20261018a"></script>
 </body>
 </html>
