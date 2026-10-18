@@ -6,7 +6,15 @@ const OD_ROLES = ["radnik", "shift_lider", "monitoring", "accounting", "office_m
 const OD_RASPORED = ["radnik", "shift_lider", "monitoring"];
 const OD_LABEL = { radnik: "Radnik", shift_lider: "Shift lider", monitoring: "Monitoring", accounting: "Accounting", office_manager: "Office manager" };
 
-let OD = { me: null, isAdmin: false, round: null, picks: [] };
+let OD = { me: null, isAdmin: false, round: null, picks: [], emps: [] };
+
+// Pravo na odmor: 6 meseci od početka radnog odnosa (isto kao vacation_eligible_from u bazi).
+function odEligibleFrom(hire) {
+  if (!hire) return null;
+  const [y, m, d] = hire.split("-").map(Number);
+  const last = new Date(y, m - 1 + 6 + 1, 0).getDate(); // 31.8. + 6 meseci = 28/29.2.
+  return odIso(new Date(y, m - 1 + 6, Math.min(d, last)));
+}
 
 function odIso(d) { return officeIso(d); }
 function odAddDays(iso, n) { const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + n); return odIso(d); }
@@ -26,6 +34,9 @@ function odBanner(message, type) {
 function odPickError(f, term) {
   if (!OD_ROLES.includes(f)) return "Odmor ovde biraju radnici, shift lideri, monitoring, accounting i office manager.";
   const others = OD.picks.filter(p => p.employee_id !== OD.me.id);
+  const termStart = odTerm(term).from;
+  const myElig = odEligibleFrom(OD.me.hire_date);
+  if (myElig && termStart < myElig) return `Pravo na odmor od ${odFmt(myElig)}`;
   if (OD_RASPORED.includes(f)) {
     const t = others.find(p => p.term_no === term && OD_RASPORED.includes(p.funkcija));
     if (t) return "Zauzeto";
@@ -33,6 +44,21 @@ function odPickError(f, term) {
   if (["shift_lider", "monitoring", "accounting"].includes(f)) {
     const t = others.find(p => Math.abs(p.term_no - term) <= 1 && p.funkcija === f);
     if (t) return `Preklapa se sa odmorom: ${t.name}`;
+  }
+  // Rezervacija za nove radnike koji još nisu birali (isto kao u bazi).
+  if (OD_RASPORED.includes(f)) {
+    const lastStart = odTerm(OD.round.term_count - 1).from;
+    const picked = new Set(OD.picks.map(p => p.employee_id));
+    const fresh = OD.emps.filter(e => e.active && e.id !== OD.me.id && OD_RASPORED.includes(e.funkcija) && !picked.has(e.id))
+      .map(e => odEligibleFrom(e.hire_date))
+      .filter(x => x && x > OD.round.start_date && x <= lastStart);
+    const taken = new Set(others.filter(p => OD_RASPORED.includes(p.funkcija)).map(p => p.term_no));
+    for (const t of new Set(fresh)) {
+      if (termStart < t) continue;
+      let free = 0;
+      for (let n = 0; n < OD.round.term_count; n++) if (n !== term && odTerm(n).from >= t && !taken.has(n)) free++;
+      if (free < fresh.filter(x => x >= t).length) return "Rezervisano za nove radnike";
+    }
   }
   return null;
 }
@@ -49,6 +75,8 @@ async function odLoad() {
   OD.round = (rounds && rounds[0]) || null;
   OD.picks = [];
   if (OD.round) {
+    const { data: emps } = await sb.from("employees").select("id, funkcija, hire_date, active");
+    OD.emps = emps || [];
     const { data } = await sb.from("vacation_picks")
       .select("id, term_no, employee_id, employees(funkcija, profiles(full_name))").eq("round_id", OD.round.id);
     OD.picks = (data || []).map(p => ({
@@ -173,7 +201,7 @@ document.getElementById("od-admin-form").addEventListener("submit", async (e) =>
   const { session, profile } = await mountHeader("odmori");
   if (!session) { window.location.href = APP_BASE + "login.html"; return; }
   OD.isAdmin = isAdminProfile(profile);
-  const { data: emp } = await sb.from("employees").select("id, funkcija").eq("profile_id", session.user.id).maybeSingle();
+  const { data: emp } = await sb.from("employees").select("id, funkcija, hire_date").eq("profile_id", session.user.id).maybeSingle();
   OD.me = emp || null;
   document.getElementById("od-admin-card").classList.toggle("od-hidden", !OD.isAdmin);
   await odLoad();

@@ -29,7 +29,7 @@ function showBanner(message, type) {
 async function fetchEmployeesWithVacations() {
   const { data: employees, error } = await sb
     .from("employees")
-    .select("id, funkcija, monitoring_smena, slava_date, active, profile_id, profiles(*)")
+    .select("id, funkcija, monitoring_smena, slava_date, hire_date, active, profile_id, profiles(*)")
     .order("created_at");
   if (error) {
     console.error(error);
@@ -117,6 +117,9 @@ function buildEmployeeRow(emp) {
     </div>
     <div class="field-slava">
       <input type="date" class="f-slava" value="${emp.slava_date || ""}" />
+    </div>
+    <div>
+      <input type="date" class="f-hire" value="${emp.hire_date || ""}" title="Početak radnog odnosa — pravo na odmor posle 6 meseci" />
     </div>
     <div class="field-odmor">
       <input type="date" class="f-odmor-od" value="${emp.vacation ? emp.vacation.start_date : ""}" />
@@ -385,7 +388,8 @@ async function handleAddPerson(e) {
 
   const { error: empError } = await sb
     .from("employees")
-    .insert({ profile_id: userId, funkcija: funkcijaForRole(role, "radnik"), active: true });
+    .insert({ profile_id: userId, funkcija: funkcijaForRole(role, "radnik"), active: true,
+      hire_date: document.getElementById("new-hire-date").value || null });
 
   if (empError) {
     showBanner("Greška pri upisu zaposlenog: " + empError.message, "error");
@@ -425,6 +429,7 @@ async function handleSaveChanges() {
     const funkcija = row.querySelector(".f-funkcija").value;
     const monitoring_smena = row.querySelector(".f-monitoring").value || null;
     const slava_date = row.querySelector(".f-slava").value || null;
+    const hire_date = row.querySelector(".f-hire").value || null;
     const active = row.querySelector(".f-active").checked;
     const odmorOd = row.querySelector(".f-odmor-od").value;
     const odmorDo = row.querySelector(".f-odmor-do").value;
@@ -432,7 +437,7 @@ async function handleSaveChanges() {
 
     const { error: empError } = await sb
       .from("employees")
-      .update({ funkcija, monitoring_smena, slava_date, active })
+      .update({ funkcija, monitoring_smena, slava_date, hire_date, active })
       .eq("id", employeeId);
     if (empError) errors.push(empError.message);
     // Deaktivirani nestaju iz liste (kad je prikaz "samo aktivni") tek posle čuvanja.

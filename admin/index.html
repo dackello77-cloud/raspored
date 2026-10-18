@@ -20,7 +20,7 @@
 
   .add-form-grid {
     display: grid;
-    grid-template-columns: 2fr 2fr 1.4fr auto;
+    grid-template-columns: 2fr 2fr 1.4fr 1.2fr auto;
     gap: 14px;
     align-items: end;
     margin-bottom: 8px;
@@ -60,7 +60,7 @@
 
   .emp-row {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
     gap: 10px;
     align-items: center;
     padding: 12px 8px;
@@ -81,7 +81,7 @@
 
   .col-head {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
     gap: 10px;
     padding: 0 8px 8px;
     font-size: 10.5px;
@@ -469,6 +469,10 @@
               <option value="accounting">Accounting</option>
             </select>
           </div>
+          <div>
+            <label class="field-label">Zaposlen od</label>
+            <input type="date" id="new-hire-date" title="Datum početka radnog odnosa — pravo na odmor posle 6 meseci" />
+          </div>
           <button type="submit" class="btn btn-primary" id="add-person-btn">Dodaj osobu</button>
         </form>
       </div>
@@ -490,12 +494,13 @@
         </div>
 
         <div class="scroll-x">
-          <div style="min-width:1050px;">
+          <div style="min-width:1150px;">
             <div class="col-head">
               <div>Zaposleni</div>
               <div>Funkcija</div>
               <div>Monitoring</div>
               <div>Slava</div>
+              <div>Zaposlen od</div>
               <div>Odmor od (pon.)</div>
               <div>Trajanje</div>
               <div>Odmor do (ned.)</div>
@@ -680,7 +685,7 @@
   <script src="../js/account.js?v=20261015a"></script>
   <script src="../js/constants.js?v=20261015a"></script>
   <script src="../js/admin-shell.js?v=20261015a"></script>
-  <script src="../js/admin-osobe.js?v=20261015a"></script>
+  <script src="../js/admin-osobe.js?v=20261018a"></script>
   <script src="../js/admin-backup.js?v=20261015a"></script>
   <script src="../js/admin-plan.js?v=20261015a"></script>
   <script src="../js/generator.js?v=20261015a"></script>
