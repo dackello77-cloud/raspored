@@ -480,7 +480,9 @@ async function genShowDraft(year, month, scrollTo) {
     const ok = await rdmConfirm(`Obrisati nacrt za <b>${label}</b>?`, "Objavljeni raspored se ne menja.");
     if (!ok) return;
     await sb.from("schedule_draft").delete().gte("date", start).lte("date", end);
+    await sb.from("settings").delete().eq("key", `nacrt_izmena_${year}_${month}`);
     genShowBanner(`Nacrt za ${label} je obrisan.`, "success");
+    await rdmLoadAllMonths();
     await genShowDraft(year, month);
   });
   if (scrollTo) box.scrollIntoView({ behavior: "smooth", block: "start" });

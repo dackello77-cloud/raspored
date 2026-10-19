@@ -73,12 +73,14 @@ async function rdmSetLeader(tbl, date, shiftCode, scheduleId, employeeId, newSta
   await sb.from(tbl).update({ is_leader: newState }).eq("id", scheduleId);
 }
 
-async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule") {
+// opts.tekuci: mesec u "Tekući i naredni rasporedi" — izmene objavljenog idu u nacrt (rdmEditTbl).
+async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule", opts = {}) {
   const wrap = document.createElement("div");
   wrap.className = "rdm-month-wrap";
   wrap.dataset.year = year;
   wrap.dataset.month = month;
   wrap.dataset.table = tbl;
+  if (opts.tekuci) wrap.dataset.tekuci = "1";
 
   // Zaglavlje meseca + manjak smena — zakačeno na vrhu dok se skroluje kroz mesec.
   const sticky = document.createElement("div");
@@ -114,8 +116,8 @@ async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule") {
   const underfond = document.createElement("div");
   underfond.className = "rdm-underfond";
   sticky.appendChild(underfond);
-  // Nacrt se prikazuje kao tabela sa glavne strane (red po danu, kolona po smeni) — kako će izgledati radnicima.
-  if (tbl === "schedule_draft") {
+  // Tabela kao na glavnoj strani (red po danu, kolona po smeni) — kako će izgledati radnicima.
+  {
     const sub = document.createElement("div");
     sub.className = "shift-subheader";
     sub.innerHTML = `<div></div>` + rdmTableColumns().map(col => col.kind === "shift" ? `
@@ -142,8 +144,66 @@ async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule") {
     header.querySelector(".toggle-label").textContent = isHidden ? "Sakrij" : "Prikaži";
   });
 
+  if (opts.tekuci && tbl === "schedule_draft") rdmDecorateDraft(wrap);
   await rdmRenderMonthBody(body, year, month);
   return wrap;
+}
+
+// Objavljeni mesec sa neobjavljenim izmenama: traka "NACRT" + Objavi izmene / Odbaci izmene.
+function rdmDecorateDraft(wrap) {
+  if (wrap.classList.contains("rdm-draft")) return;
+  wrap.classList.add("rdm-draft");
+  const year = Number(wrap.dataset.year), month = Number(wrap.dataset.month);
+  const label = `${MONTH_NAMES_SR[month - 1]} ${year}`;
+  wrap.querySelector(".month-delete-btn")?.remove();
+  const bar = document.createElement("div");
+  bar.className = "rdm-draft-bar";
+  bar.innerHTML = `<span class="draft-badge">NACRT</span>
+    <span class="rdm-draft-text">Izmene za <b>${label}</b> još nisu objavljene — radnici vide stari raspored dok ne kliknete „Objavi izmene“.</span>
+    <span class="rdm-draft-actions">
+      <button type="button" class="btn btn-ghost rdm-draft-discard">Odbaci izmene</button>
+      <button type="button" class="btn btn-primary rdm-draft-publish">Objavi izmene</button>
+    </span>`;
+  const header = wrap.querySelector(".month-header");
+  header.after(bar);
+  bar.querySelector(".rdm-draft-publish").addEventListener("click", async (e) => {
+    const ok = await rdmConfirm(`Objaviti izmene za <b>${label}</b>?`,
+      "Radnici odmah vide novi raspored.", "Objavi", "btn-primary");
+    if (!ok) return;
+    e.target.disabled = true;
+    const { error } = await sb.rpc("schedule_publish", { p_year: year, p_month: month });
+    if (error) { rdmShowBanner("Objava nije uspela: " + error.message, "error"); e.target.disabled = false; return; }
+    rdmShowBanner(`Izmene za ${label} su objavljene.`, "success");
+    await rdmLoadAllMonths();
+  });
+  bar.querySelector(".rdm-draft-discard").addEventListener("click", async () => {
+    const ok = await rdmConfirm(`Odbaciti sve neobjavljene izmene za <b>${label}</b>?`,
+      "Ostaje objavljeni raspored kakav radnici sada vide.", "Odbaci izmene");
+    if (!ok) return;
+    const { start, end } = rdmMonthRange(year, month);
+    const { error } = await sb.from("schedule_draft").delete().gte("date", start).lte("date", end);
+    if (error) { rdmShowBanner("Greška: " + error.message, "error"); return; }
+    await sb.from("settings").delete().eq("key", `nacrt_izmena_${year}_${month}`);
+    rdmShowBanner(`Izmene za ${label} su odbačene.`, "success");
+    await rdmLoadAllMonths();
+  });
+}
+
+// Pre svake izmene objavljenog meseca: napravi nacrt (kopija sa istim id redova) i piši u njega.
+// Vraća tabelu u koju se piše.
+async function rdmEditTbl(tbl, dateStr) {
+  if (tbl !== "schedule") return tbl;
+  const [y, m] = dateStr.split("-").map(Number);
+  const { error } = await sb.rpc("schedule_draft_from_published", { p_year: y, p_month: m });
+  if (error) {
+    rdmShowBanner(/schedule_draft_from_published/.test(error.message)
+      ? "Treba jednom pokrenuti SQL iz fajla sql/migration_034_izmene_kroz_nacrt.sql u Supabase."
+      : "Greška: " + error.message, "error");
+    throw error;
+  }
+  const wrap = document.querySelector(`#rasporedi-months .rdm-month-wrap[data-year="${y}"][data-month="${m}"]`);
+  if (wrap) { wrap.dataset.table = "schedule_draft"; rdmDecorateDraft(wrap); }
+  return "schedule_draft";
 }
 
 // Radnici kojima u ovom mesecu nedostaju smene do fonda, npr. "SASKA 12/21".
@@ -177,7 +237,7 @@ async function rdmRenderMonthBody(body, year, month) {
   const isRefresh = !!body.querySelector(".rdm-day-block, .day-row");
   if (!isRefresh) body.innerHTML = '<div class="empty-note muted">Učitavanje...</div>';
   const tbl = (body.parentElement && body.parentElement.dataset.table) || "schedule";
-  const asTable = tbl === "schedule_draft";
+  const asTable = true;
   const rows = await rdmFetchSchedule(year, month, tbl);
   const byDate = rdmGroup(rows);
   const { lastDay } = rdmMonthRange(year, month);
@@ -310,6 +370,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
         `${shiftType.label} · ${d}.${m}.${y}.`
       );
       if (!ok) return;
+      tbl = await rdmEditTbl(tbl, dateStr);
       await sb.from(tbl).delete().eq("id", p.scheduleId);
       await rerender();
     });
@@ -318,7 +379,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
       ev.preventDefault();
       const items = [];
       if (p.isLeader) {
-        items.push({ label: "Ukloni lidera", run: () => rdmSetLeader(tbl, dateStr, shiftType.code, p.scheduleId, p.employeeId, false) });
+        items.push({ label: "Ukloni lidera", run: async () => { tbl = await rdmEditTbl(tbl, dateStr); await rdmSetLeader(tbl, dateStr, shiftType.code, p.scheduleId, p.employeeId, false); } });
       } else if (!leaderAllowed) {
         // radni dan — opcija Lider se ne prikazuje
       } else if (hasLeader) {
@@ -327,6 +388,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
         items.push({
           label: "Lider", dot: DOT_LEADER,
           run: async () => {
+            tbl = await rdmEditTbl(tbl, dateStr);
             if (p.isMS) await sb.from(tbl).update({ is_medju_smena: false }).eq("id", p.scheduleId);
             await rdmSetLeader(tbl, dateStr, shiftType.code, p.scheduleId, p.employeeId, true);
           },
@@ -356,6 +418,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
             : {
                 label: mv.label, dot: mv.ms ? DOT_MS : `var(--s${{ I: 1, II: 2, III: 3 }[mv.code]})`,
                 run: async () => {
+                  tbl = await rdmEditTbl(tbl, dateStr);
                   const { error } = await sb.from(tbl).update({ shift_code: mv.code, is_medju_smena: mv.ms, is_leader: false }).eq("id", p.scheduleId);
                   if (error) rdmShowBanner("Prebacivanje nije uspelo: " + error.message, "error");
                 },
@@ -397,6 +460,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
     inline.querySelector("select").addEventListener("change", async (e) => {
       const empId = e.target.value;
       if (!empId) return;
+      tbl = await rdmEditTbl(tbl, dateStr);
       const { error } = await sb.from(tbl).insert({ date: dateStr, shift_code: shiftType.code, employee_id: empId });
       if (error) {
         rdmShowBanner("Greška: " + error.message, "error");
@@ -558,8 +622,9 @@ async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoa
     for (const d of changed) {
       const rowsA = rows.filter(r => r.employee_id === A && r.date === d);
       const rowsB = rows.filter(r => r.employee_id === B && r.date === d);
-      for (const r of rowsA) { const { error } = await sb.from(tbl).update({ employee_id: B }).eq("id", r.id); if (error) errors++; }
-      for (const r of rowsB) { const { error } = await sb.from(tbl).update({ employee_id: A }).eq("id", r.id); if (error) errors++; }
+      const t = await rdmEditTbl(tbl, d); // objavljeni mesec -> nacrt (isti id redova)
+      for (const r of rowsA) { const { error } = await sb.from(t).update({ employee_id: B }).eq("id", r.id); if (error) errors++; }
+      for (const r of rowsB) { const { error } = await sb.from(t).update({ employee_id: A }).eq("id", r.id); if (error) errors++; }
     }
     close();
     rdmShowBanner(errors
@@ -661,12 +726,17 @@ async function rdmLoadAllMonths() {
   });
 
   const months = [...monthsSet.values()].sort((a, b) => a.year - b.year || a.month - b.month);
+  // Meseci sa neobjavljenim izmenama prikazuju se iz nacrta.
+  const { data: draftDates } = await sb.from("schedule_draft").select("date")
+    .gte("date", `${currentY}-${rdmPad2(currentM)}-01`).order("date");
+  const draftSet = new Set((draftDates || []).map(r => { const [y, m] = r.date.split("-").map(Number); return `${y}-${m}`; }));
 
   const frag = document.createDocumentFragment();
   for (let i = 0; i < months.length; i++) {
     const key = `${months[i].year}-${months[i].month}`;
     const collapsed = openState.has(key) ? !openState.get(key) : i !== 0;
-    frag.appendChild(await rdmRenderMonth(months[i].year, months[i].month, collapsed));
+    frag.appendChild(await rdmRenderMonth(months[i].year, months[i].month, collapsed,
+      draftSet.has(key) ? "schedule_draft" : "schedule", { tekuci: true }));
   }
   const scrollY = window.scrollY;
   container.replaceChildren(frag);
@@ -691,8 +761,10 @@ async function rdmHandleReplace() {
     return;
   }
 
+  let tbl;
+  try { tbl = await rdmEditTbl("schedule", date); } catch (e) { return; }
   const { data: rows, error: fetchErr } = await sb
-    .from("schedule")
+    .from(tbl)
     .select("id")
     .eq("date", date)
     .eq("employee_id", emp1);
@@ -708,14 +780,14 @@ async function rdmHandleReplace() {
 
   let errorCount = 0;
   for (const row of rows) {
-    const { error } = await sb.from("schedule").update({ employee_id: emp2 }).eq("id", row.id);
+    const { error } = await sb.from(tbl).update({ employee_id: emp2 }).eq("id", row.id);
     if (error) errorCount++;
   }
 
   if (errorCount) {
     rdmShowBanner(`Zamena delimično uspela, ${errorCount} grešaka (verovatno drugi zaposleni već ima tu smenu).`, "error");
   } else {
-    rdmShowBanner("Zamena uspešna.", "success");
+    rdmShowBanner("Zamena je upisana u nacrt — kliknite „Objavi izmene“ da je radnici vide.", "success");
   }
 
   await rdmLoadAllMonths();
