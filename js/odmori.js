@@ -1,7 +1,7 @@
 // Stranica "Odmori": zaposleni biraju termin za godišnji odmor (2 nedelje), administrator
 // aktivira termine (datum objave + ponedeljak od koga kreću). Pravila čuva baza —
 // sql/migration_025_odmori.sql. Zaposleni ne vide ko je uzeo koji termin (migration_030): stanje
-// termina (zauzet / moj / zašto ne mogu) daje baza preko vacation_terms; imena vide samo admin i HR.
+// termina (zauzet / moj / zašto ne mogu) daje baza preko vacation_terms; imena vidi samo administrator.
 
 const OD_ROLES = ["radnik", "shift_lider", "monitoring", "accounting", "office_manager"];
 const OD_RASPORED = ["radnik", "shift_lider", "monitoring"];
@@ -10,7 +10,7 @@ const OD_LABEL = { radnik: "Radnik", shift_lider: "Shift lider", monitoring: "Mo
 const OD_SEASONS = { letnji: "Letnji", zimski: "Zimski" };
 
 // round/picks = trenutno izabran tab (sezona); rounds = aktivni termini obe sezone.
-// terms = stanje termina za mene iz baze (vacation_terms); picks = sa imenima, samo za admina / HR.
+// terms = stanje termina za mene iz baze (vacation_terms); picks = sa imenima, samo za administratora.
 let OD = { me: null, myName: "", isAdmin: false, seeAll: false, season: "letnji", rounds: {}, round: null, picks: [], terms: [] };
 
 function odIso(d) { return officeIso(d); }
@@ -207,7 +207,7 @@ document.getElementById("od-admin-form").addEventListener("submit", async (e) =>
   const { session, profile } = await mountHeader("odmori");
   if (!session) { window.location.href = APP_BASE + "login.html"; return; }
   OD.isAdmin = isAdminProfile(profile);
-  OD.seeAll = OD.isAdmin || !!(profile && profile.hr_manager);
+  OD.seeAll = OD.isAdmin; // imena vidi samo administrator (HR je često i sam radnik koji bira termin)
   OD.myName = ((profile && profile.full_name) || "").toUpperCase();
   const { data: emp } = await sb.from("employees").select("id, funkcija, hire_date").eq("profile_id", session.user.id).maybeSingle();
   OD.me = emp || null;
