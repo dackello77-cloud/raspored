@@ -214,6 +214,31 @@
     letter-spacing: 0.06em; padding: 2px 6px; border-radius: 5px;
   }
 
+  /* Računar: uži datum (broj, ispod dan i mesec), uže međusmene -> šire I/II/III smene,
+     da zaposleni stanu u jedan red. Današnji dan = zeleni datum (bez oznake "Danas"). */
+  @media (min-width: 821px) {
+    .shift-subheader, .day-row { grid-template-columns: 58px 1fr 84px 1fr 84px 1fr; gap: 8px; }
+    .day-row .shift-cell { gap: 3px; }
+    .day-row .chip { padding: 2px 5px; gap: 4px; }
+    .date-label { flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 3px 2px; border-radius: 10px; }
+    .date-label .dnum { font-size: 18px; min-width: 0; }
+    .date-label .dmeta { flex-direction: row; gap: 3px; align-items: baseline; }
+    .date-label .dow { font-size: 9.5px; letter-spacing: 0.03em; }
+    .date-label .dmon { font-size: 9.5px; }
+    .date-label .today-badge { display: none; }
+    .day-row.today .date-label { background: var(--green-dark); color: #fff; }
+    .day-row.today .date-label .dow, .day-row.today .date-label .dmon { color: rgba(255,255,255,0.85); }
+    .shift-col.ms-col { padding: 9px 6px; gap: 4px; }
+    .shift-col.ms-col .shift-icon { display: none; }
+    .day-row .shift-cell.ms-cell { padding: 4px 3px; }
+    .day-row .shift-cell.ms-cell .chip { font-size: 10.5px; padding: 2px 4px; gap: 3px; }
+    .day-row .shift-cell:not(.ms-cell) { padding: 4px 8px; }
+    /* Pretraga u zaglavlju: uska, na klik se raširi preko kolone */
+    .sub-search-wrap { position: relative; }
+    .sub-search-wrap .sub-search { padding: 7px 6px; font-size: 11px; }
+    .sub-search-wrap .sub-search:focus { position: absolute; left: 0; width: 220px; z-index: 6; box-shadow: var(--shadow-md); }
+  }
+
   .day-row.day-off-for-search { border: 2.5px solid var(--green-dark); background: #fdf0ef; }
   .emp-chip.is-me { background: var(--green-darker); border-color: var(--green-darker); color: #fff; }
   .emp-chip.search-hit { background: #2459c9; border-color: #2459c9; color: #fff; }
@@ -381,6 +406,6 @@
   <script src="js/push.js?v=20261015a"></script>
   <script src="js/constants.js?v=20261015a"></script>
   <script src="js/swap-common.js?v=20261015a"></script>
-  <script src="js/raspored.js?v=20261018a"></script>
+  <script src="js/raspored.js?v=20261019i"></script>
 </body>
 </html>

@@ -132,7 +132,7 @@ function buildMonthSectionEl(year, month, byDate, shiftTypes, isRealToday) {
   subheader.className = "shift-subheader";
   const columns = scheduleColumns(shiftTypes);
   const searchVal = (document.getElementById("filter-search")?.value || "").replace(/"/g, "&quot;");
-  subheader.innerHTML = `<div class="sub-search-wrap"><input type="text" class="sub-search" placeholder="Pronađi..." value="${searchVal}" /></div>` + columns.map(col => col.kind === "shift" ? `
+  subheader.innerHTML = `<div class="sub-search-wrap"><input type="text" class="sub-search" placeholder="🔍" title="Pronađi zaposlenog" value="${searchVal}" /></div>` + columns.map(col => col.kind === "shift" ? `
     <div class="shift-col shift-${col.st.code}">
       <span class="shift-icon">${SHIFT_ICON_SVG[col.st.code] || ""}</span>
       <span><div class="shift-name">${col.st.label}</div><div class="shift-part">${SHIFT_PART_OF_DAY[col.st.code] || ""}</div></span>
