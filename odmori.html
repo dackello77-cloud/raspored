@@ -45,6 +45,12 @@
   .od-state { font-size: 12px; font-weight: 700; }
   .od-state.mine { color: var(--green-darker); }
   .od-state.locked { color: var(--text-muted); }
+  .od-tabs { display: flex; gap: 6px; background: var(--bg-soft); border-radius: 12px; padding: 4px; }
+  .od-tab { flex: 1; border: none; background: none; border-radius: 9px; padding: 9px 10px; font: inherit; font-size: 14px;
+    font-weight: 700; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+  .od-tab.active { background: #fff; color: var(--green-darker); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .od-tab-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-dark); }
+  .od-tab-dot[hidden] { display: none; }
   @media (max-width: 700px) {
     .od-term { grid-template-columns: 1fr; }
     .od-actions { justify-content: flex-start; }
@@ -58,8 +64,13 @@
     <div class="od-wrap">
       <div id="od-banner"></div>
 
+      <div class="od-tabs" role="tablist">
+        <button type="button" class="od-tab active" data-season="letnji">☀️ Letnji <span class="od-tab-dot" title="Izbor je otvoren" hidden></span></button>
+        <button type="button" class="od-tab" data-season="zimski">❄️ Zimski <span class="od-tab-dot" title="Izbor je otvoren" hidden></span></button>
+      </div>
+
       <section class="card od-hidden" id="od-admin-card">
-        <h2>Aktiviraj termine za odmor</h2>
+        <h2 id="od-admin-title">Aktiviraj termine za odmor</h2>
         <p class="muted sub">Od datuma objave zaposleni biraju termin. Termin traje 2 nedelje, svaki sledeći kreće nedelju kasnije. Broj termina = radnici + shift lideri + monitoring, + 3.</p>
         <form class="od-admin-form" id="od-admin-form" novalidate>
           <div><label class="field-label" for="od-publish">Datum objave</label><input type="date" id="od-publish" required /></div>
@@ -71,7 +82,7 @@
       </section>
 
       <section class="card">
-        <h2>Termini za odmor</h2>
+        <h2 id="od-list-title">Termini za odmor</h2>
         <div class="od-info muted" id="od-info"></div>
         <div class="od-terms" id="od-terms"><div class="od-none">Učitavanje...</div></div>
       </section>
@@ -84,6 +95,6 @@
   <script src="js/push.js?v=20261015a"></script>
   <script src="js/constants.js?v=20261015a"></script>
   <script src="js/swap-common.js?v=20261015a"></script>
-  <script src="js/odmori.js?v=20261018b"></script>
+  <script src="js/odmori.js?v=20261019a"></script>
 </body>
 </html>

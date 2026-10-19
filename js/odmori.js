@@ -6,7 +6,10 @@ const OD_ROLES = ["radnik", "shift_lider", "monitoring", "accounting", "office_m
 const OD_RASPORED = ["radnik", "shift_lider", "monitoring"];
 const OD_LABEL = { radnik: "Radnik", shift_lider: "Shift lider", monitoring: "Monitoring", accounting: "Accounting", office_manager: "Office manager" };
 
-let OD = { me: null, isAdmin: false, round: null, picks: [], emps: [] };
+const OD_SEASONS = { letnji: "Letnji", zimski: "Zimski" };
+
+// round/picks = trenutno izabran tab (sezona); rounds = aktivni termini obe sezone.
+let OD = { me: null, isAdmin: false, season: "letnji", rounds: {}, round: null, picks: [], emps: [] };
 
 // Pravo na odmor: 6 meseci od početka radnog odnosa (isto kao vacation_eligible_from u bazi).
 function odEligibleFrom(hire) {
@@ -65,14 +68,16 @@ function odPickError(f, term) {
 
 async function odLoad() {
   const { data: rounds, error } = await sb.from("vacation_rounds").select("*").eq("active", true)
-    .order("created_at", { ascending: false }).limit(1);
+    .order("created_at", { ascending: false });
   if (error) {
     odBanner(/vacation_rounds/.test(error.message)
       ? "Odmori još nisu uključeni — treba jednom pokrenuti SQL iz fajla sql/migration_025_odmori.sql u Supabase."
       : error.message, "error");
     return;
   }
-  OD.round = (rounds && rounds[0]) || null;
+  OD.rounds = {};
+  (rounds || []).forEach(r => { const s = r.season || "letnji"; if (!OD.rounds[s]) OD.rounds[s] = r; });
+  OD.round = OD.rounds[OD.season] || null;
   OD.picks = [];
   if (OD.round) {
     const { data: emps } = await sb.from("employees").select("id, funkcija, hire_date, active");
@@ -87,7 +92,22 @@ async function odLoad() {
   odRender();
 }
 
+// Tab je "otvoren" ako zaposleni trenutno mogu da biraju u toj sezoni.
+function odSeasonOpen(r) { const t = odToday(); return !!r && t >= r.publish_date && t < r.start_date; }
+
+function odRenderTabs() {
+  document.querySelectorAll(".od-tab").forEach(b => {
+    const s = b.dataset.season;
+    b.classList.toggle("active", s === OD.season);
+    b.querySelector(".od-tab-dot").hidden = !odSeasonOpen(OD.rounds[s]);
+  });
+  const name = OD_SEASONS[OD.season].toLowerCase();
+  document.getElementById("od-admin-title").textContent = `Aktiviraj termine — ${name} odmor`;
+  document.getElementById("od-list-title").textContent = `Termini — ${name} odmor`;
+}
+
 function odRender() {
+  odRenderTabs();
   const r = OD.round;
   const today = odToday();
   const lastEnd = r ? odTerm(r.term_count - 1).to : null;
@@ -99,7 +119,7 @@ function odRender() {
   if (OD.isAdmin) odRenderAdmin();
   if (!r || (!published && !OD.isAdmin)) {
     info.textContent = "";
-    list.innerHTML = '<div class="od-none">Nema aktivnih termina za odmor.</div>';
+    list.innerHTML = `<div class="od-none">Nema aktivnih termina za ${OD_SEASONS[OD.season].toLowerCase()} odmor.</div>`;
     return;
   }
 
@@ -140,13 +160,13 @@ function odRenderAdmin() {
   const r = OD.round;
   const box = document.getElementById("od-admin-current");
   box.innerHTML = r
-    ? `Aktivni termini: objava <b>${odFmt(r.publish_date)}</b>, odmori od <b>${odFmt(r.start_date)}</b>, ${r.term_count} termina
+    ? `Aktivni ${OD_SEASONS[OD.season].toLowerCase()} termini: objava <b>${odFmt(r.publish_date)}</b>, odmori od <b>${odFmt(r.start_date)}</b>, ${r.term_count} termina
        (do ${odFmt(odTerm(r.term_count - 1).to)}). Izabrano: ${OD.picks.length}.
        <button type="button" class="btn btn-danger" id="od-close">Deaktiviraj termine</button>`
-    : "Nema aktivnih termina.";
+    : `Nema aktivnih termina za ${OD_SEASONS[OD.season].toLowerCase()} odmor.`;
   const close = document.getElementById("od-close");
   if (close) close.addEventListener("click", async () => {
-    if (!confirm("Deaktivirati termine? Već upisani odmori ostaju u Osobe u sistemu.")) return;
+    if (!confirm(`Deaktivirati ${OD_SEASONS[OD.season].toLowerCase()} termine? Već upisani odmori ostaju u Osobe u sistemu.`)) return;
     const { error } = await sb.rpc("vacation_round_close", { p_id: r.id });
     if (error) { odBanner(error.message, "error"); return; }
     odBanner("Termini su deaktivirani.", "success");
@@ -162,23 +182,31 @@ document.getElementById("od-terms").addEventListener("click", async (e) => {
     const k = Number(pick.dataset.term), t = odTerm(k);
     if (!confirm(`Izabrati odmor ${odFmt(t.from)} – ${odFmt(t.to)}?`)) return;
     pick.disabled = true;
-    const { error } = await sb.rpc("vacation_pick", { p_term: k });
+    const { error } = await sb.rpc("vacation_pick", { p_term: k, p_season: OD.season });
     if (error) { odBanner(error.message, "error"); await odLoad(); return; }
     odBanner(`Odmor je upisan: ${odFmt(t.from)} – ${odFmt(t.to)}.`, "success");
     await odLoad();
   } else if (unpick) {
     if (!confirm("Otkazati tvoj termin za odmor?")) return;
-    const { error } = await sb.rpc("vacation_unpick", {});
+    const { error } = await sb.rpc("vacation_unpick", { p_season: OD.season });
     if (error) { odBanner(error.message, "error"); return; }
     odBanner("Termin je otkazan.", "success");
     await odLoad();
   } else if (remove) {
     if (!confirm("Ukloniti ovaj termin i upisan odmor?")) return;
-    const { error } = await sb.rpc("vacation_unpick", { p_pick: remove.dataset.pick });
+    const { error } = await sb.rpc("vacation_unpick", { p_pick: remove.dataset.pick, p_season: OD.season });
     if (error) { odBanner(error.message, "error"); return; }
     odBanner("Termin je uklonjen.", "success");
     await odLoad();
   }
+});
+
+document.querySelector(".od-tabs").addEventListener("click", async (e) => {
+  const b = e.target.closest(".od-tab");
+  if (!b || b.dataset.season === OD.season) return;
+  OD.season = b.dataset.season;
+  document.getElementById("od-admin-msg").textContent = "";
+  await odLoad();
 });
 
 document.getElementById("od-admin-form").addEventListener("submit", async (e) => {
@@ -189,11 +217,12 @@ document.getElementById("od-admin-form").addEventListener("submit", async (e) =>
   msg.className = "zm-office-msg err";
   if (!publish || !start) { msg.textContent = "Upiši oba datuma."; return; }
   if (new Date(start + "T00:00:00").getDay() !== 1) { msg.textContent = "Odmori moraju da počnu u ponedeljak."; return; }
-  if (OD.round && !confirm("Već postoje aktivni termini — zameniti ih novim? Već upisani odmori ostaju.")) return;
-  const { error } = await sb.rpc("vacation_round_create", { p_publish: publish, p_start: start });
+  const name = OD_SEASONS[OD.season].toLowerCase();
+  if (OD.round && !confirm(`Već postoje aktivni termini za ${name} odmor — zameniti ih novim? Već upisani odmori ostaju.`)) return;
+  const { error } = await sb.rpc("vacation_round_create", { p_publish: publish, p_start: start, p_season: OD.season });
   if (error) { msg.textContent = error.message; return; }
   msg.textContent = "";
-  odBanner("Termini za odmor su aktivirani.", "success");
+  odBanner(`Termini za ${name} odmor su aktivirani.`, "success");
   await odLoad();
 });
 
@@ -205,4 +234,8 @@ document.getElementById("od-admin-form").addEventListener("submit", async (e) =>
   OD.me = emp || null;
   document.getElementById("od-admin-card").classList.toggle("od-hidden", !OD.isAdmin);
   await odLoad();
+  // Početni tab: sezona u kojoj je izbor upravo otvoren (zimski dok letnji još traje), inače letnji.
+  if (!odSeasonOpen(OD.rounds.letnji) && odSeasonOpen(OD.rounds.zimski)) {
+    OD.season = "zimski"; OD.round = OD.rounds.zimski; await odLoad();
+  }
 })();

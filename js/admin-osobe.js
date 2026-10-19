@@ -38,11 +38,15 @@ async function fetchEmployeesWithVacations() {
   const ids = employees.map(e => e.id);
   let vacationsByEmp = {};
   if (ids.length) {
+    // Prikazuje se samo odmor koji još nije završen, i to najraniji (npr. letnji pa tek posle
+    // njegovog kraja zimski). Završeni odmori ostaju u bazi zbog plana/rasporeda, samo se ne prikazuju.
+    const today = officeIso(belgradeNow());
     const { data: vacations } = await sb
       .from("vacations")
       .select("*")
       .in("employee_id", ids)
-      .order("start_date", { ascending: false });
+      .gte("end_date", today)
+      .order("start_date", { ascending: true });
     (vacations || []).forEach(v => {
       if (!vacationsByEmp[v.employee_id]) vacationsByEmp[v.employee_id] = v;
     });

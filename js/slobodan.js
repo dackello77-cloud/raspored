@@ -5,6 +5,13 @@
 
 const FP_ROLES = ["radnik", "shift_lider", "monitoring", "accounting", "office_manager"];
 const FP_MAX = 2;
+const FP_DEADLINE = 20; // do 20. u mesecu (uključivo) bira se dan za naredni mesec, posle je zaključano
+
+function fpOpen() { return belgradeNow().getDate() <= FP_DEADLINE; }
+function fpDeadlineText() {
+  const t = belgradeNow();
+  return `${FP_DEADLINE}.${t.getMonth() + 1}.${t.getFullYear()}.`;
+}
 
 function fpNextMonth() {
   const t = belgradeNow();
@@ -29,10 +36,14 @@ async function fpRefreshCard() {
     return;
   }
   const mine = Object.values(byDate).find(r => r.mine);
-  box.innerHTML = mine ? `Tvoj slobodan dan: <b>${zmEsc(zmFmtDate(mine.off_date))}</b>` : "Još nisi izabrao/la slobodan dan.";
+  const open = fpOpen();
+  box.innerHTML = (mine ? `Tvoj slobodan dan: <b>${zmEsc(zmFmtDate(mine.off_date))}</b>` : open ? "Još nisi izabrao/la slobodan dan." : "Nisi izabrao/la slobodan dan.")
+    + (open ? `<br><span class="muted">Izbor je otvoren do ${fpDeadlineText()}</span>` : `<br><span class="muted">🔒 Izbor je zaključan (rok je bio ${fpDeadlineText()})</span>`);
+  document.getElementById("fp-open").disabled = !open;
 }
 
 async function fpOpenCalendar() {
+  if (!fpOpen()) { zmBanner(`Slobodni dani za naredni mesec biraju se do ${FP_DEADLINE}. u mesecu — izbor je zaključan.`, "error"); fpRefreshCard(); return; }
   document.getElementById("zm-dialog")?.remove();
   const first = fpNextMonth();
   const y = first.getFullYear(), m = first.getMonth();
@@ -42,7 +53,7 @@ async function fpOpenCalendar() {
   overlay.innerHTML = `
     <div class="pw-box fp-box">
       <h3>Slobodan dan — ${MONTH_NAMES_SR[m]} ${y}.</h3>
-      <div class="muted" style="font-size:12px;">Klikni na dan — odmah se upisuje u plan. Najviše ${FP_MAX} osobe po danu; pun dan je zaključan.</div>
+      <div class="muted" style="font-size:12px;">Klikni na dan — odmah se upisuje u plan. Najviše ${FP_MAX} osobe po danu; pun dan je zaključan. Izbor je otvoren do ${fpDeadlineText()}</div>
       <div class="fp-cal"><div class="zm-empty">Učitavanje...</div></div>
       <div class="pw-msg"></div>
       <div class="pw-actions">
@@ -107,7 +118,7 @@ function fpInit(me, profile) {
   if (!allowed) return;
   const first = fpNextMonth();
   document.getElementById("fp-sub").textContent =
-    `${MONTH_NAMES_SR[first.getMonth()]} ${first.getFullYear()}. · najviše ${FP_MAX} osobe po danu, upisuje se u plan zaposlenih.`;
+    `${MONTH_NAMES_SR[first.getMonth()]} ${first.getFullYear()}. · bira se do ${FP_DEADLINE}. u mesecu · najviše ${FP_MAX} osobe po danu, upisuje se u plan zaposlenih.`;
   document.getElementById("fp-open").addEventListener("click", fpOpenCalendar);
   fpRefreshCard();
 }
