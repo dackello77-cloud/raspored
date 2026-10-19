@@ -54,12 +54,11 @@ async function submitToken(token) {
   const shift = data.shift_code
     ? `${SHIFT_NAMES[data.shift_code] || data.shift_code}${data.is_medju_smena ? " (međusmena)" : ""}`
     : "";
+  // Bez vremena prijave i kašnjenja — samo potvrda da je osoba u smeni.
   if (data.already) {
-    showResult({ kind: "ok", title: "Već si prijavljen/a", big: data.time, text: shift ? `Dolazak za ${shift} je već zabeležen.` : "Dolazak je već zabeležen." });
-  } else if (data.late_minutes > 0) {
-    showResult({ kind: "late", title: `Zdravo, ${firstName}`, big: data.time, extra: `<span class="dz-late">Kašnjenje ${data.late_minutes} min</span>`, text: `Dolazak zabeležen — ${shift}.` });
+    showResult({ kind: "ok", title: "Već si prijavljen/a", big: "U SMENI", text: shift ? `${shift} — prijava je već zabeležena.` : "Prijava je već zabeležena." });
   } else {
-    showResult({ kind: "ok", title: `Zdravo, ${firstName}`, big: data.time, text: shift ? `Dolazak zabeležen — ${shift}. Srećan rad!` : "Dolazak zabeležen. Danas nemaš smenu u rasporedu." });
+    showResult({ kind: "ok", title: `Zdravo, ${firstName}`, big: "U SMENI", text: shift ? `${shift} · Srećan rad!` : "Prijava zabeležena. Danas nemaš smenu u rasporedu." });
   }
 }
 

@@ -329,8 +329,7 @@ async function mountCheckInButton(session) {
     const cur = windows.find(w => now >= new Date(w.start.getTime() - CHECKIN_BEFORE_MIN * 60e3) && now < w.end);
     let on = false, note = "";
     if (cur && cur.att) {
-      const t = new Date(cur.att.checked_at);
-      note = `prijavljen/a ${t.toLocaleTimeString("sr-Latn", { timeZone: "Europe/Belgrade", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
+      note = "✓ u smeni";
     } else if (cur) {
       on = true;
     } else {

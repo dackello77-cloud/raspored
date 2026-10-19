@@ -139,13 +139,13 @@ async function dlLoadDay() {
     else extra.push(a);
   });
 
-  const counts = { ok: 0, late: 0, miss: 0, wait: 0, sick: 0 };
+  const counts = { ok: 0, miss: 0, wait: 0, sick: 0 };
   // Status jednog očekivanog dolaska; count=false za ponovljeni prikaz (HR grupa).
   // empId: zaposleni — na bolovanju bez prijave piše "Bolovanje" umesto "Bez prijave".
   const status = (start, a, count, empId) => {
     const c = (k) => { if (count) counts[k]++; };
     if (!a && empId && sickOn(sick, empId, date)) { c("sick"); return `<span class="dl-st sick">Bolovanje</span>`; }
-    if (a) return a.late_minutes > 0 ? (c("late"), `<span class="dl-st late">Kasni ${a.late_minutes} min</span>`) : (c("ok"), `<span class="dl-st ok">Na vreme</span>`);
+    if (a) { c("ok"); return `<span class="dl-st ok">✓ U smeni</span>`; }
     if (start > now) { c("wait"); return `<span class="dl-st wait">Još nije počela</span>`; }
     if (!tracked) return `<span class="dl-st wait">Pre prijava</span>`;
     c("miss"); return `<span class="dl-st miss">Bez prijave</span>`;
@@ -157,7 +157,6 @@ async function dlLoadDay() {
       ${attId && !window.DL_READONLY ? `<button class="dl-del" data-id="${attId}" type="button" title="Obriši prijavu" aria-label="Obriši prijavu">×</button>` : ""}
       ${abs && st.includes("dl-st miss") ? dlAbsHtml(absence.get(`${abs[0]}|${date}|${abs[1]}`), abs[0], date, abs[1], name) : ""}
     </div>`;
-  const came = (a) => a ? ` · došao/la ${DL_TIME_FMT.format(new Date(a.checked_at))}` : "";
   const group = (cls, title, sub, inner, isNow) =>
     `<div class="dl-group ${cls}${isNow ? " dl-current" : ""}"><div class="dl-group-head ${cls}">
       <span>${title}${isNow ? ` <em class="dl-now">U toku</em>` : ""}</span><small>${sub}</small></div>${inner}</div>`;
@@ -178,7 +177,7 @@ async function dlLoadDay() {
       attLeft.delete(`${p.id}|${o.code}`);
       if (a) n++;
       const st = daysOff.has(`${p.id}|${date}`) && !a ? `<span class="dl-st wait">Slobodan dan</span>` : status(start, a, true, p.id);
-      inner += row(p.name, `početak ${dlHHMM(start)}${came(a)}`, st, a && a.id, [p.id, o.code]);
+      inner += row(p.name, `početak ${dlHHMM(start)}`, st, a && a.id, [p.id, o.code]);
     });
     const isNow = date === today && now >= start && now < new Date(start.getTime() + 8 * 3600e3);
     return group("dl-office", o.label, `prijavljeno ${n}/${members.length}`, inner, isNow);
@@ -198,11 +197,11 @@ async function dlLoadDay() {
       const o = OFFICE_ROLES[p.funkcija];
       if (r) {
         const a = attAll.get(`${p.id}|${r.shift_code}`);
-        inner += row(p.name, `${dlShiftLabel(r.shift_code, r.is_medju_smena)} smena · početak ${dlHHMM(r.start)}${came(a)}`, status(r.start, a, false, p.id), null);
+        inner += row(p.name, `${dlShiftLabel(r.shift_code, r.is_medju_smena)} smena · početak ${dlHHMM(r.start)}`, status(r.start, a, false, p.id), null);
       } else if (o && workday && !daysOff.has(`${p.id}|${date}`)) {
         const start = dlOfficeStart(date, o.code);
         const a = attAll.get(`${p.id}|${o.code}`);
-        inner += row(p.name, `${o.label} · početak ${dlHHMM(start)}${came(a)}`, status(start, a, false, p.id), null);
+        inner += row(p.name, `${o.label} · početak ${dlHHMM(start)}`, status(start, a, false, p.id), null);
       } else {
         inner += row(p.name, daysOff.has(`${p.id}|${date}`) ? "slobodan dan" : "ne radi ovog dana", `<span class="dl-st wait">Slobodan</span>`, null);
       }
@@ -223,7 +222,7 @@ async function dlLoadDay() {
       attLeft.delete(`${r.employee_id}|${code}`);
       if (a) n++;
       const role = r.is_medju_smena ? "Međusmena · " : sickLast(r) ? "" : dlIsLeader(r) ? "Lider · " : "";
-      inner += row(dlName(r), `${role}početak ${dlHHMM(r.start)}${came(a)}`, status(r.start, a, true, r.employee_id), a && a.id, [r.employee_id, code]);
+      inner += row(dlName(r), `${role}početak ${dlHHMM(r.start)}`, status(r.start, a, true, r.employee_id), a && a.id, [r.employee_id, code]);
     });
     const isNow = current.date === date && current.code === code;
     html += group(`shift-${code}`, DL.shiftTypes[code]?.label || code, `prijavljeno ${n}/${rows.length}`, inner, isNow);
@@ -234,7 +233,7 @@ async function dlLoadDay() {
   if (others.length) {
     let inner = "";
     others.forEach(a => {
-      inner += row(dlName(a), `došao/la ${DL_TIME_FMT.format(new Date(a.checked_at))}${a.shift_code ? ` · ${OFFICE_CODE_LABEL[a.shift_code] || dlShiftLabel(a.shift_code, a.is_medju_smena)}` : ""}`,
+      inner += row(dlName(a), a.shift_code ? `${OFFICE_CODE_LABEL[a.shift_code] || dlShiftLabel(a.shift_code, a.is_medju_smena)}` : "prijava bez smene",
         `<span class="dl-st extra">Nije u rasporedu</span>`, a.id);
     });
     html += group("", "Van rasporeda", `${others.length}`, inner, false);
@@ -242,8 +241,7 @@ async function dlLoadDay() {
 
   list.innerHTML = html || `<div class="dl-empty">Za ovaj dan nema rasporeda ni prijava.</div>`;
   summary.innerHTML = html ? [
-    `<span class="dl-st ok">Na vreme ${counts.ok}</span>`,
-    `<span class="dl-st late">Kasnili ${counts.late}</span>`,
+    `<span class="dl-st ok">U smeni ${counts.ok}</span>`,
     `<span class="dl-st miss">Bez prijave ${counts.miss}</span>`,
     counts.sick ? `<span class="dl-st sick">Bolovanje ${counts.sick}</span>` : "",
     counts.wait ? `<span class="dl-st wait">Tek dolaze ${counts.wait}</span>` : "",
@@ -284,7 +282,7 @@ async function dlLoadMonth() {
   const now = belgradeNow();
   const people = new Map();
   const person = (id, name) => {
-    if (!people.has(id)) people.set(id, { name, planned: 0, came: 0, onTime: 0, lateN: 0, lateMin: 0, missed: [], late: [], extra: [], sick: [], sickDays: 0 });
+    if (!people.has(id)) people.set(id, { name, planned: 0, came: 0, missed: [], extra: [], sick: [], sickDays: 0 });
     return people.get(id);
   };
   const attByKey = new Map();
@@ -303,8 +301,6 @@ async function dlLoadMonth() {
     p.planned++;
     if (!a) { p.missed.push({ ...r, q: absence.get(key) }); return; }
     p.came++;
-    if (a.late_minutes > 0) { p.lateN++; p.lateMin += a.late_minutes; p.late.push(a); }
-    else p.onTime++;
   });
   // Office manager / Accounting: svaki radni dan (pon–pet, bez praznika i odobrenih slobodnih dana).
   staff.filter(e => OFFICE_ROLES[e.funkcija]).forEach(e => {
@@ -321,8 +317,6 @@ async function dlLoadMonth() {
       p.planned++;
       if (!a) { p.missed.push({ date, shift_code: o.code, is_medju_smena: false, q: absence.get(key) }); continue; }
       p.came++;
-      if (a.late_minutes > 0) { p.lateN++; p.lateMin += a.late_minutes; p.late.push(a); }
-      else p.onTime++;
     }
   });
   attByKey.forEach(a => person(a.employee_id, dlName(a)).extra.push(a));
@@ -343,17 +337,15 @@ async function dlLoadMonth() {
   const list = [...people.values()].filter(p => p.planned || p.extra.length || p.sickDays)
     .sort((a, b) => (a.rank - b.rank) || a.name.localeCompare(b.name, "sr"));
   list.forEach(p => {
-    p.late.sort((a, b) => a.work_date.localeCompare(b.work_date));
     p.missed.sort((a, b) => a.date.localeCompare(b.date));
     p.extra.sort((a, b) => a.work_date.localeCompare(b.work_date));
   });
   DL.month = { year, month, list };
 
   const sum = (f) => list.reduce((n, p) => n + f(p), 0);
-  const planned = sum(p => p.planned), onTime = sum(p => p.onTime);
+  const planned = sum(p => p.planned), came = sum(p => p.came);
   totalsEl.innerHTML = list.length ? `
-    <div class="dl-tile"><b>${planned ? Math.round(onTime / planned * 100) : 0}%</b><span>na vreme</span><small>${onTime} od ${planned} smena</small></div>
-    <div class="dl-tile late"><b>${sum(p => p.lateN)}</b><span>kašnjenja</span><small>ukupno ${sum(p => p.lateMin)} min</small></div>
+    <div class="dl-tile"><b>${planned ? Math.round(came / planned * 100) : 0}%</b><span>u smeni</span><small>${came} od ${planned} smena</small></div>
     <div class="dl-tile miss"><b>${sum(p => p.missed.length)}</b><span>bez prijave</span><small>smena</small></div>
     <div class="dl-tile sick"><b>${sum(p => p.sickDays)}</b><span>bolovanje</span><small>dana · ${list.filter(p => p.sickDays).length} osoba</small></div>` : "";
   noteEl.textContent = from <= DL.startDate && DL.startDate <= to
@@ -368,20 +360,18 @@ async function dlLoadMonth() {
 
   listEl.innerHTML = sickHtml + (list.length ? list.map((p, i) => {
     const badges = [
-      p.lateN ? `<span class="dl-st late">Kasnio ${p.lateN}× · ${p.lateMin} min</span>` : "",
       p.missed.length ? `<span class="dl-st miss">Bez prijave ${p.missed.length}</span>` : "",
       p.extra.length ? `<span class="dl-st extra">Van rasporeda ${p.extra.length}</span>` : "",
       p.sickDays ? `<span class="dl-st sick">Bolovanje ${p.sickDays} d</span>` : "",
     ].join("") || `<span class="dl-st ok">Uredno</span>`;
     const detail = [
-      p.late.length ? `<b>Kašnjenja:</b> ${p.late.map(a => `${dlShortDate(a.work_date)} ${dlShiftLabel(a.shift_code, a.is_medju_smena)} (${a.late_minutes} min)`).join(", ")}` : "",
       p.missed.length ? `<b>Bez prijave:</b> ${p.missed.map(r => `${dlShortDate(r.date)} ${dlShiftLabel(r.shift_code, r.is_medju_smena)}${dlMissNote(r)}`).join(", ")}` : "",
-      p.extra.length ? `<b>Van rasporeda:</b> ${p.extra.map(a => `${dlShortDate(a.work_date)} u ${DL_TIME_FMT.format(new Date(a.checked_at))}`).join(", ")}` : "",
+      p.extra.length ? `<b>Van rasporeda:</b> ${p.extra.map(a => dlShortDate(a.work_date)).join(", ")}` : "",
       p.sickDays ? `<b>Bolovanje:</b> ${p.sick.map(dlSickPeriod).join(", ")}` : "",
-    ].filter(Boolean).join("<br>") || "Sve smene na vreme.";
+    ].filter(Boolean).join("<br>") || "Sve smene uredno.";
     return `<div class="dl-person" data-i="${i}">
       <div class="dl-p-head">
-        <div class="dl-who"><b>${dlEsc(p.name)}${p.tag ? ` <span class="dl-tag">${p.tag}</span>` : ""}</b><small>${p.planned} smena · prijavljen ${p.came} · na vreme ${p.onTime}</small></div>
+        <div class="dl-who"><b>${dlEsc(p.name)}${p.tag ? ` <span class="dl-tag">${p.tag}</span>` : ""}</b><small>${p.planned} smena · u smeni ${p.came}</small></div>
         <div class="dl-p-badges">${badges}</div>
         <span class="dl-chev">›</span>
       </div>
@@ -458,31 +448,29 @@ async function dlDownloadPdf() {
 
     const n = belgradeNow();
     const sum = (f) => list.reduce((s, p) => s + f(p), 0);
-    const planned = sum(p => p.planned), onTime = sum(p => p.onTime);
+    const planned = sum(p => p.planned), came = sum(p => p.came);
     doc.setFont("DejaVu", "bold"); doc.setFontSize(16);
     doc.text(`Dolasci — ${MONTH_NAMES_SR[month - 1]} ${year}.`, 14, 18);
     doc.setFont("DejaVu", "normal"); doc.setFontSize(9); doc.setTextColor(110);
     doc.text(`Izveštaj napravljen ${n.getDate()}.${n.getMonth() + 1}.${n.getFullYear()}. u ${dlHHMM(n)}` +
       (document.getElementById("dl-month-note").textContent ? ` · ${document.getElementById("dl-month-note").textContent}` : ""), 14, 24);
     doc.setTextColor(30); doc.setFontSize(10);
-    doc.text(`Na vreme: ${planned ? Math.round(onTime / planned * 100) : 0}% (${onTime} od ${planned} smena)   ·   ` +
-      `Kašnjenja: ${sum(p => p.lateN)} (ukupno ${sum(p => p.lateMin)} min)   ·   Bez prijave: ${sum(p => p.missed.length)}   ·   Bolovanje: ${sum(p => p.sickDays)} dana`, 14, 31);
+    doc.text(`U smeni: ${planned ? Math.round(came / planned * 100) : 0}% (${came} od ${planned} smena)   ·   Bez prijave: ${sum(p => p.missed.length)}   ·   Bolovanje: ${sum(p => p.sickDays)} dana`, 14, 31);
 
     const green = [30, 74, 58];
     const base = { font: "DejaVu", fontSize: 8.5, cellPadding: 1.8, lineColor: [228, 222, 208], lineWidth: 0.1 };
     doc.autoTable({
       startY: 36,
-      head: [["Zaposleni", "Smena", "Prijavljen", "Na vreme", "Kasnio", "Kašnjenje (min)", "Bez prijave", "Van rasporeda", "Bolovanje (dana)"]],
-      body: list.map(p => [p.name, p.planned, p.came, p.onTime, p.lateN, p.lateMin, p.missed.length, p.extra.length, p.sickDays]),
+      head: [["Zaposleni", "Smena", "U smeni", "Bez prijave", "Van rasporeda", "Bolovanje (dana)"]],
+      body: list.map(p => [p.name, p.planned, p.came, p.missed.length, p.extra.length, p.sickDays]),
       styles: base,
       headStyles: { fillColor: green, textColor: 255, fontStyle: "bold" },
-      columnStyles: { 0: { cellWidth: 44 }, 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" }, 8: { halign: "right" } },
+      columnStyles: { 0: { cellWidth: 52 }, 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } },
       alternateRowStyles: { fillColor: [247, 246, 241] },
       didParseCell: (d) => {
         if (d.section !== "body") return;
-        if ((d.column.index === 4 || d.column.index === 5) && +d.cell.raw > 0) d.cell.styles.textColor = [163, 90, 0];
-        if (d.column.index === 6 && +d.cell.raw > 0) d.cell.styles.textColor = [192, 57, 43];
-        if (d.column.index === 8 && +d.cell.raw > 0) d.cell.styles.textColor = [107, 63, 184];
+        if (d.column.index === 3 && +d.cell.raw > 0) d.cell.styles.textColor = [192, 57, 43];
+        if (d.column.index === 5 && +d.cell.raw > 0) d.cell.styles.textColor = [107, 63, 184];
       },
     });
 
@@ -501,9 +489,8 @@ async function dlDownloadPdf() {
       });
     }
 
-    const details = list.filter(p => p.late.length || p.missed.length || p.extra.length).map(p => [
+    const details = list.filter(p => p.missed.length || p.extra.length).map(p => [
       p.name,
-      p.late.map(a => `${dlShortDate(a.work_date)} ${dlShiftLabel(a.shift_code, a.is_medju_smena)} (${a.late_minutes} min)`).join(", "),
       [...p.missed.map(r => `${dlShortDate(r.date)} ${dlShiftLabel(r.shift_code, r.is_medju_smena)}${dlMissNote(r, true)}`),
        ...p.extra.map(a => `${dlShortDate(a.work_date)} van rasporeda`)].join(", "),
     ]);
@@ -513,7 +500,7 @@ async function dlDownloadPdf() {
       doc.setFont("DejaVu", "bold"); doc.setFontSize(11); doc.text("Detalji po zaposlenom", 14, y);
       doc.autoTable({
         startY: y + 3,
-        head: [["Zaposleni", "Kašnjenja", "Bez prijave / van rasporeda"]],
+        head: [["Zaposleni", "Bez prijave / van rasporeda"]],
         body: details,
         styles: base,
         headStyles: { fillColor: green, textColor: 255, fontStyle: "bold" },
