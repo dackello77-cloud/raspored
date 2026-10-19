@@ -347,8 +347,9 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
   }
   if (!asTable) box.appendChild(shiftBody);
 
-  [...main, ...ms].forEach(p => {
+  [...main, ...ms].forEach((p, idx) => {
     const row = document.createElement(asTable ? "span" : "div");
+    row.dataset.order = idx; // prvobitni redosled (pretraga traženog stavlja prvog)
     row.className = asTable
       ? "chip on-white emp-chip"
       : `rdm-emp-row ${p.isLeader ? "is-leader" : ""} ${p.isMS ? "is-ms" : ""}`;
@@ -796,6 +797,13 @@ async function rdmHandleReplace() {
 function rdmApplySearch(term, root = document.getElementById("rasporedi-months"), info = document.getElementById("rasporedi-search-info")) {
   const t = term.trim().toLowerCase();
   let count = 0;
+  // Kao na glavnoj strani: tražena osoba ide prva u smeni; bez pretrage vraća se prvobitni redosled.
+  root.querySelectorAll(".day-row .shift-cell").forEach(cell => {
+    const list = [...cell.querySelectorAll(":scope > .emp-chip")].sort((a, b) => a.dataset.order - b.dataset.order);
+    for (let i = list.length - 1; i >= 0; i--) cell.prepend(list[i]);
+    const hit = t && list.find(c => c.dataset.name === t);
+    if (hit) cell.prepend(hit);
+  });
   root.querySelectorAll(".rdm-emp-row, .emp-chip").forEach(row => {
     const match = !t || row.dataset.name === t;
     row.classList.toggle("search-hit", !!t && match);
