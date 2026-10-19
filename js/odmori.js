@@ -95,7 +95,7 @@ function odRender() {
   info.innerHTML = !published
     ? `Pregled za administratora — zaposleni vide termine od <b>${odFmt(r.publish_date)}</b>.`
     : open
-      ? `Izbor je otvoren do ${odFmt(odAddDays(r.start_date, -1))}. Termin traje 2 nedelje.${mine ? ` Tvoj termin: <b>${odFmt(odTerm(mine.term_no).from)} – ${odFmt(odTerm(mine.term_no).to)}</b>.` : ""}`
+      ? `Izbor je otvoren do ${odFmt(odAddDays(r.start_date, -1))}. Termin traje 2 nedelje.${mine ? ` Moj termin: <b>${odFmt(odTerm(mine.term_no).from)} – ${odFmt(odTerm(mine.term_no).to)}</b>.` : ""}`
       : "Odmori su počeli — izbor termina je zatvoren.";
 
   let html = "";
@@ -103,9 +103,11 @@ function odRender() {
     const t = odTerm(k);
     const st = OD.terms.find(x => x.term_no === k) || {};
     const isMine = !!st.mine;
+    // Katanac u sredini samo kad je termin zauzet za mene (npr. radniku ne smeta termin office managera).
+    const lockMid = !isMine && st.taken && (st.err === "Zauzeto" || !OD_ROLES.includes(myF));
     let action = "";
     if (isMine) {
-      action = `<span class="od-state mine">Tvoj termin</span>${open ? '<button type="button" class="btn btn-ghost od-unpick">Otkaži</button>' : ""}`;
+      action = open ? '<button type="button" class="btn btn-ghost od-unpick">Otkaži</button>' : "";
     } else if (open && OD.me && OD_ROLES.includes(myF)) {
       const err = st.err;
       // "Zauzeto" već piše u sredini (katanac) — ne ponavlja se desno.
@@ -113,15 +115,13 @@ function odRender() {
         ? (lockMid && !OD.seeAll ? "" : `<span class="od-state locked" title="${zmEsc(err)}">🔒 ${zmEsc(err)}</span>`)
         : `<button type="button" class="btn btn-primary od-pick" data-term="${k}">${mine ? "Prebaci ovde" : "Izaberi"}</button>`;
     }
-    // Katanac u sredini samo kad je termin zauzet za mene (npr. radniku ne smeta termin office managera).
-    const lockMid = !isMine && st.taken && (st.err === "Zauzeto" || !OD_ROLES.includes(myF));
     let people;
     if (OD.seeAll) {
       people = OD.picks.filter(p => p.term_no === k).map(p => `<span class="od-person">${zmEsc(p.name)} <small>${OD_LABEL[p.funkcija] || ""}</small>${OD.isAdmin
         ? `<button type="button" class="od-remove" data-pick="${p.id}" title="Ukloni termin">×</button>` : ""}</span>`).join("");
     } else {
       // Zaposleni vidi samo svoje ime; tuđi termin = samo katanac, bez imena.
-      people = isMine ? `<span class="od-person">${zmEsc(OD.myName)}</span>`
+      people = isMine ? `<span class="od-mine">✓ Moj termin</span>`
         : lockMid ? `<span class="od-taken">🔒 Zauzeto</span>` : "";
     }
     html += `<div class="od-term${isMine ? " is-mine" : ""}${!OD.seeAll && lockMid ? " is-taken" : ""}">
