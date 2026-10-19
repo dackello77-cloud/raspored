@@ -1,6 +1,7 @@
 // Stranica "Odmori": zaposleni biraju termin za godišnji odmor (2 nedelje), administrator
 // aktivira termine (datum objave + ponedeljak od koga kreću). Pravila čuva baza —
-// sql/migration_025_odmori.sql; ovde se ista pravila koriste samo za prikaz (zaključano / slobodno).
+// sql/migration_025_odmori.sql. Zaposleni ne vide ko je uzeo koji termin (migration_030): stanje
+// termina (zauzet / moj / zašto ne mogu) daje baza preko vacation_terms; imena vide samo admin i HR.
 
 const OD_ROLES = ["radnik", "shift_lider", "monitoring", "accounting", "office_manager"];
 const OD_RASPORED = ["radnik", "shift_lider", "monitoring"];
@@ -9,15 +10,8 @@ const OD_LABEL = { radnik: "Radnik", shift_lider: "Shift lider", monitoring: "Mo
 const OD_SEASONS = { letnji: "Letnji", zimski: "Zimski" };
 
 // round/picks = trenutno izabran tab (sezona); rounds = aktivni termini obe sezone.
-let OD = { me: null, isAdmin: false, season: "letnji", rounds: {}, round: null, picks: [], emps: [] };
-
-// Pravo na odmor: 6 meseci od početka radnog odnosa (isto kao vacation_eligible_from u bazi).
-function odEligibleFrom(hire) {
-  if (!hire) return null;
-  const [y, m, d] = hire.split("-").map(Number);
-  const last = new Date(y, m - 1 + 6 + 1, 0).getDate(); // 31.8. + 6 meseci = 28/29.2.
-  return odIso(new Date(y, m - 1 + 6, Math.min(d, last)));
-}
+// terms = stanje termina za mene iz baze (vacation_terms); picks = sa imenima, samo za admina / HR.
+let OD = { me: null, myName: "", isAdmin: false, seeAll: false, season: "letnji", rounds: {}, round: null, picks: [], terms: [] };
 
 function odIso(d) { return officeIso(d); }
 function odAddDays(iso, n) { const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + n); return odIso(d); }
@@ -33,39 +27,6 @@ function odBanner(message, type) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// Isto pravilo kao public.vacation_pick_error u bazi (null = može).
-function odPickError(f, term) {
-  if (!OD_ROLES.includes(f)) return "Odmor ovde biraju radnici, shift lideri, monitoring, accounting i office manager.";
-  const others = OD.picks.filter(p => p.employee_id !== OD.me.id);
-  const termStart = odTerm(term).from;
-  const myElig = odEligibleFrom(OD.me.hire_date);
-  if (myElig && termStart < myElig) return `Pravo na odmor od ${odFmt(myElig)}`;
-  if (OD_RASPORED.includes(f)) {
-    const t = others.find(p => p.term_no === term && OD_RASPORED.includes(p.funkcija));
-    if (t) return "Zauzeto";
-  }
-  if (["shift_lider", "monitoring", "accounting"].includes(f)) {
-    const t = others.find(p => Math.abs(p.term_no - term) <= 1 && p.funkcija === f);
-    if (t) return `Preklapa se sa odmorom: ${t.name}`;
-  }
-  // Rezervacija za nove radnike koji još nisu birali (isto kao u bazi).
-  if (OD_RASPORED.includes(f)) {
-    const lastStart = odTerm(OD.round.term_count - 1).from;
-    const picked = new Set(OD.picks.map(p => p.employee_id));
-    const fresh = OD.emps.filter(e => e.active && e.id !== OD.me.id && OD_RASPORED.includes(e.funkcija) && !picked.has(e.id))
-      .map(e => odEligibleFrom(e.hire_date))
-      .filter(x => x && x > OD.round.start_date && x <= lastStart);
-    const taken = new Set(others.filter(p => OD_RASPORED.includes(p.funkcija)).map(p => p.term_no));
-    for (const t of new Set(fresh)) {
-      if (termStart < t) continue;
-      let free = 0;
-      for (let n = 0; n < OD.round.term_count; n++) if (n !== term && odTerm(n).from >= t && !taken.has(n)) free++;
-      if (free < fresh.filter(x => x >= t).length) return "Rezervisano za nove radnike";
-    }
-  }
-  return null;
-}
-
 async function odLoad() {
   const { data: rounds, error } = await sb.from("vacation_rounds").select("*").eq("active", true)
     .order("created_at", { ascending: false });
@@ -79,9 +40,14 @@ async function odLoad() {
   (rounds || []).forEach(r => { const s = r.season || "letnji"; if (!OD.rounds[s]) OD.rounds[s] = r; });
   OD.round = OD.rounds[OD.season] || null;
   OD.picks = [];
-  if (OD.round) {
-    const { data: emps } = await sb.from("employees").select("id, funkcija, hire_date, active");
-    OD.emps = emps || [];
+  OD.terms = [];
+  if (OD.round && OD.me) {
+    const { data, error: e2 } = await sb.rpc("vacation_terms", { p_season: OD.season });
+    if (e2) odBanner(/vacation_terms/.test(e2.message)
+      ? "Treba jednom pokrenuti SQL iz fajla sql/migration_030_odmori_privatnost.sql u Supabase." : e2.message, "error");
+    OD.terms = data || [];
+  }
+  if (OD.round && OD.seeAll) {
     const { data } = await sb.from("vacation_picks")
       .select("id, term_no, employee_id, employees(funkcija, profiles(full_name))").eq("round_id", OD.round.id);
     OD.picks = (data || []).map(p => ({
@@ -124,7 +90,8 @@ function odRender() {
   }
 
   const myF = OD.me && OD.me.funkcija;
-  const mine = OD.me && OD.picks.find(p => p.employee_id === OD.me.id);
+  const mineT = OD.terms.find(t => t.mine);
+  const mine = mineT ? { term_no: mineT.term_no } : null;
   info.innerHTML = !published
     ? `Pregled za administratora — zaposleni vide termine od <b>${odFmt(r.publish_date)}</b>.`
     : open
@@ -134,20 +101,30 @@ function odRender() {
   let html = "";
   for (let k = 0; k < r.term_count; k++) {
     const t = odTerm(k);
-    const here = OD.picks.filter(p => p.term_no === k);
-    const isMine = !!(mine && mine.term_no === k);
+    const st = OD.terms.find(x => x.term_no === k) || {};
+    const isMine = !!st.mine;
     let action = "";
     if (isMine) {
       action = `<span class="od-state mine">Tvoj termin</span>${open ? '<button type="button" class="btn btn-ghost od-unpick">Otkaži</button>' : ""}`;
     } else if (open && OD.me && OD_ROLES.includes(myF)) {
-      const err = odPickError(myF, k);
+      const err = st.err;
+      // "Zauzeto" već piše u sredini (katanac) — ne ponavlja se desno.
       action = err
-        ? `<span class="od-state locked" title="${zmEsc(err)}">🔒 ${zmEsc(err)}</span>`
+        ? (lockMid && !OD.seeAll ? "" : `<span class="od-state locked" title="${zmEsc(err)}">🔒 ${zmEsc(err)}</span>`)
         : `<button type="button" class="btn btn-primary od-pick" data-term="${k}">${mine ? "Prebaci ovde" : "Izaberi"}</button>`;
     }
-    const people = here.map(p => `<span class="od-person">${zmEsc(p.name)} <small>${OD_LABEL[p.funkcija] || ""}</small>${OD.isAdmin
-      ? `<button type="button" class="od-remove" data-pick="${p.id}" title="Ukloni termin">×</button>` : ""}</span>`).join("");
-    html += `<div class="od-term${isMine ? " is-mine" : ""}">
+    // Katanac u sredini samo kad je termin zauzet za mene (npr. radniku ne smeta termin office managera).
+    const lockMid = !isMine && st.taken && (st.err === "Zauzeto" || !OD_ROLES.includes(myF));
+    let people;
+    if (OD.seeAll) {
+      people = OD.picks.filter(p => p.term_no === k).map(p => `<span class="od-person">${zmEsc(p.name)} <small>${OD_LABEL[p.funkcija] || ""}</small>${OD.isAdmin
+        ? `<button type="button" class="od-remove" data-pick="${p.id}" title="Ukloni termin">×</button>` : ""}</span>`).join("");
+    } else {
+      // Zaposleni vidi samo svoje ime; tuđi termin = samo katanac, bez imena.
+      people = isMine ? `<span class="od-person">${zmEsc(OD.myName)}</span>`
+        : lockMid ? `<span class="od-taken">🔒 Zauzeto</span>` : "";
+    }
+    html += `<div class="od-term${isMine ? " is-mine" : ""}${!OD.seeAll && lockMid ? " is-taken" : ""}">
       <div class="od-term-head"><b>Termin ${k + 1}</b><span>${odFmtShort(t.from)} – ${odFmt(t.to)}</span></div>
       <div class="od-people">${people || '<span class="muted">Slobodno</span>'}</div>
       <div class="od-actions">${action}</div>
@@ -230,6 +207,8 @@ document.getElementById("od-admin-form").addEventListener("submit", async (e) =>
   const { session, profile } = await mountHeader("odmori");
   if (!session) { window.location.href = APP_BASE + "login.html"; return; }
   OD.isAdmin = isAdminProfile(profile);
+  OD.seeAll = OD.isAdmin || !!(profile && profile.hr_manager);
+  OD.myName = ((profile && profile.full_name) || "").toUpperCase();
   const { data: emp } = await sb.from("employees").select("id, funkcija, hire_date").eq("profile_id", session.user.id).maybeSingle();
   OD.me = emp || null;
   document.getElementById("od-admin-card").classList.toggle("od-hidden", !OD.isAdmin);
