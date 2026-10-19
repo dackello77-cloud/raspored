@@ -18,6 +18,23 @@
 <link rel="stylesheet" href="css/style.css?v=20261015a" />
 <style>
   .od-wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  /* Administrator: desno spisak onih koji još nisu izabrali termin. */
+  .od-layout.has-side { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+  .od-layout.has-side .od-wrap { max-width: none; margin: 0; }
+  .od-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .od-side h2 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .od-side h2 small { font-size: 13px; color: var(--text-muted); font-weight: 700; }
+  .od-side-group { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin: 12px 0 4px; }
+  .od-side-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .od-side-row:last-child { border-bottom: none; }
+  .od-side-row b { font-weight: 700; }
+  .od-side-row span { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .od-side-row span.late { color: var(--red-text); }
+  .od-side-done { padding: 14px 0 4px; text-align: center; color: var(--green-darker); font-weight: 700; font-size: 14px; }
+  @media (max-width: 1000px) {
+    .od-layout.has-side { grid-template-columns: 1fr; }
+    .od-side { position: static; max-height: none; }
+  }
   .card h2 { margin: 0 0 2px; font-size: 15px; }
   .card .sub { margin: 0 0 14px; font-size: 12px; }
   .od-hidden { display: none !important; }
@@ -30,7 +47,7 @@
   .od-none { padding: 28px 10px; text-align: center; color: var(--text-muted); font-size: 14px; font-weight: 600; }
   .od-terms { display: flex; flex-direction: column; gap: 8px; }
   .od-term { border: 1px solid var(--border); border-radius: 14px; padding: 14px 18px; display: grid;
-    grid-template-columns: minmax(190px, 0.9fr) minmax(0, 1.3fr) auto; gap: 12px; align-items: center; background: #fff; }
+    grid-template-columns: 280px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: #fff; }
   .od-term.is-mine { border-color: var(--green-dark); background: var(--green-light); }
   .od-term-head { display: flex; flex-direction: column; }
   .od-term-head b { font-size: 13px; color: var(--text-muted); font-weight: 700; }
@@ -65,6 +82,7 @@
   <header class="app-header" id="app-header-mount"></header>
 
   <main class="page">
+   <div class="od-layout" id="od-layout">
     <div class="od-wrap">
       <div id="od-banner"></div>
 
@@ -91,6 +109,8 @@
         <div class="od-terms" id="od-terms"><div class="od-none">Učitavanje...</div></div>
       </section>
     </div>
+    <aside class="card od-side od-hidden" id="od-side"></aside>
+   </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -99,6 +119,6 @@
   <script src="js/push.js?v=20261015a"></script>
   <script src="js/constants.js?v=20261015a"></script>
   <script src="js/swap-common.js?v=20261015a"></script>
-  <script src="js/odmori.js?v=20261019g"></script>
+  <script src="js/odmori.js?v=20261019h"></script>
 </body>
 </html>

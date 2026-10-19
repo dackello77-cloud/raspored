@@ -11,7 +11,16 @@ const OD_SEASONS = { letnji: "Letnji", zimski: "Zimski" };
 
 // round/picks = trenutno izabran tab (sezona); rounds = aktivni termini obe sezone.
 // terms = stanje termina za mene iz baze (vacation_terms); picks = sa imenima, samo za administratora.
-let OD = { me: null, myName: "", isAdmin: false, seeAll: false, season: "letnji", rounds: {}, round: null, picks: [], terms: [] };
+// emps = zaposleni koji biraju odmor (samo za administratora — desni spisak "nisu izabrali").
+let OD = { me: null, myName: "", isAdmin: false, seeAll: false, season: "letnji", rounds: {}, round: null, picks: [], terms: [], emps: [] };
+
+// Pravo na odmor: 6 meseci od početka radnog odnosa (isto kao vacation_eligible_from u bazi).
+function odEligibleFrom(hire) {
+  if (!hire) return null;
+  const [y, m, d] = hire.split("-").map(Number);
+  const last = new Date(y, m - 1 + 6 + 1, 0).getDate(); // 31.8. + 6 meseci = 28/29.2.
+  return odIso(new Date(y, m - 1 + 6, Math.min(d, last)));
+}
 
 function odIso(d) { return officeIso(d); }
 function odAddDays(iso, n) { const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + n); return odIso(d); }
@@ -46,6 +55,11 @@ async function odLoad() {
     if (e2) odBanner(/vacation_terms/.test(e2.message)
       ? "Treba jednom pokrenuti SQL iz fajla sql/migration_030_odmori_privatnost.sql u Supabase." : e2.message, "error");
     OD.terms = data || [];
+  }
+  if (OD.round && OD.isAdmin) {
+    const { data: emps } = await sb.from("employees").select("id, funkcija, hire_date, profiles(full_name)")
+      .eq("active", true).in("funkcija", OD_ROLES);
+    OD.emps = (emps || []).map(e => ({ id: e.id, funkcija: e.funkcija, hire_date: e.hire_date, name: (e.profiles?.full_name || "").toUpperCase() }));
   }
   if (OD.round && OD.seeAll) {
     const { data } = await sb.from("vacation_picks")
@@ -82,7 +96,7 @@ function odRender() {
   const list = document.getElementById("od-terms");
   const info = document.getElementById("od-info");
 
-  if (OD.isAdmin) odRenderAdmin();
+  if (OD.isAdmin) { odRenderAdmin(); odRenderSide(); }
   if (!r || (!published && !OD.isAdmin)) {
     info.textContent = "";
     list.innerHTML = `<div class="od-none">Nema aktivnih termina za ${OD_SEASONS[OD.season].toLowerCase()} odmor.</div>`;
@@ -132,6 +146,34 @@ function odRender() {
     </div>`;
   }
   list.innerHTML = html;
+}
+
+// Desno (samo administrator): ko još nije izabrao termin u ovoj sezoni i od kada stiče pravo.
+// Kako ko izabere, nestaje sa spiska.
+function odRenderSide() {
+  const side = document.getElementById("od-side");
+  const r = OD.round;
+  document.getElementById("od-layout").classList.toggle("has-side", !!r);
+  side.classList.toggle("od-hidden", !r);
+  if (!r) return;
+  const picked = new Set(OD.picks.map(p => p.employee_id));
+  const left = OD.emps.filter(e => !picked.has(e.id));
+  const lastStart = odTerm(r.term_count - 1).from;
+  let html = `<h2>Nisu izabrali <small>${left.length} od ${OD.emps.length}</small></h2>
+    <p class="muted sub">${OD_SEASONS[OD.season]} odmor · nestaju sa spiska kad izaberu termin.</p>`;
+  if (!left.length) html += `<div class="od-side-done">✓ Svi su izabrali termin</div>`;
+  OD_ROLES.forEach(f => {
+    const group = left.filter(e => e.funkcija === f).sort((a, b) => a.name.localeCompare(b.name, "sr"));
+    if (!group.length) return;
+    html += `<div class="od-side-group">${OD_LABEL[f]} · ${group.length}</div>`;
+    group.forEach(e => {
+      const el = odEligibleFrom(e.hire_date);
+      const late = el && el > lastStart; // pravo stiče tek posle poslednjeg termina
+      html += `<div class="od-side-row"><b>${zmEsc(e.name)}</b><span class="${late ? "late" : ""}"
+        title="${late ? "Pravo stiče posle poslednjeg termina" : ""}">${el ? `pravo od ${odFmt(el)}` : "ima pravo"}</span></div>`;
+    });
+  });
+  side.innerHTML = html;
 }
 
 function odRenderAdmin() {
