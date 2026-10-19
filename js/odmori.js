@@ -103,16 +103,17 @@ function odRender() {
     const t = odTerm(k);
     const st = OD.terms.find(x => x.term_no === k) || {};
     const isMine = !!st.mine;
-    // Katanac u sredini samo kad je termin zauzet za mene (npr. radniku ne smeta termin office managera).
-    const lockMid = !isMine && st.taken && (st.err === "Zauzeto" || !OD_ROLES.includes(myF));
+    // Zašto ja ne mogu ovaj termin (Zauzeto / Preklapa se sa drugim odmorom / Pravo na odmor od…) —
+    // za zaposlenog piše u sredini, bez imena i bez dugmeta. Ko ne bira odmor vidi samo zauzetost.
+    const lockText = isMine ? null : OD_ROLES.includes(myF) ? st.err : (st.taken ? "Zauzeto" : null);
     let action = "";
     if (isMine) {
       action = open ? '<button type="button" class="btn btn-ghost od-unpick">Otkaži</button>' : "";
     } else if (open && OD.me && OD_ROLES.includes(myF)) {
       const err = st.err;
-      // "Zauzeto" već piše u sredini (katanac) — ne ponavlja se desno.
+      // Zaposlenom razlog već piše u sredini (katanac) — ne ponavlja se desno.
       action = err
-        ? (lockMid && !OD.seeAll ? "" : `<span class="od-state locked" title="${zmEsc(err)}">🔒 ${zmEsc(err)}</span>`)
+        ? (!OD.seeAll ? "" : `<span class="od-state locked" title="${zmEsc(err)}">🔒 ${zmEsc(err)}</span>`)
         : `<button type="button" class="btn btn-primary od-pick" data-term="${k}">${mine ? "Prebaci ovde" : "Izaberi"}</button>`;
     }
     let people;
@@ -122,9 +123,9 @@ function odRender() {
     } else {
       // Zaposleni vidi samo svoje ime; tuđi termin = samo katanac, bez imena.
       people = isMine ? `<span class="od-mine">✓ Moj termin</span>`
-        : lockMid ? `<span class="od-taken">🔒 Zauzeto</span>` : "";
+        : lockText ? `<span class="od-taken">🔒 ${zmEsc(lockText)}</span>` : "";
     }
-    html += `<div class="od-term${isMine ? " is-mine" : ""}${!OD.seeAll && lockMid ? " is-taken" : ""}">
+    html += `<div class="od-term${isMine ? " is-mine" : ""}${!OD.seeAll && lockText ? " is-taken" : ""}">
       <div class="od-term-head"><b>Termin ${k + 1}</b><span>${odFmtShort(t.from)} – ${odFmt(t.to)}</span></div>
       <div class="od-people">${people || '<span class="muted">Slobodno</span>'}</div>
       <div class="od-actions">${action}</div>
