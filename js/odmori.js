@@ -189,17 +189,25 @@ function odRenderSide() {
   let html = `<h2>Nisu izabrali <small>${left.length} od ${OD.emps.length}</small></h2>
     <p class="muted sub">${OD_SEASONS[OD.season]} odmor · nestaju sa spiska kad izaberu termin.</p>`;
   if (!left.length) html += `<div class="od-side-done">✓ Svi su izabrali termin</div>`;
+  // Novi (pravo stiču posle početka odmora) idu na dno, po datumu od kog stiču pravo.
+  const isLater = e => { const el = odEligibleFrom(e.hire_date); return !!el && el > r.start_date; };
+  const row = e => {
+    const el = odEligibleFrom(e.hire_date);
+    const late = el && el > lastStart; // pravo stiče tek posle poslednjeg termina
+    return `<div class="od-side-row"><b>${zmEsc(e.name)}</b><span class="${late ? "late" : ""}"
+      title="${late ? "Pravo stiče posle poslednjeg termina" : ""}">${el ? `pravo od ${odFmt(el)}` : "ima pravo"}</span></div>`;
+  };
   OD_ROLES.forEach(f => {
-    const group = left.filter(e => e.funkcija === f).sort((a, b) => a.name.localeCompare(b.name, "sr"));
+    const group = left.filter(e => e.funkcija === f && !isLater(e)).sort((a, b) => a.name.localeCompare(b.name, "sr"));
     if (!group.length) return;
     html += `<div class="od-side-group">${OD_LABEL[f]} · ${group.length}</div>`;
-    group.forEach(e => {
-      const el = odEligibleFrom(e.hire_date);
-      const late = el && el > lastStart; // pravo stiče tek posle poslednjeg termina
-      html += `<div class="od-side-row"><b>${zmEsc(e.name)}</b><span class="${late ? "late" : ""}"
-        title="${late ? "Pravo stiče posle poslednjeg termina" : ""}">${el ? `pravo od ${odFmt(el)}` : "ima pravo"}</span></div>`;
-    });
+    group.forEach(e => { html += row(e); });
   });
+  const later = left.filter(isLater).sort((a, b) => odEligibleFrom(a.hire_date).localeCompare(odEligibleFrom(b.hire_date)));
+  if (later.length) {
+    html += `<div class="od-side-group">Stiču pravo kasnije · ${later.length}</div>`;
+    later.forEach(e => { html += row(e); });
+  }
   side.innerHTML = html;
 }
 
