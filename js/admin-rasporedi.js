@@ -211,9 +211,13 @@ function rdmDecorateDraft(wrap) {
     const { error } = await sb.rpc("schedule_publish", { p_year: year, p_month: month });
     if (error) { rdmShowBanner("Objava nije uspela: " + error.message, "error"); e.target.disabled = false; return; }
     const n = changed ? Object.keys(changed).length : 0;
-    if (n) sb.functions.invoke("send-push", { body: { published: { year, month, changed } } }).catch(console.error);
+    let pushNote = "";
+    if (n) {
+      const { data, error: pe } = await sb.functions.invoke("send-push", { body: { published: { year, month, changed } } });
+      pushNote = pe ? ` Greška pri slanju: ${pe.message}` : ` Stiglo na telefona: ${data?.sent ?? "?"}.`;
+    }
     rdmShowBanner(`Izmene za ${label} su objavljene. ` + (n
-      ? `Obaveštenje je poslato radnicima kojima su se smene promenile (${n}).`
+      ? `Obaveštenje je poslato radnicima kojima su se smene promenile (${n}).${pushNote}`
       : changed ? "Obaveštenje nije slato — nema promena od danas nadalje."
       : "Obaveštenje nije poslato (greška pri poređenju)."), "success");
     await rdmLoadAllMonths();
