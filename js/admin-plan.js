@@ -253,7 +253,10 @@ function buildPlanRow(emp, weeks, dayOff, weeklyPlan, fond, gridTemplate, ctx) {
   const name = (emp.profiles?.full_name || "").toUpperCase();
   const username = emp.profiles?.username || "";
   const isMonitoring = emp.funkcija === "monitoring";
-  // Slava (dan i mesec iz "Osobe u sistemu") — ako pada u ovaj mesec, predlaže se kao obavezno slobodan.
+  // Slava (dan i mesec iz "Osobe u sistemu") — ako pada u ovaj mesec, generator je sam postavlja kao
+  // slobodan dan i fond je jedna smena manje. Prikazuje se ispod polja, ne upisuje se u days_off
+  // (to polje je slobodan dan koji radnik bira u aplikaciji i ne smanjuje fond). Stari upis slave u
+  // days_off se ne prikazuje u polju, pa ga sledeće "Sačuvaj plan" briše.
   const slavaThisMonth = emp.slava_date && Number(emp.slava_date.slice(5, 7)) === ctx.month
     ? `${ctx.year}-${emp.slava_date.slice(5)}`
     : null;
@@ -284,8 +287,8 @@ function buildPlanRow(emp, weeks, dayOff, weeklyPlan, fond, gridTemplate, ctx) {
         : FUNKCIJA_FOR_WEEK_LABELS[emp.funkcija] || emp.funkcija}
     </div>
     <div class="field-odmor">
-      <input type="date" class="p-dayoff" min="${monthMin}" max="${monthMax}" value="${dayOff ? dayOff.off_date : (slavaThisMonth || "")}" />
-      ${!dayOff && slavaThisMonth ? '<div class="plan-slava-note">Slava</div>' : ""}
+      <input type="date" class="p-dayoff" min="${monthMin}" max="${monthMax}" value="${dayOff && dayOff.off_date !== slavaThisMonth ? dayOff.off_date : ""}" />
+      ${slavaThisMonth ? `<div class="plan-slava-note">Slava ${Number(slavaThisMonth.slice(8))}.${Number(slavaThisMonth.slice(5, 7))}.</div>` : ""}
     </div>
     <div class="plan-fond"${slavaThisMonth ? ' title="Slava — jedna smena manje"' : ""}>${slavaThisMonth ? fond - 1 : fond}</div>
     <div class="plan-ne-zajedno">
