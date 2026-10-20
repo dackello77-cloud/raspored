@@ -132,7 +132,10 @@ function odRender() {
     if (odTermBlocked(k)) continue;
     no++;
     const t = odTerm(k);
-    const st = OD.terms.find(x => x.term_no === k) || {};
+    let st = OD.terms.find(x => x.term_no === k);
+    // Zaposleni vidi samo termine koje mu baza vrati (novi radnik = termini za nove, stariji = ostali).
+    if (!st && !OD.isAdmin && OD.me) continue;
+    st = st || {};
     const isMine = !!st.mine;
     // Zašto ja ne mogu ovaj termin (Zauzeto / Preklapa se sa drugim odmorom / Pravo na odmor od…) —
     // za zaposlenog piše u sredini, bez imena i bez dugmeta. Ko ne bira odmor vidi samo zauzetost.
@@ -148,15 +151,12 @@ function odRender() {
         : `<button type="button" class="btn btn-primary od-pick" data-term="${k}">${mine ? "Prebaci ovde" : "Izaberi"}</button>`;
     }
     let people;
-    const isResv = k in OD.reserved; // administrator sačuvao za nove radnike (sql/migration_041_odmori_samo_rucno.sql)
+    const isResv = k in OD.reserved; // administrator odredio za nove radnike (sql/migration_042_odmori_novi_vide_svoje.sql)
     const free = !isMine && !st.taken && !OD.picks.some(p => p.term_no === k);
     if (OD.isAdmin && free) {
       action += `<button type="button" class="btn btn-ghost od-resv" data-term="${k}">${isResv ? "Ukloni čuvanje" : "🆕 Čuvaj za nove"}</button>`;
     }
-    if (isResv && free) {
-      // Slobodan termin čuvan za novog radnika — piše svima (bez imena), stariji ne mogu da ga uzmu.
-      people = `<span class="od-new">🆕 Samo za nove radnike</span>`;
-    } else if (OD.seeAll) {
+    if (OD.seeAll) {
       people = OD.picks.filter(p => p.term_no === k).map(p => `<span class="od-person">${zmEsc(p.name)} <small>${OD_LABEL[p.funkcija] || ""}</small>${OD.isAdmin
         ? `<button type="button" class="od-remove" data-pick="${p.id}" title="Ukloni termin">×</button>` : ""}</span>`).join("");
     } else {
@@ -170,6 +170,7 @@ function odRender() {
       <div class="od-actions">${action}</div>
     </div>`;
   }
+  if (!html && !OD.isAdmin) html = `<div class="od-none">Još nema termina za tebe — odrediće ih administrator.</div>`;
   if (OD.isAdmin) html += `<button type="button" class="od-add-term" id="od-add-term" title="Dodaj još jedan termin na kraj">＋ Dodaj termin</button>`;
   list.innerHTML = html;
 }
