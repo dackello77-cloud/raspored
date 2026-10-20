@@ -214,7 +214,7 @@ function rdmDecorateDraft(wrap) {
     let pushNote = "";
     if (n) {
       const { data, error: pe } = await sb.functions.invoke("send-push", { body: { published: { year, month, changed } } });
-      pushNote = pe ? ` Greška pri slanju: ${pe.message}` : ` Stiglo na telefona: ${data?.sent ?? "?"}.`;
+      pushNote = pe ? ` Greška pri slanju: ${pe.message}` : ` Stiglo na telefona: ${data?.sent ?? "?"}.` + (data?.sent ? "" : ` (${data?.why || "stara verzija send-push"})`);
     }
     rdmShowBanner(`Izmene za ${label} su objavljene. ` + (n
       ? `Obaveštenje je poslato radnicima kojima su se smene promenile (${n}).${pushNote}`
