@@ -149,6 +149,42 @@ async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule", o
   return wrap;
 }
 
+// Pre "Objavi izmene": ko je dobio drugačije smene od danas nadalje -> { employee_id: [datumi] }.
+// Poredi objavljeni raspored i nacrt po danu (smena, lider, međusmena). null ako čitanje ne uspe.
+async function rdmChangedDays(year, month) {
+  const { start, end } = rdmMonthRange(year, month);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${rdmPad2(now.getMonth() + 1)}-${rdmPad2(now.getDate())}`;
+  const from = today > start ? today : start;
+  if (from > end) return null;
+  const cols = "date, shift_code, employee_id, is_leader, is_medju_smena";
+  const [pub, draft] = await Promise.all([
+    sb.from("schedule").select(cols + ", sick_cover").gte("date", from).lte("date", end),
+    sb.from("schedule_draft").select(cols).gte("date", from).lte("date", end),
+  ]);
+  if (pub.error || draft.error) { console.error(pub.error || draft.error); return null; }
+  const sig = (rows) => {
+    const m = new Map();
+    for (const r of rows) {
+      if (!r.employee_id) continue;
+      // Lider zbog bolovanja (sick_cover) se ponovo postavlja pri objavi — nije prava izmena.
+      const v = `${r.shift_code}${r.is_leader && !r.sick_cover ? "L" : ""}${r.is_medju_smena ? "M" : ""}`;
+      const k = `${r.employee_id}|${r.date}`;
+      m.set(k, [...(m.get(k) || []), v].sort().join(","));
+    }
+    return m;
+  };
+  const a = sig(pub.data || []), b = sig(draft.data || []);
+  const out = {};
+  for (const k of new Set([...a.keys(), ...b.keys()])) {
+    if (a.get(k) === b.get(k)) continue;
+    const [emp, date] = k.split("|");
+    (out[emp] ||= []).push(date);
+  }
+  for (const d of Object.values(out)) d.sort();
+  return out;
+}
+
 // Objavljeni mesec sa neobjavljenim izmenama: traka "NACRT" + Objavi izmene / Odbaci izmene.
 function rdmDecorateDraft(wrap) {
   if (wrap.classList.contains("rdm-draft")) return;
@@ -171,9 +207,12 @@ function rdmDecorateDraft(wrap) {
       "Radnici odmah vide novi raspored.", "Objavi", "btn-primary");
     if (!ok) return;
     e.target.disabled = true;
+    const changed = await rdmChangedDays(year, month);
     const { error } = await sb.rpc("schedule_publish", { p_year: year, p_month: month });
     if (error) { rdmShowBanner("Objava nije uspela: " + error.message, "error"); e.target.disabled = false; return; }
-    rdmShowBanner(`Izmene za ${label} su objavljene.`, "success");
+    const n = changed ? Object.keys(changed).length : 0;
+    if (n) sb.functions.invoke("send-push", { body: { published: { year, month, changed } } }).catch(console.error);
+    rdmShowBanner(`Izmene za ${label} su objavljene.` + (n ? ` Obaveštenje je poslato radnicima kojima su se smene promenile (${n}).` : ""), "success");
     await rdmLoadAllMonths();
   });
   bar.querySelector(".rdm-draft-discard").addEventListener("click", async () => {
