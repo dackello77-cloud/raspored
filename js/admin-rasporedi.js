@@ -212,7 +212,10 @@ function rdmDecorateDraft(wrap) {
     if (error) { rdmShowBanner("Objava nije uspela: " + error.message, "error"); e.target.disabled = false; return; }
     const n = changed ? Object.keys(changed).length : 0;
     if (n) sb.functions.invoke("send-push", { body: { published: { year, month, changed } } }).catch(console.error);
-    rdmShowBanner(`Izmene za ${label} su objavljene.` + (n ? ` Obaveštenje je poslato radnicima kojima su se smene promenile (${n}).` : ""), "success");
+    rdmShowBanner(`Izmene za ${label} su objavljene. ` + (n
+      ? `Obaveštenje je poslato radnicima kojima su se smene promenile (${n}).`
+      : changed ? "Obaveštenje nije slato — nema promena od danas nadalje."
+      : "Obaveštenje nije poslato (greška pri poređenju)."), "success");
     await rdmLoadAllMonths();
   });
   bar.querySelector(".rdm-draft-discard").addEventListener("click", async () => {
