@@ -145,7 +145,7 @@ async function dlLoadDay() {
   const status = (start, a, count, empId) => {
     const c = (k) => { if (count) counts[k]++; };
     if (!a && empId && sickOn(sick, empId, date)) { c("sick"); return `<span class="dl-st sick">Bolovanje</span>`; }
-    if (a) { c("ok"); return `<span class="dl-st ok">✓ U smeni</span>`; }
+    if (a) { c("ok"); return `<span class="dl-st ok">✓ U smeni · ${DL_TIME_FMT.format(new Date(a.checked_at))}</span>`; }
     if (start > now) { c("wait"); return `<span class="dl-st wait">Još nije počela</span>`; }
     if (!tracked) return `<span class="dl-st wait">Pre prijava</span>`;
     c("miss"); return `<span class="dl-st miss">Bez prijave</span>`;
@@ -234,7 +234,7 @@ async function dlLoadDay() {
     let inner = "";
     others.forEach(a => {
       inner += row(dlName(a), a.shift_code ? `${OFFICE_CODE_LABEL[a.shift_code] || dlShiftLabel(a.shift_code, a.is_medju_smena)}` : "prijava bez smene",
-        `<span class="dl-st extra">Nije u rasporedu</span>`, a.id);
+        `<span class="dl-st extra">Nije u rasporedu · ${DL_TIME_FMT.format(new Date(a.checked_at))}</span>`, a.id);
     });
     html += group("", "Van rasporeda", `${others.length}`, inner, false);
   }

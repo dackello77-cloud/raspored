@@ -69,7 +69,7 @@ async function refreshRecent() {
     if (error) return;
     const box = document.getElementById("t-recent");
     const html = (data || []).map(r =>
-      `<span>✓ ${r.full_name} · u smeni</span>`
+      `<span>✓ ${r.full_name} · ${r.checked_time}</span>`
     ).join("");
     if (box.innerHTML !== html) box.innerHTML = html;
   } catch (e) { /* sledeći put */ }
