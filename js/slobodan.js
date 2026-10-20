@@ -1,7 +1,8 @@
 // Slobodan dan za naredni mesec (stranica Zamene -> dugme "Slobodan").
 // Kalendar je uvek za naredni mesec; izabran dan se odmah upisuje u Plan zaposlenih
-// (days_off). Najviše 2 osobe po danu — pun dan je zaključan. Pravila čuva baza:
-// sql/migration_024_slobodan_kalendar.sql.
+// (days_off). Najviše 2 osobe po danu — pun dan je zaključan. Slava zauzima mesto (2 slave = zaključan dan),
+// a radnik sa slavom u tom mesecu bira još jedan dan. Pravila čuva baza:
+// sql/migration_024_slobodan_kalendar.sql, sql/migration_035_slobodan_slava.sql.
 
 const FP_ROLES = ["radnik", "shift_lider", "monitoring", "accounting", "office_manager"];
 const FP_MAX = 2;
@@ -35,9 +36,10 @@ async function fpRefreshCard() {
       : error.message;
     return;
   }
-  const mine = Object.values(byDate).find(r => r.mine);
+  const mine = Object.values(byDate).find(r => r.mine && !r.my_slava);
+  const slava = Object.values(byDate).find(r => r.my_slava);
   const open = fpOpen();
-  box.innerHTML = (mine ? `Tvoj slobodan dan: <b>${zmEsc(zmFmtDate(mine.off_date))}</b>` : open ? "Još nisi izabrao/la slobodan dan." : "Nisi izabrao/la slobodan dan.")
+  box.innerHTML = (slava ? `Slava: <b>${zmEsc(zmFmtDate(slava.off_date))}</b> (slobodan dan)<br>` : "") + (mine ? `Tvoj slobodan dan: <b>${zmEsc(zmFmtDate(mine.off_date))}</b>` : open ? "Još nisi izabrao/la slobodan dan." : "Nisi izabrao/la slobodan dan.")
     + (open ? `<br><span class="muted">Izbor je otvoren do ${fpDeadlineText()}</span>` : `<br><span class="muted">🔒 Izbor je zaključan (rok je bio ${fpDeadlineText()})</span>`);
   document.getElementById("fp-open").disabled = !open;
 }
@@ -82,10 +84,11 @@ async function fpOpenCalendar() {
       const r = byDate[iso];
       const taken = r ? r.taken : 0;
       const mine = !!(r && r.mine);
-      const full = taken >= FP_MAX && !mine;
-      html += `<button type="button" class="fp-day${mine ? " mine" : ""}${full ? " full" : ""}" data-iso="${iso}" ${full ? "disabled" : ""}
-        title="${mine ? "Tvoj slobodan dan" : full ? "Popunjeno" : `Slobodno mesta: ${FP_MAX - taken}`}">
-        <b>${d}</b><small>${full ? "🔒" : `${taken}/${FP_MAX}`}</small></button>`;
+      const mySlava = !!(r && r.my_slava);
+      const full = (taken >= FP_MAX && !mine) || mySlava;
+      html += `<button type="button" class="fp-day${mine || mySlava ? " mine" : ""}${full && !mySlava ? " full" : ""}" data-iso="${iso}" ${full ? "disabled" : ""}
+        title="${mySlava ? "Tvoja slava — slobodan dan" : mine ? "Tvoj slobodan dan" : full ? "Popunjeno" : `Slobodno mesta: ${FP_MAX - taken}`}">
+        <b>${d}</b><small>${mySlava ? "Slava" : full ? "🔒" : `${taken}/${FP_MAX}`}</small></button>`;
     }
     cal.innerHTML = html;
     clearBtn.hidden = !Object.values(byDate).some(x => x.mine);
