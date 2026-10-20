@@ -60,7 +60,7 @@ async function odLoad() {
   OD.terms = [];
   OD.reserved = {};
   if (OD.round) {
-    // Termini koji se čuvaju za nove radnike (sql/migration_038_odmori_novi_radnici.sql).
+    // Termini koje je administrator sačuvao za nove radnike.
     const { data } = await sb.rpc("vacation_reserved", { p_season: OD.season });
     (data || []).forEach(x => { OD.reserved[x.term_no] = x.eligible_from; });
   }
@@ -148,14 +148,14 @@ function odRender() {
         : `<button type="button" class="btn btn-primary od-pick" data-term="${k}">${mine ? "Prebaci ovde" : "Izaberi"}</button>`;
     }
     let people;
-    const isResv = k in OD.reserved, resv = OD.reserved[k]; // resv = null → ručno sačuvan (administrator)
+    const isResv = k in OD.reserved; // administrator sačuvao za nove radnike (sql/migration_041_odmori_samo_rucno.sql)
     const free = !isMine && !st.taken && !OD.picks.some(p => p.term_no === k);
-    if (OD.isAdmin && free && !resv) {
+    if (OD.isAdmin && free) {
       action += `<button type="button" class="btn btn-ghost od-resv" data-term="${k}">${isResv ? "Ukloni čuvanje" : "🆕 Čuvaj za nove"}</button>`;
     }
     if (isResv && free) {
       // Slobodan termin čuvan za novog radnika — piše svima (bez imena), stariji ne mogu da ga uzmu.
-      people = `<span class="od-new">🆕 Za nove radnike${resv ? ` · pravo od ${odFmt(resv)}` : ""}</span>`;
+      people = `<span class="od-new">🆕 Samo za nove radnike</span>`;
     } else if (OD.seeAll) {
       people = OD.picks.filter(p => p.term_no === k).map(p => `<span class="od-person">${zmEsc(p.name)} <small>${OD_LABEL[p.funkcija] || ""}</small>${OD.isAdmin
         ? `<button type="button" class="od-remove" data-pick="${p.id}" title="Ukloni termin">×</button>` : ""}</span>`).join("");
@@ -170,6 +170,7 @@ function odRender() {
       <div class="od-actions">${action}</div>
     </div>`;
   }
+  if (OD.isAdmin) html += `<button type="button" class="od-add-term" id="od-add-term" title="Dodaj još jedan termin na kraj">＋ Dodaj termin</button>`;
   list.innerHTML = html;
 }
 
@@ -207,21 +208,8 @@ function odRenderAdmin() {
   box.innerHTML = r
     ? `Aktivni ${OD_SEASONS[OD.season].toLowerCase()} termini: objava <b>${odFmt(r.publish_date)}</b>, odmori od <b>${odFmt(r.start_date)}</b>, ${odTermCount()} termina
        (do ${odFmt(odTerm(r.term_count - 1).to)}). Izabrano: ${OD.picks.length}.
-       <button type="button" class="btn btn-ghost" id="od-add-term">➕ Dodaj još jedan termin</button>
        <button type="button" class="btn btn-danger" id="od-close">Deaktiviraj termine</button>`
     : `Nema aktivnih termina za ${OD_SEASONS[OD.season].toLowerCase()} odmor.`;
-  const add = document.getElementById("od-add-term");
-  if (add) add.addEventListener("click", async () => {
-    add.disabled = true;
-    const { data, error } = await sb.rpc("vacation_round_add_term", { p_season: OD.season });
-    if (error) {
-      odBanner(/vacation_round_add_term/.test(error.message)
-        ? "Treba jednom pokrenuti SQL iz fajla sql/migration_040_odmori_dodaj_termin.sql u Supabase." : error.message, "error");
-      add.disabled = false; return;
-    }
-    odBanner(`Dodat je termin od ${odFmt(data)}.`, "success");
-    await odLoad();
-  });
   const close = document.getElementById("od-close");
   if (close) close.addEventListener("click", async () => {
     if (!confirm(`Deaktivirati ${OD_SEASONS[OD.season].toLowerCase()} termine? Već upisani odmori ostaju u Osobe u sistemu.`)) return;
@@ -232,11 +220,27 @@ function odRenderAdmin() {
   });
 }
 
+// Dugme "+" na dnu liste (administrator): još jedan termin na kraj (sql/migration_040_odmori_dodaj_termin.sql).
+async function odAddTerm(add) {
+  add.disabled = true;
+  const { data, error } = await sb.rpc("vacation_round_add_term", { p_season: OD.season });
+  if (error) {
+    odBanner(/vacation_round_add_term/.test(error.message)
+      ? "Treba jednom pokrenuti SQL iz fajla sql/migration_040_odmori_dodaj_termin.sql u Supabase." : error.message, "error");
+    add.disabled = false;
+    return;
+  }
+  odBanner(`Dodat je termin od ${odFmt(data)}.`, "success");
+  await odLoad();
+}
+
 document.getElementById("od-terms").addEventListener("click", async (e) => {
   const pick = e.target.closest(".od-pick");
   const unpick = e.target.closest(".od-unpick");
   const remove = e.target.closest(".od-remove");
   const resv = e.target.closest(".od-resv");
+  const addT = e.target.closest(".od-add-term");
+  if (addT) { await odAddTerm(addT); return; }
   if (resv) {
     resv.disabled = true;
     const { error } = await sb.rpc("vacation_reserve_toggle", { p_season: OD.season, p_term: Number(resv.dataset.term) });
