@@ -28,6 +28,14 @@ function odFmt(iso) { const [y, m, d] = iso.split("-"); return `${+d}.${+m}.${y}
 function odFmtShort(iso) { const [, m, d] = iso.split("-"); return `${+d}.${+m}.`; }
 function odToday() { return odIso(belgradeNow()); }
 function odTerm(k) { const from = odAddDays(OD.round.start_date, 7 * k); return { from, to: odAddDays(from, 13) }; }
+// Od 22.12. do 10.1. svi rade — termin koji dodiruje taj period se ne prikazuje
+// (isto kao vacation_term_blocked u bazi, sql/migration_037_odmori_praznici.sql).
+function odTermBlocked(k) {
+  const t = odTerm(k), y = +t.from.slice(0, 4);
+  return [y - 1, y].some(n => t.from <= `${n + 1}-01-10` && t.to >= `${n}-12-22`);
+}
+
+function odTermCount() { let n = 0; for (let k = 0; k < OD.round.term_count; k++) if (!odTermBlocked(k)) n++; return n; }
 
 function odBanner(message, type) {
   const box = document.getElementById("od-banner");
@@ -113,7 +121,10 @@ function odRender() {
       : "Odmori su počeli — izbor termina je zatvoren.";
 
   let html = "";
+  let no = 0; // redni broj prikazanog termina (praznični se preskaču)
   for (let k = 0; k < r.term_count; k++) {
+    if (odTermBlocked(k)) continue;
+    no++;
     const t = odTerm(k);
     const st = OD.terms.find(x => x.term_no === k) || {};
     const isMine = !!st.mine;
@@ -140,7 +151,7 @@ function odRender() {
         : lockText ? `<span class="od-taken">🔒 ${zmEsc(lockText)}</span>` : "";
     }
     html += `<div class="od-term${isMine ? " is-mine" : ""}${!OD.seeAll && lockText ? " is-taken" : ""}">
-      <div class="od-term-head"><b>Termin ${k + 1}</b><span>${odFmtShort(t.from)} – ${odFmt(t.to)}</span></div>
+      <div class="od-term-head"><b>Termin ${no}</b><span>${odFmtShort(t.from)} – ${odFmt(t.to)}</span></div>
       <div class="od-people">${people || '<span class="muted">Slobodno</span>'}</div>
       <div class="od-actions">${action}</div>
     </div>`;
@@ -180,7 +191,7 @@ function odRenderAdmin() {
   const r = OD.round;
   const box = document.getElementById("od-admin-current");
   box.innerHTML = r
-    ? `Aktivni ${OD_SEASONS[OD.season].toLowerCase()} termini: objava <b>${odFmt(r.publish_date)}</b>, odmori od <b>${odFmt(r.start_date)}</b>, ${r.term_count} termina
+    ? `Aktivni ${OD_SEASONS[OD.season].toLowerCase()} termini: objava <b>${odFmt(r.publish_date)}</b>, odmori od <b>${odFmt(r.start_date)}</b>, ${odTermCount()} termina
        (do ${odFmt(odTerm(r.term_count - 1).to)}). Izabrano: ${OD.picks.length}.
        <button type="button" class="btn btn-danger" id="od-close">Deaktiviraj termine</button>`
     : `Nema aktivnih termina za ${OD_SEASONS[OD.season].toLowerCase()} odmor.`;
