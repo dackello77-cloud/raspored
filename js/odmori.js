@@ -148,10 +148,14 @@ function odRender() {
         : `<button type="button" class="btn btn-primary od-pick" data-term="${k}">${mine ? "Prebaci ovde" : "Izaberi"}</button>`;
     }
     let people;
-    const resv = OD.reserved[k];
-    if (resv && !isMine && !st.taken && !OD.picks.some(p => p.term_no === k)) {
+    const isResv = k in OD.reserved, resv = OD.reserved[k]; // resv = null → ručno sačuvan (administrator)
+    const free = !isMine && !st.taken && !OD.picks.some(p => p.term_no === k);
+    if (OD.isAdmin && free && !resv) {
+      action += `<button type="button" class="btn btn-ghost od-resv" data-term="${k}">${isResv ? "Ukloni čuvanje" : "🆕 Čuvaj za nove"}</button>`;
+    }
+    if (isResv && free) {
       // Slobodan termin čuvan za novog radnika — piše svima (bez imena), stariji ne mogu da ga uzmu.
-      people = `<span class="od-new">🆕 Za nove radnike · pravo od ${odFmt(resv)}</span>`;
+      people = `<span class="od-new">🆕 Za nove radnike${resv ? ` · pravo od ${odFmt(resv)}` : ""}</span>`;
     } else if (OD.seeAll) {
       people = OD.picks.filter(p => p.term_no === k).map(p => `<span class="od-person">${zmEsc(p.name)} <small>${OD_LABEL[p.funkcija] || ""}</small>${OD.isAdmin
         ? `<button type="button" class="od-remove" data-pick="${p.id}" title="Ukloni termin">×</button>` : ""}</span>`).join("");
@@ -219,6 +223,15 @@ document.getElementById("od-terms").addEventListener("click", async (e) => {
   const pick = e.target.closest(".od-pick");
   const unpick = e.target.closest(".od-unpick");
   const remove = e.target.closest(".od-remove");
+  const resv = e.target.closest(".od-resv");
+  if (resv) {
+    resv.disabled = true;
+    const { error } = await sb.rpc("vacation_reserve_toggle", { p_season: OD.season, p_term: Number(resv.dataset.term) });
+    if (error) odBanner(/vacation_reserve_toggle/.test(error.message)
+      ? "Treba jednom pokrenuti SQL iz fajla sql/migration_039_odmori_rucno_cuvanje.sql u Supabase." : error.message, "error");
+    await odLoad();
+    return;
+  }
   if (pick) {
     const k = Number(pick.dataset.term), t = odTerm(k);
     if (!confirm(`Izabrati odmor ${odFmt(t.from)} – ${odFmt(t.to)}?`)) return;
