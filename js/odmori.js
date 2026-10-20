@@ -207,8 +207,21 @@ function odRenderAdmin() {
   box.innerHTML = r
     ? `Aktivni ${OD_SEASONS[OD.season].toLowerCase()} termini: objava <b>${odFmt(r.publish_date)}</b>, odmori od <b>${odFmt(r.start_date)}</b>, ${odTermCount()} termina
        (do ${odFmt(odTerm(r.term_count - 1).to)}). Izabrano: ${OD.picks.length}.
+       <button type="button" class="btn btn-ghost" id="od-add-term">➕ Dodaj još jedan termin</button>
        <button type="button" class="btn btn-danger" id="od-close">Deaktiviraj termine</button>`
     : `Nema aktivnih termina za ${OD_SEASONS[OD.season].toLowerCase()} odmor.`;
+  const add = document.getElementById("od-add-term");
+  if (add) add.addEventListener("click", async () => {
+    add.disabled = true;
+    const { data, error } = await sb.rpc("vacation_round_add_term", { p_season: OD.season });
+    if (error) {
+      odBanner(/vacation_round_add_term/.test(error.message)
+        ? "Treba jednom pokrenuti SQL iz fajla sql/migration_040_odmori_dodaj_termin.sql u Supabase." : error.message, "error");
+      add.disabled = false; return;
+    }
+    odBanner(`Dodat je termin od ${odFmt(data)}.`, "success");
+    await odLoad();
+  });
   const close = document.getElementById("od-close");
   if (close) close.addEventListener("click", async () => {
     if (!confirm(`Deaktivirati ${OD_SEASONS[OD.season].toLowerCase()} termine? Već upisani odmori ostaju u Osobe u sistemu.`)) return;
