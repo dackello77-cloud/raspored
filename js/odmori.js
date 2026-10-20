@@ -12,7 +12,7 @@ const OD_SEASONS = { letnji: "Letnji", zimski: "Zimski" };
 // round/picks = trenutno izabran tab (sezona); rounds = aktivni termini obe sezone.
 // terms = stanje termina za mene iz baze (vacation_terms); picks = sa imenima, samo za administratora.
 // emps = zaposleni koji biraju odmor (samo za administratora — desni spisak "nisu izabrali").
-let OD = { me: null, myName: "", isAdmin: false, seeAll: false, season: "letnji", rounds: {}, round: null, picks: [], terms: [], emps: [] };
+let OD = { me: null, myName: "", isAdmin: false, seeAll: false, season: "letnji", rounds: {}, round: null, picks: [], terms: [], emps: [], reserved: {} };
 
 // Pravo na odmor: 6 meseci od početka radnog odnosa (isto kao vacation_eligible_from u bazi).
 function odEligibleFrom(hire) {
@@ -58,6 +58,12 @@ async function odLoad() {
   OD.round = OD.rounds[OD.season] || null;
   OD.picks = [];
   OD.terms = [];
+  OD.reserved = {};
+  if (OD.round) {
+    // Termini koji se čuvaju za nove radnike (sql/migration_038_odmori_novi_radnici.sql).
+    const { data } = await sb.rpc("vacation_reserved", { p_season: OD.season });
+    (data || []).forEach(x => { OD.reserved[x.term_no] = x.eligible_from; });
+  }
   if (OD.round && OD.me) {
     const { data, error: e2 } = await sb.rpc("vacation_terms", { p_season: OD.season });
     if (e2) odBanner(/vacation_terms/.test(e2.message)
@@ -142,7 +148,11 @@ function odRender() {
         : `<button type="button" class="btn btn-primary od-pick" data-term="${k}">${mine ? "Prebaci ovde" : "Izaberi"}</button>`;
     }
     let people;
-    if (OD.seeAll) {
+    const resv = OD.reserved[k];
+    if (resv && !isMine && !st.taken && !OD.picks.some(p => p.term_no === k)) {
+      // Slobodan termin čuvan za novog radnika — piše svima (bez imena), stariji ne mogu da ga uzmu.
+      people = `<span class="od-new">🆕 Za nove radnike · pravo od ${odFmt(resv)}</span>`;
+    } else if (OD.seeAll) {
       people = OD.picks.filter(p => p.term_no === k).map(p => `<span class="od-person">${zmEsc(p.name)} <small>${OD_LABEL[p.funkcija] || ""}</small>${OD.isAdmin
         ? `<button type="button" class="od-remove" data-pick="${p.id}" title="Ukloni termin">×</button>` : ""}</span>`).join("");
     } else {
