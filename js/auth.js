@@ -21,16 +21,58 @@ const ROLE_LABELS = { admin: "Administrator", management: "Management", accounti
 // ---------- Jedan telefon po radniku (sql/migration_013_device_binding.sql) ----------
 // Telefon pri prvom otvaranju dobije trajnu tajnu oznaku (čuva se u pregledaču). Server pamti
 // oznaku + model telefona i odbija prijavu sa drugog telefona dok admin ne ukloni stari.
+// Oznaka se čuva na tri mesta (localStorage, kolačić, IndexedDB) jer neki telefoni (npr. Honor
+// "čišćenje memorije") brišu deo podataka pregledača — preživela kopija vraća istu oznaku.
 const DEVICE_KEY = "raspored-device-id";
+const DEVICE_ID_RE = /^d-[\w-]{14,98}$/;
+function deviceCookieGet() {
+  const m = document.cookie.match(/(?:^|; )raspored-device-id=([^;]+)/);
+  return m && DEVICE_ID_RE.test(m[1]) ? m[1] : null;
+}
+function deviceCookieSet(id) {
+  try { document.cookie = `${DEVICE_KEY}=${id}; max-age=${60 * 60 * 24 * 400}; path=${APP_BASE}; SameSite=Lax; Secure`; } catch (e) { /* nije bitno */ }
+}
+function deviceIdb(mode, id) {
+  return new Promise(resolve => {
+    try {
+      const req = indexedDB.open("raspored-device", 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("kv");
+      req.onerror = () => resolve(null);
+      req.onsuccess = () => {
+        try {
+          const tx = req.result.transaction("kv", mode);
+          const store = tx.objectStore("kv");
+          if (mode === "readwrite") { store.put(id, DEVICE_KEY); tx.oncomplete = () => resolve(id); }
+          else { const g = store.get(DEVICE_KEY); g.onsuccess = () => resolve(DEVICE_ID_RE.test(g.result || "") ? g.result : null); g.onerror = () => resolve(null); }
+          tx.onerror = () => resolve(null);
+        } catch (e) { resolve(null); }
+      };
+    } catch (e) { resolve(null); }
+  });
+}
 function deviceId() {
   try {
     let id = localStorage.getItem(DEVICE_KEY);
-    if (!id) {
-      id = "d-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2));
+    if (!id || !DEVICE_ID_RE.test(id)) {
+      id = deviceCookieGet() || "d-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2));
       localStorage.setItem(DEVICE_KEY, id);
     }
     return id;
-  } catch (e) { return null; }
+  } catch (e) { return deviceCookieGet(); }
+}
+// Pre provere na serveru: ako localStorage i kolačić nemaju oznaku, vrati je iz IndexedDB;
+// zatim upiši istu oznaku na sva tri mesta i zamoli pregledač da podatke ne briše sam.
+async function deviceIdRestore() {
+  let had = null;
+  try { had = localStorage.getItem(DEVICE_KEY); } catch (e) { /* nema */ }
+  if (!(had && DEVICE_ID_RE.test(had)) && !deviceCookieGet()) {
+    const saved = await deviceIdb("readonly");
+    if (saved) { try { localStorage.setItem(DEVICE_KEY, saved); } catch (e) { /* nema */ } deviceCookieSet(saved); }
+  }
+  const id = deviceId();
+  if (id) { deviceCookieSet(id); await deviceIdb("readwrite", id); }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* nije podržano */ }
+  return id;
 }
 function deviceIsMobile() {
   if (navigator.userAgentData && typeof navigator.userAgentData.mobile === "boolean" && navigator.userAgentData.mobile) return true;
@@ -56,7 +98,7 @@ async function deviceLabel() {
 }
 // Vraća { status: ok|registered|blocked|computer|exempt|unknown, label }.
 async function deviceCheck() {
-  const id = deviceId();
+  const id = await deviceIdRestore();
   if (!id) return { status: "unknown" };
   try {
     const { data, error } = await sb.rpc("device_register", { p_device: id, p_label: await deviceLabel(), p_mobile: deviceIsMobile() });

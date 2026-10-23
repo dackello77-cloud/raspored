@@ -67,9 +67,13 @@ function deviceLineHtml(emp) {
   if (!emp.profiles || !PHONE_ROLES.includes(emp.profiles.role)) return "";
   const d = emp.device;
   if (!d) return `<div class="emp-device muted">📱 telefon još nije vezan</div>`;
+  // Pokušaj koji je posle rešen ponovnim prepoznavanjem istog telefona (migration_043) se ne prikazuje.
   const blocked = d.blocked_at && new Date(d.blocked_at) > new Date(d.registered_at)
+    && !(d.rebound_at && new Date(d.rebound_at) >= new Date(d.blocked_at))
     ? `<div class="emp-device warn">⚠ pokušaj sa drugog telefona ${osobeShortDate(d.blocked_at)}: ${zmSafe(d.blocked_label)}</div>` : "";
-  return `<div class="emp-device">📱 ${zmSafe(d.label || "telefon")}</div>${blocked}`;
+  const rebound = d.rebound_at
+    ? `<div class="emp-device muted">↻ isti telefon ponovo prepoznat ${osobeShortDate(d.rebound_at)} (obrisani podaci pregledača; ranije: ${zmSafe(d.rebound_from)})</div>` : "";
+  return `<div class="emp-device">📱 ${zmSafe(d.label || "telefon")}</div>${rebound}${blocked}`;
 }
 function zmSafe(s) { return String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
 
