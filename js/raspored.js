@@ -326,7 +326,9 @@ function zmChipMenu(ev, chip) {
     return;
   }
 
-  const myF = RASPORED_ME_EMP.funkcija, theirF = chip.dataset.funkcija;
+  // zamena za shift lidera na odmoru je tih nedelja i ovde shift lider
+  const myF = effFunkcija(RASPORED_ME_EMP.id, RASPORED_ME_EMP.funkcija, date);
+  const theirF = effFunkcija(chip.dataset.emp, chip.dataset.funkcija, date);
   const target = { id: chip.dataset.emp, name: targetName, shift: chip.dataset.shift };
   // Monitoring i shift lideri menjaju za jedan dan ili celu nedelju; radnici samo za jedan dan.
   const weekly = myF === theirF && (myF === "monitoring" || myF === "shift_lider");
@@ -719,7 +721,11 @@ function startClock(shiftTypes) {
   if (profile && !isAdminProfile(profile) && profile.username) RASPORED_ME = profile.username.toLowerCase();
   if (session) {
     const { data: me } = await sb.from("employees").select("id, funkcija").eq("profile_id", session.user.id).maybeSingle();
-    if (me && ["radnik", "shift_lider", "monitoring"].includes(me.funkcija)) RASPORED_ME_EMP = me;
+    if (me && ["radnik", "shift_lider", "monitoring"].includes(me.funkcija)) {
+      RASPORED_ME_EMP = me;
+      const n = belgradeNow();
+      leadWeeksLoad(mobIso(mobAddDays(n, -7)), mobIso(mobAddDays(n, 100)));
+    }
     else if (me && OFFICE_ROLES[me.funkcija]) {
       RASPORED_ME_OFFICE = me;
       const { data: off } = await sb.from("swap_requests").select("date")

@@ -114,3 +114,15 @@ function sickDaysIn(row, from, to) {
   return b < a ? 0 : Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000) + 1;
 }
 function sickFmt(iso) { const [y, m, d] = iso.split("-"); return `${+d}.${+m}.${y}.`; }
+
+// ---------- Zamena za shift lidera (sql/migration_044_zamena_lidera_zamene.sql) ----------
+// Nedelje kad radnik menja shift lidera na odmoru — tada je i u zamenama shift lider.
+let LEAD_WEEKS = [];
+async function leadWeeksLoad(from, to) {
+  const { data, error } = await sb.rpc("zamene_lidera", { p_from: from, p_to: to });
+  LEAD_WEEKS = error ? [] : (data || []);
+}
+function effFunkcija(employeeId, funkcija, iso) {
+  return funkcija === "radnik" && LEAD_WEEKS.some(w => w.employee_id === employeeId && w.week_start <= iso && iso <= w.week_end)
+    ? "shift_lider" : funkcija;
+}

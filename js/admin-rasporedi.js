@@ -24,6 +24,8 @@ async function rdmLoadStaticData() {
     sb.from("employees").select("id, funkcija, slava_date, profiles(full_name, username)").eq("active", true),
   ]);
   RDM_SHIFT_TYPES = shiftTypes || [];
+  const n = belgradeNow();
+  await leadWeeksLoad(`${n.getFullYear() - 1}-01-01`, `${n.getFullYear() + 1}-12-31`);
   RDM_ACTIVE_EMPLOYEES = (employees || [])
     .map(e => ({ id: e.id, funkcija: e.funkcija, slava: e.slava_date, name: e.profiles?.full_name || "" }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -376,9 +378,9 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
   const ms = people.filter(p => p.isMS).sort(byFunkcija);
   const leaderP = people.find(p => p.isLeader);
   const hasLeader = !!leaderP;
-  // Lider se postavlja samo vikendom/praznikom — radnim danima smenu vodi shift lider po funkciji.
-  const leaderAllowed = isHolidayOrWeekendLike(new Date(dateStr + "T00:00:00")) &&
-    !people.some(p => p.funkcija === "shift_lider");
+  // Lider se postavlja kad smenu ne vodi shift lider po funkciji (vikend, praznik,
+  // ili radni dan kad je shift lider slobodan).
+  const leaderAllowed = !people.some(p => p.funkcija === "shift_lider");
   const rerender = () => rdmRenderMonthBody(body, parseInt(body.parentElement.dataset.year, 10), parseInt(body.parentElement.dataset.month, 10));
 
   const shiftBody = document.createElement("div");
@@ -425,6 +427,8 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
     row.addEventListener("contextmenu", (ev) => {
       ev.preventDefault();
       const items = [];
+      // zamena za shift lidera na odmoru menja smene kao shift lider
+      const pEff = { ...p, funkcija: effFunkcija(p.employeeId, p.funkcija, dateStr) };
       if (p.isLeader) {
         items.push({ label: "Ukloni lidera", run: async () => { tbl = await rdmEditTbl(tbl, dateStr); await rdmSetLeader(tbl, dateStr, shiftType.code, p.scheduleId, p.employeeId, false); } });
       } else if (!leaderAllowed) {
@@ -443,11 +447,11 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
       }
       // Isto kao kad se sami menjaju: radnik ⇄ radnik samo za taj dan;
       // shift lider ⇄ shift lider i monitoring ⇄ monitoring za dan ili celu nedelju.
-      if (p.funkcija === "radnik" || RDM_SWAP_FUNKCIJE.includes(p.funkcija)) {
-        items.push({ label: "⇄ Zameni smenu sa...", run: () => rdmSwapDialog(p, dateStr, false, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
+      if (pEff.funkcija === "radnik" || RDM_SWAP_FUNKCIJE.includes(pEff.funkcija)) {
+        items.push({ label: "⇄ Zameni smenu sa...", run: () => rdmSwapDialog(pEff, dateStr, false, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
       }
-      if (RDM_SWAP_FUNKCIJE.includes(p.funkcija)) {
-        items.push({ label: "⇄ Zameni celu nedelju sa...", run: () => rdmSwapDialog(p, dateStr, true, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
+      if (RDM_SWAP_FUNKCIJE.includes(pEff.funkcija)) {
+        items.push({ label: "⇄ Zameni celu nedelju sa...", run: () => rdmSwapDialog(pEff, dateStr, true, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
       }
       // Brzo prebacivanje u drugu smenu ili međusmenu istog dana (lider se skida).
       // Međusmena samo za radnike i samo ako je slobodna.
@@ -544,7 +548,10 @@ async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoa
     .filter(d => tbl === "schedule" || d.slice(0, 7) === dateStr.slice(0, 7));
   // ±6 dana oko zamene — dovoljno za proveru "max 5 zaredom" i "2 slobodna posle III".
   const from = rdmAddDays(days[0], -6), to = rdmAddDays(days[days.length - 1], 6);
-  const candidates = RDM_ACTIVE_EMPLOYEES.filter(e => e.funkcija === p.funkcija && e.id !== p.employeeId);
+  const candidates = RDM_ACTIVE_EMPLOYEES.filter(e => effFunkcija(e.id, e.funkcija, dateStr) === p.funkcija && e.id !== p.employeeId);
+  // Lider ⇄ lider: liderstvo ostaje u smeni — zamena (radnik) dobija is_leader, pravi shift lider ne.
+  const realF = (id) => (RDM_ACTIVE_EMPLOYEES.find(e => e.id === id) || {}).funkcija;
+  const leaderFor = (id) => p.funkcija === "shift_lider" ? { is_leader: realF(id) !== "shift_lider" } : {};
   const ids = [p.employeeId, ...candidates.map(e => e.id)];
 
   const { data: fetched, error } = await sb.from(tbl)
@@ -670,8 +677,8 @@ async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoa
       const rowsA = rows.filter(r => r.employee_id === A && r.date === d);
       const rowsB = rows.filter(r => r.employee_id === B && r.date === d);
       const t = await rdmEditTbl(tbl, d); // objavljeni mesec -> nacrt (isti id redova)
-      for (const r of rowsA) { const { error } = await sb.from(t).update({ employee_id: B }).eq("id", r.id); if (error) errors++; }
-      for (const r of rowsB) { const { error } = await sb.from(t).update({ employee_id: A }).eq("id", r.id); if (error) errors++; }
+      for (const r of rowsA) { const { error } = await sb.from(t).update({ employee_id: B, ...leaderFor(B) }).eq("id", r.id); if (error) errors++; }
+      for (const r of rowsB) { const { error } = await sb.from(t).update({ employee_id: A, ...leaderFor(A) }).eq("id", r.id); if (error) errors++; }
     }
     close();
     rdmShowBanner(errors
