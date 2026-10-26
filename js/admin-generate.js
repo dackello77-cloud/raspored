@@ -303,6 +303,7 @@ async function genHandleRun() {
 
     // Upisuje se u NACRT — glavna strana i radnici ga ne vide dok se ne klikne "Objavi raspored".
     await sb.from("schedule_draft").delete().gte("date", start).lte("date", end);
+    rdmUndoClear(year, month); // novi nacrt — stare izmene se ne poništavaju
 
     const rows = [];
     Object.entries(combined).forEach(([employeeId, dayMap]) => {
@@ -481,6 +482,7 @@ async function genShowDraft(year, month, scrollTo) {
     if (!ok) return;
     await sb.from("schedule_draft").delete().gte("date", start).lte("date", end);
     await sb.from("settings").delete().eq("key", `nacrt_izmena_${year}_${month}`);
+    rdmUndoClear(year, month);
     genShowBanner(`Nacrt za ${label} je obrisan.`, "success");
     await rdmLoadAllMonths();
     await genShowDraft(year, month);
@@ -549,6 +551,7 @@ async function genPublishDraft(year, month, published) {
     btn.textContent = "Objavi raspored";
     return;
   }
+  rdmUndoClear(year, month);
   sb.functions.invoke("send-push", { body: { published: { year, month } } }).catch(console.error);
   genShowBanner(`Raspored za ${label} je objavljen.`, "success");
   await genShowDraft(year, month);

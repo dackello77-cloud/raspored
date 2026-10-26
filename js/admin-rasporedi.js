@@ -93,8 +93,10 @@ async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule", o
   const now = belgradeNow();
   const isFuture = tbl === "schedule" && (year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth() + 1));
   header.innerHTML = `<span>${MONTH_NAMES_SR[month - 1]} ${year}</span><span class="month-header-actions">` +
+    `<button type="button" class="rdm-undo-btn" data-year="${year}" data-month="${month}" hidden>↶ Poništi</button>` +
     (isFuture ? `<button type="button" class="month-delete-btn">Obriši mesec</button>` : "") +
     `<span class="toggle-label">${collapsedDefault ? "Prikaži" : "Sakrij"}</span></span>`;
+  header.querySelector(".rdm-undo-btn").addEventListener("click", (e) => { e.stopPropagation(); rdmUndo(year, month); });
   const delBtn = header.querySelector(".month-delete-btn");
   if (delBtn) {
     delBtn.addEventListener("click", async (e) => {
@@ -148,6 +150,7 @@ async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule", o
 
   if (opts.tekuci && tbl === "schedule_draft") rdmDecorateDraft(wrap);
   await rdmRenderMonthBody(body, year, month);
+  setTimeout(rdmUndoRefresh);
   return wrap;
 }
 
@@ -212,6 +215,7 @@ function rdmDecorateDraft(wrap) {
     const changed = await rdmChangedDays(year, month);
     const { error } = await sb.rpc("schedule_publish", { p_year: year, p_month: month });
     if (error) { rdmShowBanner("Objava nije uspela: " + error.message, "error"); e.target.disabled = false; return; }
+    rdmUndoClear(year, month);
     const n = changed ? Object.keys(changed).length : 0;
     let pushNote = "";
     if (n) {
@@ -232,6 +236,7 @@ function rdmDecorateDraft(wrap) {
     const { error } = await sb.from("schedule_draft").delete().gte("date", start).lte("date", end);
     if (error) { rdmShowBanner("Greška: " + error.message, "error"); return; }
     await sb.from("settings").delete().eq("key", `nacrt_izmena_${year}_${month}`);
+    rdmUndoClear(year, month);
     rdmShowBanner(`Izmene za ${label} su odbačene.`, "success");
     await rdmLoadAllMonths();
   });
@@ -253,6 +258,85 @@ async function rdmEditTbl(tbl, dateStr) {
   if (wrap) { wrap.dataset.table = "schedule_draft"; rdmDecorateDraft(wrap); }
   return "schedule_draft";
 }
+
+// ---------- Poništi (undo) izmene u nacrtu ----------
+// Pre svake izmene pamti se ceo nacrt tog meseca (null = mesec još nije imao nacrt izmena).
+// "↶ Poništi" u zaglavlju meseca ili Ctrl/Cmd+Z vraća poslednju izmenu. Pamti se dok je stranica otvorena.
+const RDM_UNDO = [];
+const RDM_UNDO_MAX = 40;
+const RDM_UNDO_COLS = "id, date, shift_code, employee_id, is_leader, is_medju_smena, replacement_for";
+let RDM_UNDO_SEQ = 0;
+let RDM_UNDO_BUSY = false;
+
+// dates: datumi koje izmena dira (zamena cele nedelje može dirati dva meseca).
+async function rdmUndoSnap(dates, label) {
+  const seq = ++RDM_UNDO_SEQ;
+  const months = [...new Set(dates.map(d => d.slice(0, 7)))];
+  for (const ym of months) {
+    const [y, m] = ym.split("-").map(Number);
+    const { start, end } = rdmMonthRange(y, m);
+    const { data, error } = await sb.from("schedule_draft").select(RDM_UNDO_COLS).gte("date", start).lte("date", end);
+    if (error) continue;
+    RDM_UNDO.push({ seq, y, m, label, rows: data && data.length ? data : null });
+  }
+  while (RDM_UNDO.length > RDM_UNDO_MAX) RDM_UNDO.shift();
+  rdmUndoRefresh();
+}
+function rdmUndoClear(y, m) {
+  for (let i = RDM_UNDO.length - 1; i >= 0; i--) if (RDM_UNDO[i].y === y && RDM_UNDO[i].m === m) RDM_UNDO.splice(i, 1);
+  rdmUndoRefresh();
+}
+function rdmUndoRefresh() {
+  document.querySelectorAll(".rdm-undo-btn").forEach(btn => {
+    const y = Number(btn.dataset.year), m = Number(btn.dataset.month);
+    const last = [...RDM_UNDO].reverse().find(u => u.y === y && u.m === m);
+    btn.hidden = !last;
+    btn.disabled = RDM_UNDO_BUSY;
+    if (last) btn.title = `Poništi: ${last.label} (Ctrl/Cmd+Z)`;
+  });
+}
+// Bez y/m: poslednja izmena uopšte (Ctrl/Cmd+Z), zajedno sa svim mesecima te izmene.
+async function rdmUndo(y, m) {
+  if (RDM_UNDO_BUSY) return;
+  const last = [...RDM_UNDO].reverse().find(u => y == null || (u.y === y && u.m === m));
+  if (!last) return;
+  const steps = y == null ? RDM_UNDO.filter(u => u.seq === last.seq) : [last];
+  RDM_UNDO_BUSY = true;
+  rdmUndoRefresh();
+  let failed = false;
+  for (const st of steps) {
+    const { start, end } = rdmMonthRange(st.y, st.m);
+    const { error } = await sb.from("schedule_draft").delete().gte("date", start).lte("date", end);
+    if (error) { failed = true; continue; }
+    if (st.rows) {
+      const { error: e2 } = await sb.from("schedule_draft").insert(st.rows);
+      if (e2) failed = true;
+    } else {
+      // pre te izmene mesec nije imao nacrt — ostaje objavljeni raspored
+      await sb.from("settings").delete().eq("key", `nacrt_izmena_${st.y}_${st.m}`);
+    }
+    RDM_UNDO.splice(RDM_UNDO.indexOf(st), 1);
+  }
+  RDM_UNDO_BUSY = false;
+  rdmShowBanner(failed ? "Poništavanje nije uspelo — proverite raspored." : `Poništeno: ${last.label}.`, failed ? "error" : "success");
+  // ponovo nacrtaj sve prikaze tih meseci (Tekući i naredni + nacrt u Generisanju)
+  const ms = new Set(steps.map(st => `${st.y}-${st.m}`));
+  let reloadTekuci = false;
+  for (const wrap of document.querySelectorAll(".rdm-month-wrap")) {
+    if (!ms.has(`${wrap.dataset.year}-${wrap.dataset.month}`)) continue;
+    if (wrap.closest("#rasporedi-months")) reloadTekuci = true;
+    else await rdmRenderMonthBody(wrap.lastElementChild, Number(wrap.dataset.year), Number(wrap.dataset.month));
+  }
+  if (reloadTekuci) await rdmLoadAllMonths();
+  rdmUndoRefresh();
+}
+document.addEventListener("keydown", (e) => {
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== "z") return;
+  if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable]")) return;
+  if (!RDM_UNDO.length || !document.querySelector(".rdm-month-wrap")) return;
+  e.preventDefault();
+  rdmUndo();
+});
 
 // Radnici kojima u ovom mesecu nedostaju smene do fonda, npr. "SASKA 12/21".
 function rdmRenderUnderfond(el, fondCounts, fondTarget, month) {
@@ -419,6 +503,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
         `${shiftType.label} · ${d}.${m}.${y}.`
       );
       if (!ok) return;
+      await rdmUndoSnap([dateStr], `uklonjen ${p.name.toUpperCase()} ${d}.${m}.`);
       tbl = await rdmEditTbl(tbl, dateStr);
       await sb.from(tbl).delete().eq("id", p.scheduleId);
       await rerender();
@@ -448,10 +533,10 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
       // Isto kao kad se sami menjaju: radnik ⇄ radnik samo za taj dan;
       // shift lider ⇄ shift lider i monitoring ⇄ monitoring za dan ili celu nedelju.
       if (pEff.funkcija === "radnik" || RDM_SWAP_FUNKCIJE.includes(pEff.funkcija)) {
-        items.push({ label: "⇄ Zameni smenu sa...", run: () => rdmSwapDialog(pEff, dateStr, false, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
+        items.push({ label: "⇄ Zameni smenu sa...", dialog: true, run: () => rdmSwapDialog(pEff, dateStr, false, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
       }
       if (RDM_SWAP_FUNKCIJE.includes(pEff.funkcija)) {
-        items.push({ label: "⇄ Zameni celu nedelju sa...", run: () => rdmSwapDialog(pEff, dateStr, true, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
+        items.push({ label: "⇄ Zameni celu nedelju sa...", dialog: true, run: () => rdmSwapDialog(pEff, dateStr, true, tbl, tbl === "schedule" ? rdmLoadAllMonths : rerender) });
       }
       // Brzo prebacivanje u drugu smenu ili međusmenu istog dana (lider se skida).
       // Međusmena samo za radnike i samo ako je slobodna.
@@ -476,6 +561,13 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
               };
         });
       if (moveItems.length) items.push({ header: "PREBACI U" }, ...moveItems);
+      // pre svake izmene iz menija zapamti stanje (zamena pamti tek kad se klikne "Zameni")
+      const dm = `${dateStr.slice(8, 10)}.${dateStr.slice(5, 7)}.`;
+      items.forEach(it => {
+        if (!it.run || it.dialog) return;
+        const run = it.run;
+        it.run = async () => { await rdmUndoSnap([dateStr], `${p.name.toUpperCase()} ${dm} — ${it.label}`); await run(); };
+      });
       rdmOpenContextMenu(ev.clientX, ev.clientY, p.name.toUpperCase(), items, rerender);
     });
 
@@ -511,6 +603,8 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
     inline.querySelector("select").addEventListener("change", async (e) => {
       const empId = e.target.value;
       if (!empId) return;
+      const emp = RDM_ACTIVE_EMPLOYEES.find(x => x.id === empId);
+      await rdmUndoSnap([dateStr], `dodat ${(emp ? emp.name : "").toUpperCase()} ${dateStr.slice(8, 10)}.${dateStr.slice(5, 7)}.`);
       tbl = await rdmEditTbl(tbl, dateStr);
       const { error } = await sb.from(tbl).insert({ date: dateStr, shift_code: shiftType.code, employee_id: empId });
       if (error) {
@@ -672,6 +766,7 @@ async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoa
     okBtn.disabled = true;
     okBtn.textContent = "Menjam...";
     const { B, nameB, changed } = current;
+    await rdmUndoSnap(changed, `zamena ${nameA} ⇄ ${nameB}`);
     let errors = 0;
     for (const d of changed) {
       const rowsA = rows.filter(r => r.employee_id === A && r.date === d);
@@ -816,6 +911,7 @@ async function rdmHandleReplace() {
   }
 
   let tbl;
+  await rdmUndoSnap([date], "brza zamena");
   try { tbl = await rdmEditTbl("schedule", date); } catch (e) { return; }
   const { data: rows, error: fetchErr } = await sb
     .from(tbl)
