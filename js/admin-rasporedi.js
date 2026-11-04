@@ -36,6 +36,46 @@ function rdmFondOf(e, month, fondTarget) {
   return fondTarget - (e.slava && Number(e.slava.slice(5, 7)) === month ? 1 : 0);
 }
 
+// Dani kad zaposleni ne sme ručno u smenu: slava, izabran slobodan dan (Plan / kalendar) i odobren
+// zahtev za slobodan dan. Vraća { off: { "employeeId|datum": razlog } } ili { error }.
+async function rdmOffReasons(ids, from, to) {
+  const [picks, approved] = await Promise.all([
+    sb.from("days_off").select("employee_id, off_date").in("employee_id", ids).gte("off_date", from).lte("off_date", to),
+    sb.from("swap_requests").select("requester_id, date").eq("kind", "day_off").eq("status", "approved")
+      .in("requester_id", ids).gte("date", from).lte("date", to),
+  ]);
+  const error = picks.error || approved.error;
+  if (error) return { error };
+  const off = {};
+  picks.data.forEach(r => { off[`${r.employee_id}|${r.off_date}`] = "jer je izabrao/la slobodan dan"; });
+  approved.data.forEach(r => { off[`${r.requester_id}|${r.date}`] = "jer je tražio/la slobodan dan (odobren)"; });
+  RDM_ACTIVE_EMPLOYEES.filter(e => e.slava && ids.includes(e.id)).forEach(e => {
+    for (let d = from; d <= to; d = rdmAddDays(d, 1)) {
+      if (d.slice(5) === e.slava.slice(5)) off[`${e.id}|${d}`] = "zbog slave";
+    }
+  });
+  return { off };
+}
+
+const rdmOffText = (name, dateStr, reason) => `<b>${name}</b> je ${rdmFmtDay(dateStr)} slobodan/na ${reason}.`;
+
+// Obaveštenje da izmena nije dozvoljena, ili da provera nije uspela (tada se izmena takođe ne radi).
+function rdmNotice(message, detail) {
+  return rdmConfirm(message, detail, "U redu", "btn-primary", true);
+}
+
+// Provera pre ručnog postavljanja u smenu. Vraća true ako je izmena dozvoljena.
+async function rdmCanPlace(emp, dateStr) {
+  const { off, error } = await rdmOffReasons([emp.id], dateStr, dateStr);
+  if (error) {
+    await rdmNotice("Provera slobodnih dana nije uspela — izmena nije urađena.", error.message);
+    return false;
+  }
+  const reason = off[`${emp.id}|${dateStr}`];
+  if (reason) await rdmNotice(rdmOffText(emp.name.toUpperCase(), dateStr, reason), "Ne može da se postavi u smenu tog dana.");
+  return !reason;
+}
+
 // tbl: "schedule" (objavljeni raspored) ili "schedule_draft" (nacrt u Generisanju — vidi ga samo admin).
 async function rdmFetchSchedule(year, month, tbl = "schedule") {
   const { start, end } = rdmMonthRange(year, month);
@@ -604,6 +644,7 @@ function rdmBuildShiftBox(dateStr, shiftType, people, body, fondCounts, fondTarg
       const empId = e.target.value;
       if (!empId) return;
       const emp = RDM_ACTIVE_EMPLOYEES.find(x => x.id === empId);
+      if (!(await rdmCanPlace(emp, dateStr))) { e.target.value = ""; return; }
       await rdmUndoSnap([dateStr], `dodat ${(emp ? emp.name : "").toUpperCase()} ${dateStr.slice(8, 10)}.${dateStr.slice(5, 7)}.`);
       tbl = await rdmEditTbl(tbl, dateStr);
       const { error } = await sb.from(tbl).insert({ date: dateStr, shift_code: shiftType.code, employee_id: empId });
@@ -660,6 +701,8 @@ async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoa
       .in("employee_id", ids).gte("date", from).lte("date", to);
     rows = [...fetched.filter(r => r.date.slice(0, 7) === month), ...(around || []).filter(r => r.date.slice(0, 7) !== month)];
   }
+  const { off, error: offError } = await rdmOffReasons(ids, days[0], days[days.length - 1]);
+  if (offError) { await rdmNotice("Provera slobodnih dana nije uspela — zamena nije moguća.", offError.message); return; }
 
   const shiftOf = (emp, d) => (rows.find(r => r.employee_id === emp && r.date === d) || {}).shift_code || null;
   const A = p.employeeId, nameA = p.name.toUpperCase();
@@ -673,7 +716,12 @@ async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoa
     const changed = days.filter(d => shiftOf(A, d) !== shiftOf(B, d));
     const touches = (...ds) => ds.some(d => changed.includes(d));
     const warnings = [];
+    const blocked = []; // neko bi dobio smenu na dan kad je slobodan (slava / slobodan dan) — zamena nije dozvoljena
     [[A, B, nameA], [B, A, nameB]].forEach(([emp, other, nm]) => {
+      changed.forEach(d => {
+        const reason = off[`${emp}|${d}`];
+        if (reason && !shiftOf(emp, d) && shiftOf(other, d)) blocked.push(rdmOffText(nm, d, reason));
+      });
       const sh = span.map(d => changed.includes(d) ? shiftOf(other, d) : shiftOf(emp, d));
       for (let i = 1; i < span.length; i++) {
         const prev = sh[i - 1], cur = sh[i];
@@ -697,7 +745,7 @@ async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoa
         i = j + 1;
       }
     });
-    return { changed, warnings };
+    return { changed, warnings, blocked };
   };
 
   const title = week
@@ -756,9 +804,10 @@ async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoa
           <td>${rdmShiftBadge(shiftOf(A, d))} → ${rdmShiftBadge(shiftOf(B, d))}</td>
           <td>${rdmShiftBadge(shiftOf(B, d))} → ${rdmShiftBadge(shiftOf(A, d))}</td></tr>`).join("")}</tbody>
       </table>
+      ${current.blocked.length ? `<div class="banner error swap-warn">⛔ ${current.blocked.join("<br>⛔ ")}<br>Zamena nije dozvoljena.</div>` : ""}
       ${current.warnings.length ? `<div class="banner error swap-warn">⚠ ${current.warnings.join("<br>⚠ ")}</div>` : ""}`;
-    okBtn.disabled = false;
-    okBtn.textContent = current.warnings.length ? "Ipak zameni" : "Zameni";
+    okBtn.disabled = current.blocked.length > 0;
+    okBtn.textContent = current.warnings.length && !current.blocked.length ? "Ipak zameni" : "Zameni";
   });
 
   okBtn.addEventListener("click", async () => {
@@ -785,7 +834,7 @@ async function rdmSwapDialog(p, dateStr, week, tbl = "schedule", onDone = rdmLoa
 }
 
 // Prozor za potvrdu (Da / Ne). Vraća Promise<boolean>.
-function rdmConfirm(message, detail, okLabel = "Ukloni", okClass = "btn-danger-solid") {
+function rdmConfirm(message, detail, okLabel = "Ukloni", okClass = "btn-danger-solid", hideCancel = false) {
   return new Promise(resolve => {
     const overlay = document.createElement("div");
     overlay.className = "confirm-overlay";
@@ -794,7 +843,7 @@ function rdmConfirm(message, detail, okLabel = "Ukloni", okClass = "btn-danger-s
         <div class="confirm-msg">${message}</div>
         ${detail ? `<div class="confirm-detail">${detail}</div>` : ""}
         <div class="confirm-actions">
-          <button type="button" class="btn btn-ghost" data-v="0">Odustani</button>
+          ${hideCancel ? "" : '<button type="button" class="btn btn-ghost" data-v="0">Odustani</button>'}
           <button type="button" class="btn ${okClass}" data-v="1">${okLabel}</button>
         </div>
       </div>`;
@@ -909,6 +958,8 @@ async function rdmHandleReplace() {
     rdmShowBanner("Popunite datum i dva različita zaposlena.", "error");
     return;
   }
+
+  if (!(await rdmCanPlace(RDM_ACTIVE_EMPLOYEES.find(e => e.id === emp2), date))) return;
 
   let tbl;
   await rdmUndoSnap([date], "brza zamena");
