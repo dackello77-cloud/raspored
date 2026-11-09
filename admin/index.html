@@ -470,6 +470,9 @@
   .gen-table th:first-child, .gen-table td:first-child { text-align: left; }
   .gen-table th { color: var(--text-muted); text-transform: uppercase; font-size: 10px; position: sticky; top: 0; background: #fff; }
   .gen-table td.total, .gen-table th:last-child { font-weight: 700; }
+  .gen-table td.gen-low { color: var(--red-text); background: var(--red-soft); font-weight: 700; }
+  .gen-table td.gen-over { color: #9a5b00; background: #fff4e0; font-weight: 700; }
+  .gen-table td.gen-ms { color: var(--text-muted); }
   .underfond-chip { display: inline-block; background: var(--red-soft); color: var(--red-text); border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700; margin: 2px; }
 </style>
 </head>
@@ -620,13 +623,15 @@
 
       <div class="gen-results-grid" id="gen-results" style="display:none;">
         <div class="card">
-          <h2 style="margin:0 0 10px;font-size:14px;">Broj ljudi po smenama</h2>
+          <h2 style="margin:0 0 2px;font-size:14px;">Broj ljudi po smenama</h2>
+          <p class="muted" style="margin:0 0 8px;font-size:11px;">Iz nacrta — menja se posle svake ručne izmene. MS = međusmena (posebno, ne ulazi u I/II).</p>
           <div class="scroll-x" style="max-height:360px;overflow-y:auto;">
             <table class="gen-table" id="gen-daily-table"></table>
           </div>
         </div>
         <div class="card">
-          <h2 style="margin:0 0 10px;font-size:14px;">Fond smena po zaposlenom</h2>
+          <h2 style="margin:0 0 2px;font-size:14px;">Fond smena po zaposlenom</h2>
+          <p class="muted" style="margin:0 0 8px;font-size:11px;">Iz nacrta — menja se posle svake ručne izmene. MS ulazi u ukupan fond.</p>
           <div class="scroll-x" style="max-height:360px;overflow-y:auto;">
             <table class="gen-table" id="gen-fond-table"></table>
           </div>
@@ -722,9 +727,9 @@
   <script src="../js/admin-osobe.js?v=20261023a"></script>
   <script src="../js/admin-backup.js?v=20261015a"></script>
   <script src="../js/admin-plan.js?v=20261020a"></script>
-  <script src="../js/generator.js?v=20261015a"></script>
-  <script src="../js/admin-generate.js?v=20261026b"></script>
-  <script src="../js/admin-rasporedi.js?v=20261104a"></script>
+  <script src="../js/generator.js?v=20261109b"></script>
+  <script src="../js/admin-generate.js?v=20261109b"></script>
+  <script src="../js/admin-rasporedi.js?v=20261109b"></script>
   <script src="../js/admin-dolasci.js?v=20261020b"></script>
 </body>
 </html>

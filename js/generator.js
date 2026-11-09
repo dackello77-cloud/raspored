@@ -500,14 +500,16 @@ function generateRadniciSchedule(radnici, variant, year, month, weeks, weeklyOve
     const seed = hasPrefs ? Math.floor(attempt / 2) : attempt;
     const rng = seed === 0 ? null : seededRandom(seed);
     const res = generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOverridesMap, forcedOff, monitoringFixedForOverrides, rng,
-      { ...opts, plainFill: hasPrefs && attempt % 2 === 1 });
-    const score = res.deficit * 1000 + res.overfond.length * 100 + res.weekendExtra;
+      // Svaki treći pokušaj puni starim redosledom (I pa III pa II) — ako novi redosled nekome uzme
+      // pun fond, pobeđuje taj; inače pobeđuje raspored sa I na minimumu i punim II/III.
+      { ...opts, plainFill: hasPrefs && attempt % 2 === 1, legacyOrder: seed % 3 === 2 });
+    const score = res.deficit * 100000 + res.overfond.length * 10000 + res.weekendExtra * 2 + res.shapeCost;
     const pref = prefScore(res);
     const fair = fairScore(res);
     if (score < bestScore || (score === bestScore && (pref < bestPref || (pref === bestPref && fair < bestFair)))) {
       best = res; bestScore = score; bestPref = pref; bestFair = fair;
     }
-    if (!opts.fairDev && !hasPrefs && res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0) break;
+    if (!opts.fairDev && !hasPrefs && res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0 && res.shapeCost === 0) break;
   }
   return best;
 }
@@ -530,7 +532,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
   const protectedOff = {}; // employeeId -> Set(dateStr) dana koji se NE diraju (odmor/slobodan/druga funkcija)
   const notCounted = {};   // employeeId -> Set(dateStr) smene lidera/monitoringa — ne ulaze u broj radnika po smeni
   const handoverFor = {};  // zamenaId -> {dateStr: vacationerId} — smene preuzete od osobe na odmoru
-  if (!N) return { scheduleMap, fondByEmployee: {}, fondTarget, overfond: [], deficit: 0, weekendExtra: 0, handoverFor };
+  if (!N) return { scheduleMap, fondByEmployee: {}, fondTarget, overfond: [], deficit: 0, weekendExtra: 0, shapeCost: 0, handoverFor };
 
   const cycle = buildBaseCycle(variant, N);
   if (!cycle) {
@@ -756,15 +758,18 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
   }
 
   const ORDER = ["I", "III", "II"];
-  // Redosled popunjavanja po kombinaciji. Svaka grupa se puni do kraja pre sledeće.
-  // 2/3,3/4,2/3 (13 radnika): prvo III, pa I, pa tek na kraju II.
-  const PHASES_BY_VARIANT = {
-    "2/3,3/4,2/3": [["III"], ["I"], ["II"]],
-  };
-  const phases = PHASES_BY_VARIANT[variantKey(variant)] || [
+  // Redosled popunjavanja. Svaka grupa se puni do kraja pre sledeće.
+  // II i III se pune do maksimuma, a I ostaje na minimumu koliko god je moguće —
+  // I dobija dodatnog radnika tek kad II i III ne mogu više da prime (ili pravila niza ne daju).
+  const phases = (opts.legacyOrder ? [
     ORDER.filter(c => variant.mins[c] === 2),
     ORDER.filter(c => variant.mins[c] === 3),
-  ].filter(p => p.length);
+  ] : [
+    ["III", "II"].filter(c => variant.mins[c] === 2),
+    ["III", "II"].filter(c => variant.mins[c] === 3),
+    ["I"],
+  ]).filter(p => p.length);
+  const capIatMin = opts.legacyOrder ? variant.maxs : { ...variant.maxs, I: variant.mins.I };
 
   function fillRounds(codes, dayFilter, allowWeekend, requireAttach = true, pool = radnici, limit = variant.maxs, shuffle = true) {
     let changed = true;
@@ -864,7 +869,9 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
           const order = allCodes.slice().sort((a, b) =>
             (b === prev) - (a === prev) || usedLess(a, b) || tie[a] - tie[b] ||
             (variant.maxs[b] - counts[d][b]) - (variant.maxs[a] - counts[d][a]));
-          const code = order.find(c => counts[d][c] < variant.maxs[c] && editAllowed(emp.id, { [d]: c }, true));
+          // I preko minimuma samo ako ni II ni III ne mogu.
+          const code = order.find(c => counts[d][c] < capIatMin[c] && editAllowed(emp.id, { [d]: c }, true)) ||
+            order.find(c => counts[d][c] < variant.maxs[c] && editAllowed(emp.id, { [d]: c }, true));
           if (code) { applyEdits(emp.id, { [d]: code }); changed = true; }
         }
       }
@@ -876,7 +883,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
   // uključene (svejedno mu je) dopunjuje se posle, u fazi 2, kao i do sada.
   if (!opts.plainFill) ["III", "II", "I"].forEach(code => {
     const lovers = radnici.filter(e => prefRank(e.id, code) === 0);
-    if (lovers.length) fillRounds([code], d => !weekendLike[d], false, true, lovers);
+    if (lovers.length) fillRounds([code], d => !weekendLike[d], false, true, lovers, capIatMin);
   });
 
   // ---------- Faza 2 — radni dani do maksimuma ----------
@@ -998,7 +1005,14 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     SHIFT_CODES.forEach(c => { weekendExtra += Math.max(0, counts[d][c] - variant.mins[c]); });
   }
 
-  return { scheduleMap, fondByEmployee, fondTarget, overfond, deficit, weekendExtra, handoverFor };
+  // Oblik rasporeda: I iznad minimuma i (radnim danima) II/III ispod maksimuma — što manje, to bolje.
+  let shapeCost = 0;
+  for (let d = 1; d <= nDays; d++) {
+    shapeCost += Math.max(0, counts[d].I - variant.mins.I);
+    if (!weekendLike[d]) ["II", "III"].forEach(c => { shapeCost += Math.max(0, variant.maxs[c] - counts[d][c]); });
+  }
+
+  return { scheduleMap, fondByEmployee, fondTarget, overfond, deficit, weekendExtra, shapeCost, handoverFor };
 }
 
 // ------------------------------------------------------------

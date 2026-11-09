@@ -334,7 +334,7 @@ async function genHandleRun() {
       { onConflict: "key" }
     );
 
-    genRenderResults(employees, radnici, liderMonitoring, combined, fondByEmployee, fondTarget, year, month, overfond, zamene, variant, handoverFor);
+    delete GEN_STATS_CACHE[`${year}-${month}`]; // novi minimumi / zamene — tabele se računaju iz nacrta
     genShowBanner(`Nacrt rasporeda za ${MONTH_NAMES_SR[month - 1]} ${year} je napravljen. Sredite ga ispod pa kliknite „Objavi raspored“.`, "success");
     await genShowDraft(year, month, true);
   } catch (err) {
@@ -346,92 +346,103 @@ async function genHandleRun() {
   }
 }
 
-function genRenderResults(employees, radnici, liderMonitoring, combined, fondByEmployee, fondTarget, year, month, overfond, zamene = [], variant = null, handoverFor = {}) {
-  document.getElementById("gen-results").style.display = "grid";
+// Tabele "Broj ljudi po smenama" i "Fond smena po zaposlenom" — računaju se iz NACRTA, pa posle
+// svake ručne izmene (desni klik, +, ✕, prebacivanje) pokazuju trenutno stanje. Međusmena (MS)
+// se vodi posebno: ne ulazi u broj ljudi u I/II smeni, ali ulazi u ukupan fond.
+const GEN_STATS_CACHE = {}; // "GGGG-M" -> { zameneIds, mins }
+async function genStatsMeta(year, month) {
+  const k = `${year}-${month}`;
+  if (!GEN_STATS_CACHE[k]) {
+    const [zameneIds, { data: minRow }] = await Promise.all([
+      genFetchZameneIds(year, month),
+      sb.from("settings").select("value").eq("key", `minimumi_${year}_${month}`).maybeSingle(),
+    ]);
+    GEN_STATS_CACHE[k] = { zameneIds, mins: (minRow && minRow.value) || null };
+  }
+  return GEN_STATS_CACHE[k];
+}
 
+async function genRenderDraftStats(year, month, rows) {
+  const { zameneIds, mins } = await genStatsMeta(year, month);
+  const sel = genSelectedMonth();
+  if (sel.year !== year || sel.month !== month) return;
+  const results = document.getElementById("gen-results");
+  results.style.display = "grid";
+
+  const emps = RDM_ACTIVE_EMPLOYEES;
+  const byId = {};
+  emps.forEach(e => { byId[e.id] = e; });
+  const isFixed = (id) => byId[id] && (byId[id].funkcija === "shift_lider" || byId[id].funkcija === "monitoring");
   const nDays = daysInMonth(year, month);
-  let dailyHtml = "<thead><tr><th>Datum</th><th>I</th><th>II</th><th>III</th><th>Ukupno</th></tr></thead><tbody>";
+  const fondTarget = monthFond(year, month);
+
+  // Po danu: svi ljudi u smeni (MS posebno) + radnici za proveru minimuma.
+  const day = {};
+  const per = {};
+  rows.forEach(r => {
+    const dd = day[r.date] || (day[r.date] = { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, wI: 0, wII: 0, wIII: 0 });
+    if (r.is_medju_smena) dd["MS" + r.shift_code] = (dd["MS" + r.shift_code] || 0) + 1;
+    else {
+      dd[r.shift_code]++;
+      // Za minimum se broje radnici (i zamene), bez lidera/monitoringa i bez zamene za lidera.
+      if (!isFixed(r.employee_id) && !(r.replacement_for && isFixed(r.replacement_for))) dd["w" + r.shift_code]++;
+    }
+    const f = per[r.employee_id] || (per[r.employee_id] = { I: 0, II: 0, III: 0, MS: 0, total: 0 });
+    if (r.is_medju_smena) f.MS++; else f[r.shift_code]++;
+    f.total++;
+  });
+
+  const p2 = (n) => String(n).padStart(2, "0");
+  const belowMin = [];
+  let dailyHtml = "<thead><tr><th>Datum</th><th>I</th><th>MS</th><th>II</th><th>MS</th><th>III</th><th>Ukupno</th></tr></thead><tbody>";
   for (let d = 1; d <= nDays; d++) {
     const key = dateKey(year, month, d);
-    let I = 0, II = 0, III = 0;
-    employees.forEach(e => {
-      const v = combined[e.id] && combined[e.id][key];
-      if (v === "I") I++; else if (v === "II") II++; else if (v === "III") III++;
-    });
-    dailyHtml += `<tr><td>${String(d).padStart(2, "0")}.${String(month).padStart(2, "0")}.${year}</td><td>${I}</td><td>${II}</td><td>${III}</td><td class="total">${I + II + III}</td></tr>`;
+    const dd = day[key] || { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, wI: 0, wII: 0, wIII: 0 };
+    const low = (c) => mins && dd["w" + c] < mins[c];
+    ["I", "II", "III"].forEach(c => { if (low(c)) belowMin.push(`${p2(d)}.${p2(month)}. ${c} smena (${dd["w" + c]}/${mins[c]})`); });
+    const cell = (c) => `<td class="${low(c) ? "gen-low" : ""}">${dd[c]}</td>`;
+    const ms = (n) => `<td class="gen-ms">${n || ""}</td>`;
+    const dow = DOW_SR[new Date(year, month - 1, d).getDay()];
+    dailyHtml += `<tr><td>${p2(d)}.${p2(month)}. <span class="muted">${dow}</span></td>${cell("I")}${ms(dd.MSI)}${cell("II")}${ms(dd.MSII)}${cell("III")}` +
+      `<td class="total">${dd.I + dd.II + dd.III + dd.MSI + dd.MSII}</td></tr>`;
   }
   dailyHtml += "</tbody>";
   document.getElementById("gen-daily-table").innerHTML = dailyHtml;
 
-  let fondHtml = "<thead><tr><th>Zaposleni</th><th>I</th><th>II</th><th>III</th><th>Ukupno</th></tr></thead><tbody>";
-  const underfond = [];
-
-  radnici.forEach(e => {
-    const f = fondByEmployee[e.id] || { I: 0, II: 0, III: 0, total: 0 };
-    const name = (e.profiles?.full_name || "").toUpperCase();
-    const target = f.target || fondTarget;
-    const slava = target < fondTarget ? `<br/><span class="muted" style="font-weight:500;">Slava · fond ${target}</span>` : "";
-    fondHtml += `<tr><td>${name}${slava}</td><td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="total">${f.total}</td></tr>`;
-    if (f.total < target) underfond.push(`${name} (${f.total}/${target})`);
-  });
-
-  zamene.forEach(e => {
-    const f = fondByEmployee[e.id] || { I: 0, II: 0, III: 0, total: 0 };
-    const name = (e.profiles?.full_name || "").toUpperCase();
-    fondHtml += `<tr><td>${name}<br/><span class="muted" style="font-weight:500;">Zamena</span></td><td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="total">${f.total}</td></tr>`;
-  });
-
-  liderMonitoring.forEach(e => {
-    const vals = Object.values(combined[e.id] || {});
-    const f = {
-      I: vals.filter(v => v === "I").length,
-      II: vals.filter(v => v === "II").length,
-      III: vals.filter(v => v === "III").length,
-    };
-    f.total = f.I + f.II + f.III;
-    const name = (e.profiles?.full_name || "").toUpperCase();
-    const tag = e.funkcija === "shift_lider" ? "Lider" : `Monitoring ${e.monitoring_smena || ""}`;
-    fondHtml += `<tr><td>${name}<br/><span class="muted" style="font-weight:500;">${tag}</span></td><td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="total">${f.total}</td></tr>`;
-  });
-
+  const groups = [
+    emps.filter(e => e.funkcija === "radnik" && !zameneIds.has(e.id)),
+    emps.filter(e => e.funkcija === "radnik" && zameneIds.has(e.id)),
+    emps.filter(e => e.funkcija === "shift_lider"),
+    emps.filter(e => e.funkcija === "monitoring"),
+  ];
+  const underfond = [], overfond = [];
+  let fondHtml = "<thead><tr><th>Zaposleni</th><th>I</th><th>II</th><th>III</th><th>MS</th><th>Ukupno</th></tr></thead><tbody>";
+  groups.forEach((list, gi) => list.forEach(e => {
+    const f = per[e.id] || { I: 0, II: 0, III: 0, MS: 0, total: 0 };
+    const name = e.name.toUpperCase();
+    const target = rdmFondOf(e, month, fondTarget);
+    let tag = "", cls = "";
+    if (gi <= 1) {
+      if (gi === 1) tag = "Zamena";
+      if (target < fondTarget) tag = (tag ? tag + " · " : "") + `Slava · fond ${target}`;
+      if (f.total < target) { cls = "gen-low"; if (gi === 0) underfond.push(`${name} (${f.total}/${target})`); }
+      if (f.total > target) { cls = "gen-over"; overfond.push(`${name} (${f.total}/${target})`); }
+    } else {
+      tag = gi === 2 ? "Lider" : `Monitoring ${e.monitoringSmena || ""}`;
+    }
+    fondHtml += `<tr><td>${name}${tag ? `<br/><span class="muted" style="font-weight:500;">${tag}</span>` : ""}</td>` +
+      `<td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="gen-ms">${f.MS || ""}</td><td class="total ${cls}">${f.total}</td></tr>`;
+  }));
   fondHtml += "</tbody>";
   document.getElementById("gen-fond-table").innerHTML = fondHtml;
 
-  const overNames = [...radnici, ...zamene]
-    .filter(e => (overfond || []).includes(e.id))
-    .map(e => `${(e.profiles?.full_name || "").toUpperCase()} (${fondByEmployee[e.id].total}/${fondByEmployee[e.id].target || fondTarget})`);
-
-  // Smene sa manje radnika od minimuma (lideri/monitoring i zamena za lidera se ne računaju).
-  const liderIds = new Set(liderMonitoring.map(e => e.id));
-  const belowMin = [];
-  if (variant) {
-    for (let d = 1; d <= daysInMonth(year, month); d++) {
-      const key = dateKey(year, month, d);
-      const cnt = { I: 0, II: 0, III: 0 };
-      [...radnici, ...zamene].forEach(e => {
-        const v = combined[e.id] && combined[e.id][key];
-        const forId = handoverFor && handoverFor[e.id] && handoverFor[e.id][key];
-        if (cnt[v] !== undefined && !(forId && liderIds.has(forId))) cnt[v]++;
-      });
-      ["I", "II", "III"].forEach(c => {
-        if (cnt[c] < variant.mins[c]) belowMin.push(`${String(d).padStart(2, "0")}.${String(month).padStart(2, "0")}. ${c} smena (${cnt[c]}/${variant.mins[c]})`);
-      });
-    }
-  }
-
+  const chips = (title, list, top) => list.length
+    ? `<div class="field-label" style="margin:${top}px 0 6px;">${title}</div>` + list.map(n => `<span class="underfond-chip">${n}</span>`).join("")
+    : "";
   document.getElementById("gen-underfond").innerHTML =
-    (belowMin.length
-      ? `<div class="field-label" style="margin-bottom:6px;">Smene ispod minimuma — popuniti ručno:</div>` +
-        belowMin.map(n => `<span class="underfond-chip">${n}</span>`).join("") + "<br/>"
-      : "") +
-    (underfond.length
-      ? `<div class="field-label" style="margin-bottom:6px;">Nemaju pun fond — dopuniti ručno:</div>` +
-        underfond.map(n => `<span class="underfond-chip">${n}</span>`).join("")
-      : "") +
-    (overNames.length
-      ? `<div class="field-label" style="margin:10px 0 6px;">Imaju višak smena — skinuti ručno:</div>` +
-        overNames.map(n => `<span class="underfond-chip">${n}</span>`).join("")
-      : "");
+    chips("Smene ispod minimuma — popuniti ručno:", belowMin, 0) +
+    chips("Nemaju pun fond — dopuniti ručno:", underfond, belowMin.length ? 10 : 0) +
+    chips("Imaju višak smena — skinuti ručno:", overfond, 10);
 }
 
 // ---------- Nacrt: ručno sređivanje pa objava ----------
@@ -451,7 +462,11 @@ async function genShowDraft(year, month, scrollTo) {
   ]);
   const sel = genSelectedMonth();
   if (sel.year !== year || sel.month !== month) return; // u međuvremenu izabran drugi mesec
-  if (!count) { box.style.display = "none"; box.innerHTML = ""; return; }
+  if (!count) {
+    box.style.display = "none"; box.innerHTML = "";
+    document.getElementById("gen-results").style.display = "none";
+    return;
+  }
 
   await rdmLoadStaticData();
   const label = `${MONTH_NAMES_SR[month - 1]} ${year}`;

@@ -21,13 +21,13 @@ let RDM_ACTIVE_EMPLOYEES = [];
 async function rdmLoadStaticData() {
   const [{ data: shiftTypes }, { data: employees }] = await Promise.all([
     sb.from("shift_types").select("*").order("sort_order"),
-    sb.from("employees").select("id, funkcija, slava_date, profiles(full_name, username)").eq("active", true),
+    sb.from("employees").select("id, funkcija, monitoring_smena, slava_date, profiles(full_name, username)").eq("active", true),
   ]);
   RDM_SHIFT_TYPES = shiftTypes || [];
   const n = belgradeNow();
   await leadWeeksLoad(`${n.getFullYear() - 1}-01-01`, `${n.getFullYear() + 1}-12-31`);
   RDM_ACTIVE_EMPLOYEES = (employees || [])
-    .map(e => ({ id: e.id, funkcija: e.funkcija, slava: e.slava_date, name: e.profiles?.full_name || "" }))
+    .map(e => ({ id: e.id, funkcija: e.funkcija, monitoringSmena: e.monitoring_smena, slava: e.slava_date, name: e.profiles?.full_name || "" }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -81,7 +81,7 @@ async function rdmFetchSchedule(year, month, tbl = "schedule") {
   const { start, end } = rdmMonthRange(year, month);
   const { data, error } = await sb
     .from(tbl)
-    .select(`id, date, shift_code, is_leader, is_medju_smena, employee_id, employees!${tbl}_employee_id_fkey(funkcija, profiles(full_name, username))`)
+    .select(`id, date, shift_code, is_leader, is_medju_smena, replacement_for, employee_id, employees!${tbl}_employee_id_fkey(funkcija, profiles(full_name, username))`)
     .gte("date", start)
     .lte("date", end)
     .order("date");
@@ -421,6 +421,10 @@ async function rdmRenderMonthBody(body, year, month) {
   rows.forEach(r => { fondCounts[r.employee_id] = (fondCounts[r.employee_id] || 0) + 1; });
   const fondTarget = monthFond(year, month);
   rdmRenderUnderfond(body.parentElement && body.parentElement.querySelector(".rdm-underfond"), fondCounts, fondTarget, month);
+  // Nacrt u Generisanju: tabele "Broj ljudi po smenama" i "Fond smena po zaposlenom" prate svaku izmenu.
+  if (tbl === "schedule_draft" && body.closest("#gen-draft") && typeof genRenderDraftStats === "function") {
+    genRenderDraftStats(year, month, rows);
+  }
 
   const frag = document.createDocumentFragment();
 
