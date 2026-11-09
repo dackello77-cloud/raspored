@@ -417,10 +417,6 @@ async function genRenderDraftStats(year, month, rows) {
   ];
   const underfond = [], overfond = [];
   let fondHtml = "<thead><tr><th>Zaposleni</th><th>I</th><th>II</th><th>III</th><th>13–21</th><th>21–05</th><th>Ukupno</th></tr></thead><tbody>";
-  // Plutajući panel (stalno vidljiv dok se sređuje nacrt): isti brojevi, kraće.
-  const grpNames = ["Radnici", "Zamene", "Lideri", "Monitoring"];
-  const sum = { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, total: 0 };
-  let floatHtml = "<thead><tr><th>Ime</th><th>I</th><th>II</th><th>III</th><th>13–21</th><th>21–05</th><th>Uk.</th></tr></thead><tbody>";
   groups.forEach((list, gi) => list.forEach(e => {
     const f = per[e.id] || { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, total: 0 };
     const name = e.name.toUpperCase();
@@ -436,16 +432,9 @@ async function genRenderDraftStats(year, month, rows) {
     }
     fondHtml += `<tr><td>${name}${tag ? `<br/><span class="muted" style="font-weight:500;">${tag}</span>` : ""}</td>` +
       `<td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="gen-ms">${f.MSI || ""}</td><td class="gen-ms">${f.MSII || ""}</td><td class="total ${cls}">${f.total}</td></tr>`;
-    if (list[0] === e) floatHtml += `<tr class="grp"><td colspan="7">${grpNames[gi]}</td></tr>`;
-    Object.keys(sum).forEach(k => { sum[k] += f[k] || 0; });
-    const fondTxt = gi <= 1 ? `${f.total}/${target}` : `${f.total}`;
-    floatHtml += `<tr><td data-name="${e.name.replace(/"/g, "&quot;")}" title="${name} — klik: pronađi u nacrtu">${name}</td>` +
-      `<td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="gen-ms">${f.MSI || ""}</td><td class="gen-ms">${f.MSII || ""}</td><td class="total ${cls}">${fondTxt}</td></tr>`;
   }));
   fondHtml += "</tbody>";
   document.getElementById("gen-fond-table").innerHTML = fondHtml;
-  floatHtml += `</tbody><tfoot><tr><td>Ukupno</td><td>${sum.I}</td><td>${sum.II}</td><td>${sum.III}</td><td>${sum.MSI}</td><td>${sum.MSII}</td><td>${sum.total}</td></tr></tfoot>`;
-  genRenderFloat(year, month, floatHtml);
 
   const chips = (title, list, top) => list.length
     ? `<div class="field-label" style="margin:${top}px 0 6px;">${title}</div>` + list.map(n => `<span class="underfond-chip">${n}</span>`).join("")
@@ -456,13 +445,64 @@ async function genRenderDraftStats(year, month, rows) {
     chips("Imaju višak smena — skinuti ručno:", overfond, 10);
 }
 
-// Plutajući panel "Smene po zaposlenom" — vidi se dok je nacrt otvoren; može da se skupi
-// (pamti se u pregledaču). Klik na ime upisuje ime u pretragu nacrta.
-function genRenderFloat(year, month, html) {
+// Plutajući panel "Smene po zaposlenom" (I/II/III/13–21/21–05) — stalno vidljiv na strani Rasporedi.
+// Prikazuje mesec koji se trenutno sređuje: nacrt iz Generisanja, ili mesec iz "Tekući i naredni"
+// koji je poslednji otvoren / menjan. Može da se skupi (pamti se). Klik na ime = pretraga.
+let GEN_FLOAT_SRC = null; // { key: "GGGG-M-tbl", gen: bool }
+let GEN_FLOAT_TOKEN = 0;
+// Poziva se iz rdmRenderMonthBody za svaki prikazan mesec; odlučuje da li taj mesec preuzima panel.
+function genFloatOffer(year, month, rows, info) {
+  const key = `${year}-${month}-${info.gen ? "gen" : "rdm"}`;
+  const take = info.gen || info.isRefresh || info.force || !GEN_FLOAT_SRC ||
+    GEN_FLOAT_SRC.key === key || (!GEN_FLOAT_SRC.gen && info.visible && GEN_FLOAT_SRC.hidden);
+  if (!take || (!info.gen && !info.visible && !info.force && GEN_FLOAT_SRC)) return;
+  GEN_FLOAT_SRC = { key, gen: !!info.gen, hidden: !info.visible };
+  genBuildFloat(year, month, rows, info.label || "");
+}
+
+async function genBuildFloat(year, month, rows, label) {
+  const token = ++GEN_FLOAT_TOKEN;
+  const { zameneIds } = await genStatsMeta(year, month);
+  if (token !== GEN_FLOAT_TOKEN) return;
+  const emps = RDM_ACTIVE_EMPLOYEES;
+  const fondTarget = monthFond(year, month);
+  const per = {};
+  rows.forEach(r => {
+    const f = per[r.employee_id] || (per[r.employee_id] = { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, total: 0 });
+    if (r.is_medju_smena) f["MS" + r.shift_code] = (f["MS" + r.shift_code] || 0) + 1; else f[r.shift_code]++;
+    f.total++;
+  });
+  const groups = [
+    ["Radnici", emps.filter(e => e.funkcija === "radnik" && !zameneIds.has(e.id))],
+    ["Zamene", emps.filter(e => e.funkcija === "radnik" && zameneIds.has(e.id))],
+    ["Lideri", emps.filter(e => e.funkcija === "shift_lider")],
+    ["Monitoring", emps.filter(e => e.funkcija === "monitoring")],
+  ];
+  const sum = { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, total: 0 };
+  let html = "<thead><tr><th>Ime</th><th>I</th><th>II</th><th>III</th><th>13–21</th><th>21–05</th><th>Uk.</th></tr></thead><tbody>";
+  groups.forEach(([gname, list], gi) => {
+    if (!list.length) return;
+    html += `<tr class="grp"><td colspan="7">${gname}</td></tr>`;
+    list.forEach(e => {
+      const f = per[e.id] || { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, total: 0 };
+      Object.keys(sum).forEach(k => { sum[k] += f[k] || 0; });
+      const name = e.name.toUpperCase();
+      const target = rdmFondOf(e, month, fondTarget);
+      const cls = gi <= 1 ? (f.total < target ? "gen-low" : f.total > target ? "gen-over" : "") : "";
+      html += `<tr><td data-name="${e.name.replace(/"/g, "&quot;")}" title="${name} — klik: pronađi u rasporedu">${name}</td>` +
+        `<td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="gen-ms">${f.MSI || ""}</td><td class="gen-ms">${f.MSII || ""}</td>` +
+        `<td class="total ${cls}">${gi <= 1 ? `${f.total}/${target}` : f.total}</td></tr>`;
+    });
+  });
+  html += `</tbody><tfoot><tr><td>Ukupno</td><td>${sum.I}</td><td>${sum.II}</td><td>${sum.III}</td><td>${sum.MSI}</td><td>${sum.MSII}</td><td>${sum.total}</td></tr></tfoot>`;
+  genRenderFloat(year, month, html, label);
+}
+
+function genRenderFloat(year, month, html, label) {
   const box = document.getElementById("gen-float");
   if (!box) return;
   document.getElementById("gen-float-table").innerHTML = html;
-  document.getElementById("gen-float-sub").textContent = `· ${MONTH_NAMES_SR[month - 1]} ${year}`;
+  document.getElementById("gen-float-sub").textContent = `· ${MONTH_NAMES_SR[month - 1]} ${year}${label ? " · " + label : ""}`;
   if (!box.dataset.init) {
     box.dataset.init = "1";
     let min = false;
@@ -476,7 +516,9 @@ function genRenderFloat(year, month, html) {
     document.getElementById("gen-float-head").addEventListener("click", () => setMin(!box.classList.contains("min")));
     box.querySelector(".gen-float-body").addEventListener("click", (ev) => {
       const td = ev.target.closest("td[data-name]");
-      const inp = document.querySelector("#gen-draft .rdm-search-bar input");
+      const inp = GEN_FLOAT_SRC && GEN_FLOAT_SRC.gen
+        ? document.querySelector("#gen-draft .rdm-search-bar input")
+        : document.getElementById("rasporedi-search");
       if (!td || !inp) return;
       inp.value = inp.value === td.dataset.name ? "" : td.dataset.name;
       inp.dispatchEvent(new Event("input"));
@@ -484,7 +526,17 @@ function genRenderFloat(year, month, html) {
   }
   box.classList.add("show");
 }
+// Nacrt u Generisanju je nestao (obrisan / objavljen / drugi mesec): panel prelazi na tekući mesec.
 function genHideFloat() {
+  if (GEN_FLOAT_SRC && !GEN_FLOAT_SRC.gen) return;
+  GEN_FLOAT_SRC = null;
+  const open = [...document.querySelectorAll("#rasporedi-months .rdm-month-wrap")]
+    .find(w => w.lastElementChild && w.lastElementChild.style.display !== "none" && w.lastElementChild._rows);
+  if (open) {
+    genFloatOffer(Number(open.dataset.year), Number(open.dataset.month), open.lastElementChild._rows,
+      { force: true, visible: true, label: open.dataset.table === "schedule_draft" ? "nacrt izmena" : "objavljen" });
+    return;
+  }
   const box = document.getElementById("gen-float");
   if (box) box.classList.remove("show");
 }

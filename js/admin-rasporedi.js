@@ -186,6 +186,11 @@ async function rdmRenderMonth(year, month, collapsedDefault, tbl = "schedule", o
     const isHidden = body.style.display === "none";
     body.style.display = isHidden ? "" : "none";
     header.querySelector(".toggle-label").textContent = isHidden ? "Sakrij" : "Prikaži";
+    // Otvoren mesec preuzima plutajući panel "Smene po zaposlenom".
+    if (isHidden && body._rows && typeof genFloatOffer === "function") {
+      genFloatOffer(year, month, body._rows, { force: true, visible: true,
+        label: tbl === "schedule_draft" ? "nacrt izmena" : "objavljen" });
+    }
   });
 
   if (opts.tekuci && tbl === "schedule_draft") rdmDecorateDraft(wrap);
@@ -422,8 +427,17 @@ async function rdmRenderMonthBody(body, year, month) {
   const fondTarget = monthFond(year, month);
   rdmRenderUnderfond(body.parentElement && body.parentElement.querySelector(".rdm-underfond"), fondCounts, fondTarget, month);
   // Nacrt u Generisanju: tabele "Broj ljudi po smenama" i "Fond smena po zaposlenom" prate svaku izmenu.
-  if (tbl === "schedule_draft" && body.closest("#gen-draft") && typeof genRenderDraftStats === "function") {
+  const inGen = tbl === "schedule_draft" && !!body.closest("#gen-draft");
+  if (inGen && typeof genRenderDraftStats === "function") {
     genRenderDraftStats(year, month, rows);
+  }
+  // Plutajući panel "Smene po zaposlenom" (admin-generate.js).
+  body._rows = rows;
+  if (typeof genFloatOffer === "function") {
+    genFloatOffer(year, month, rows, {
+      gen: inGen, isRefresh, visible: body.style.display !== "none",
+      label: inGen ? "nacrt" : tbl === "schedule_draft" ? "nacrt izmena" : "objavljen",
+    });
   }
 
   const frag = document.createDocumentFragment();
