@@ -20,6 +20,16 @@ function addDays(dateStr, days) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Da li baza već ima kolone pref_i/pref_ii/pref_iii (sql/migration_045_smene_sklonosti.sql).
+let OSOBE_HAS_PREFS = false;
+
+// Tri polja I / II / III — sve uključeno = svejedno mu je koja smena.
+function prefChecksHtml(emp) {
+  const on = (v) => v !== false;
+  return ["i", "ii", "iii"].map(k => `<label class="pref-chk" title="Isključeno = ova smena mu manje odgovara">
+      <input type="checkbox" class="f-pref-${k}" ${on(emp["pref_" + k]) ? "checked" : ""} />${k.toUpperCase()}</label>`).join("");
+}
+
 function showBanner(message, type) {
   const box = document.getElementById("osobe-banner");
   box.innerHTML = `<div class="banner ${type}">${message}</div>`;
@@ -27,10 +37,14 @@ function showBanner(message, type) {
 }
 
 async function fetchEmployeesWithVacations() {
-  const { data: employees, error } = await sb
+  // Sklonosti prema smenama (pref_i/ii/iii) — dok se ne pokrene sql/migration_045 učitava se bez njih.
+  const BASE = "id, funkcija, monitoring_smena, slava_date, hire_date, active, profile_id, profiles(*)";
+  let { data: employees, error } = await sb
     .from("employees")
-    .select("id, funkcija, monitoring_smena, slava_date, hire_date, active, profile_id, profiles(*)")
+    .select(BASE + ", pref_i, pref_ii, pref_iii")
     .order("created_at");
+  OSOBE_HAS_PREFS = !error;
+  if (error) ({ data: employees, error } = await sb.from("employees").select(BASE).order("created_at"));
   if (error) {
     console.error(error);
     return [];
@@ -123,6 +137,7 @@ function buildEmployeeRow(emp) {
         ${optionsHTML([["I", "Monitoring I"], ["II", "Monitoring II"], ["III", "Monitoring III"]], emp.monitoring_smena || "")}
       </select>
     </div>
+    <div class="pref-col">${prefChecksHtml(emp)}</div>
     <div class="field-slava">
       <input type="date" class="f-slava" value="${emp.slava_date || ""}" />
     </div>
@@ -431,6 +446,17 @@ async function handleSaveChanges() {
 
   const rows = document.querySelectorAll("#employees-list .emp-row");
   const errors = [];
+  if (!OSOBE_HAS_PREFS) {
+    errors.push("Smene (I/II/III) nisu sačuvane — prvo jednom pokreni SQL iz fajla sql/migration_045_smene_sklonosti.sql u Supabase");
+  }
+  const noPref = [...rows].filter(r => !r.querySelector(".f-pref-i").checked && !r.querySelector(".f-pref-ii").checked && !r.querySelector(".f-pref-iii").checked);
+  if (noPref.length) {
+    showBanner("Svakoj osobi mora biti uključena bar jedna smena (I, II ili III): " +
+      noPref.map(r => r.querySelector(".emp-name").firstChild.textContent).join(", "), "error");
+    btn.disabled = false;
+    btn.textContent = "Sačuvaj izmene";
+    return;
+  }
 
   for (const row of rows) {
     const employeeId = row.dataset.employeeId;
@@ -442,10 +468,16 @@ async function handleSaveChanges() {
     const odmorOd = row.querySelector(".f-odmor-od").value;
     const odmorDo = row.querySelector(".f-odmor-do").value;
     const weeks = parseInt(row.querySelector(".f-trajanje").value, 10);
+    const empUpdate = { funkcija, monitoring_smena, slava_date, hire_date, active };
+    if (OSOBE_HAS_PREFS) {
+      empUpdate.pref_i = row.querySelector(".f-pref-i").checked;
+      empUpdate.pref_ii = row.querySelector(".f-pref-ii").checked;
+      empUpdate.pref_iii = row.querySelector(".f-pref-iii").checked;
+    }
 
     const { error: empError } = await sb
       .from("employees")
-      .update({ funkcija, monitoring_smena, slava_date, hire_date, active })
+      .update(empUpdate)
       .eq("id", employeeId);
     if (empError) errors.push(empError.message);
     // Deaktivirani nestaju iz liste (kad je prikaz "samo aktivni") tek posle čuvanja.

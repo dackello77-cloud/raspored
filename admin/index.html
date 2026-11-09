@@ -60,7 +60,7 @@
 
   .emp-row {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
+    grid-template-columns: 1.4fr 1fr 1fr 0.9fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
     gap: 10px;
     align-items: center;
     padding: 12px 8px;
@@ -77,11 +77,14 @@
   .pw-device .btn { align-self: flex-start; padding: 7px 12px; font-size: 12.5px; }
   .emp-row select, .emp-row input { width: 100%; font-size: 12px; padding: 7px 8px; }
   .emp-row .field-col-label { display: none; }
+  .pref-col { display: flex; gap: 6px; }
+  .pref-chk { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; cursor: pointer; user-select: none; }
+  .emp-row .pref-chk input { width: 14px; height: 14px; padding: 0; accent-color: var(--green-dark); }
   .active-col { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
 
   .col-head {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
+    grid-template-columns: 1.4fr 1fr 1fr 0.9fr 1fr 1fr 0.9fr 0.9fr 0.9fr 0.7fr 1.2fr;
     gap: 10px;
     padding: 0 8px 8px;
     font-size: 10.5px;
@@ -524,11 +527,12 @@
         </div>
 
         <div class="scroll-x">
-          <div style="min-width:1150px;">
+          <div style="min-width:1250px;">
             <div class="col-head">
               <div>Zaposleni</div>
               <div>Funkcija</div>
               <div>Monitoring</div>
+              <div title="Isključena smena = manje mu odgovara. Sve tri = svejedno.">Smene</div>
               <div>Slava</div>
               <div>Zaposlen od</div>
               <div>Odmor od (pon.)</div>

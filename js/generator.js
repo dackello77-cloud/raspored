@@ -193,6 +193,10 @@ function generateFixedFunctionSchedule(employees, weeks, forcedOff, weeklyOverri
 //         "prebacivanje" iz Excela (crveno): II blok -> prvi dan postaje I, a II se
 //         dodaje posle bloka; ili poslednji II postaje III, a II se dodaje pre bloka.
 // Faza 3: vikendom/praznikom dopuna samo radnicima koji i dalje nemaju pun fond.
+// Faza 1b: sklonosti (Smene I/II/III u "Osobe u sistemu") — radnim danima se prvo dopunjuju
+//         oni koji vole III, pa II, pa I. Ostatak (kome je svejedno) ide u fazi 2.
+// Rokade: na kraju, isti dan I <-> II između onih koji više vole I a rade II i onih koji
+//         više vole II (ili im je svejedno) a rade I — samo kad pravila niza ostaju ispravna.
 // Faza 4: ko ima više od fonda — skida se III posle koje slede tačno 2 slobodna dana,
 //         samo subotom, nedeljom i ponedeljkom. Ostatak viška admin skida ručno.
 //
@@ -239,6 +243,22 @@ function buildBaseCycle(variant, n) {
 }
 
 const SHIFT_CODES = ["I", "II", "III"];
+
+// ------------------------------------------------------------
+// SKLONOSTI PREMA SMENAMA (Osobe u sistemu -> Smene I/II/III; employees.pref_i/ii/iii)
+// Uključene sve tri (ili nijedna) = svejedno mu je. Isključena smena = manje mu odgovara.
+// "Voli" smenu = ta smena je uključena, a nisu uključene sve tri.
+// ------------------------------------------------------------
+function shiftPrefOf(emp) {
+  const p = { I: emp.pref_i !== false, II: emp.pref_ii !== false, III: emp.pref_iii !== false };
+  const n = SHIFT_CODES.filter(c => p[c]).length;
+  return n === 0 || n === 3 ? { I: true, II: true, III: true, neutral: true } : { ...p, neutral: false };
+}
+// 0 = voli tu smenu, 1 = svejedno mu je, 2 = manje mu odgovara
+function shiftPrefRank(pref, code) {
+  if (!pref || pref.neutral) return 1;
+  return pref[code] ? 0 : 2;
+}
 const MAX_SAME_RUN = { I: 3, II: 4, III: 2 };
 const isWorkShift = (v) => v === "I" || v === "II" || v === "III";
 
@@ -457,15 +477,37 @@ function generateRadniciSchedule(radnici, variant, year, month, weeks, weeklyOve
     });
     return f;
   };
+  // Sklonosti: među podjednako dobrim pokušajima bira onaj sa najmanje smena koje radnicima manje odgovaraju
+  // (i najviše onih koje vole).
+  const prefs = {};
+  [...radnici, ...(opts.zamene || [])].forEach(e => { prefs[e.id] = shiftPrefOf(e); });
+  const hasPrefs = Object.values(prefs).some(p => !p.neutral);
+  const prefScore = (res) => {
+    if (!hasPrefs) return 0;
+    let f = 0;
+    Object.keys(prefs).forEach(id => {
+      const m = res.scheduleMap[id] || {};
+      Object.values(m).forEach(v => { if (isWorkShift(v)) f += shiftPrefRank(prefs[id], v) - 1; });
+    });
+    return f;
+  };
   let best = null;
-  let bestScore = Infinity, bestFair = Infinity;
-  for (let attempt = 0; attempt < GENERATOR_ATTEMPTS; attempt++) {
-    const rng = attempt === 0 ? null : seededRandom(attempt);
-    const res = generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOverridesMap, forcedOff, monitoringFixedForOverrides, rng, opts);
+  let bestScore = Infinity, bestPref = Infinity, bestFair = Infinity;
+  // Sa sklonostima: svaki pokušaj se radi dvaput — sa sklonostima i bez njih (kao ranije, samo rokade
+  // I <-> II na kraju). Ako sklonosti nekome uzmu mogućnost za pun fond, pobediće pokušaj bez njih.
+  const attempts = hasPrefs ? GENERATOR_ATTEMPTS * 2 : GENERATOR_ATTEMPTS;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const seed = hasPrefs ? Math.floor(attempt / 2) : attempt;
+    const rng = seed === 0 ? null : seededRandom(seed);
+    const res = generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOverridesMap, forcedOff, monitoringFixedForOverrides, rng,
+      { ...opts, plainFill: hasPrefs && attempt % 2 === 1 });
     const score = res.deficit * 1000 + res.overfond.length * 100 + res.weekendExtra;
+    const pref = prefScore(res);
     const fair = fairScore(res);
-    if (score < bestScore || (score === bestScore && fair < bestFair)) { best = res; bestScore = score; bestFair = fair; }
-    if (!opts.fairDev && res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0) break;
+    if (score < bestScore || (score === bestScore && (pref < bestPref || (pref === bestPref && fair < bestFair)))) {
+      best = res; bestScore = score; bestPref = pref; bestFair = fair;
+    }
+    if (!opts.fairDev && !hasPrefs && res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0) break;
   }
   return best;
 }
@@ -479,6 +521,10 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
   const zamene = opts.zamene || [];
   const everyone = [...radnici, ...zamene];
   const zameneIds = new Set(zamene.map(e => e.id));
+  const prefs = {};
+  everyone.forEach(e => { prefs[e.id] = shiftPrefOf(e); });
+  const prefRank = (id, code) => shiftPrefRank(prefs[id], code);
+  const fillRank = (id, code) => (opts.plainFill ? 0 : prefRank(id, code)); // blaga prednost pri dopuni
 
   const scheduleMap = {};
   const protectedOff = {}; // employeeId -> Set(dateStr) dana koji se NE diraju (odmor/slobodan/druga funkcija)
@@ -698,7 +744,8 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     });
     options.forEach(o => { o.tie = rng ? rng() : 0; });
     const fairOf = (id) => (opts.fairDev && opts.fairDev[id]) ? (weekendLike[d] ? opts.fairDev[id].wk : 0) + (code === "III" ? opts.fairDev[id].iii : 0) : 0;
-    options.sort((a, b) => total[a.id] - total[b.id] || a.pref - b.pref || fairOf(a.id) - fairOf(b.id) || a.tie - b.tie);
+    options.sort((a, b) => total[a.id] - total[b.id] || fillRank(a.id, code) - fillRank(b.id, code) ||
+      a.pref - b.pref || fairOf(a.id) - fairOf(b.id) || a.tie - b.tie);
     for (const o of options) {
       if (editAllowed(o.id, o.edits, allowWeekend)) {
         applyEdits(o.id, o.edits);
@@ -824,6 +871,14 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     });
   }
 
+  // ---------- Faza 1b — sklonosti: radnim danima prvo oni koji vole III, pa II, pa I ----------
+  // Popunjava se do maksimuma po smeni i do fonda, uz ista pravila niza. Kome su sve tri
+  // uključene (svejedno mu je) dopunjuje se posle, u fazi 2, kao i do sada.
+  if (!opts.plainFill) ["III", "II", "I"].forEach(code => {
+    const lovers = radnici.filter(e => prefRank(e.id, code) === 0);
+    if (lovers.length) fillRounds([code], d => !weekendLike[d], false, true, lovers);
+  });
+
   // ---------- Faza 2 — radni dani do maksimuma ----------
   phases.forEach(codes => fillRounds(codes, d => !weekendLike[d], false));
 
@@ -841,7 +896,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
       while (counts[d][code] < variant.mins[code]) {
         const options = everyone
           .filter(e => get(e.id, d) === "OFF")
-          .sort((a, b) => total[a.id] - total[b.id]);
+          .sort((a, b) => total[a.id] - total[b.id] || fillRank(a.id, code) - fillRank(b.id, code));
         const pick = options.find(e => editAllowed(e.id, { [d]: code }, true));
         if (pick) { applyEdits(pick.id, { [d]: code }); continue; }
         // Niko slobodan ne može — neko iz smene sa viškom tog dana prelazi u ovu (ako pravila dozvoljavaju).
@@ -854,6 +909,61 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
         applyEdits(mover.id, { [d]: code });
       }
     }
+  }
+
+  // ---------- Rokade I <-> II po sklonostima ----------
+  // Isti dan (ili niz istih dana): osoba u II koja više voli I menja se sa osobom u I koja više voli II
+  // (ili joj je svejedno između I i II) — i obrnuto. Broj ljudi po smeni i fond se ne menjaju.
+  // Rokada samo ako ni jednom od njih dvoje ne kvari pravila niza (npr. posle II ne sme I).
+  const iiOverI = (id) => (prefRank(id, "I") - prefRank(id, "II")); // > 0: više voli II, < 0: više voli I
+  const swappable = (id, d, code) => get(id, d) === code && !isProtected(id, d) && !notCounted[id].has(keys[d]);
+  for (let round = 0; round < 10; round++) {
+    let swapped = false;
+    for (let d = 1; d <= nDays; d++) {
+      // a = radi II a više voli I
+      for (const a of everyone) {
+        if (iiOverI(a.id) >= 0 || !swappable(a.id, d, "II")) continue;
+        let maxL = 1;
+        while (maxL < 4 && d + maxL <= nDays && swappable(a.id, d + maxL, "II")) maxL++;
+        let done = false;
+        for (let L = maxL; L >= 1 && !done; L--) {
+          const range = []; for (let x = d; x < d + L; x++) range.push(x);
+          const partners = everyone
+            .filter(b => b.id !== a.id && iiOverI(b.id) >= 0 && range.every(x => swappable(b.id, x, "I")))
+            .map(b => ({ b, tie: rng ? rng() : 0 }))
+            .sort((x, y) => iiOverI(y.b.id) - iiOverI(x.b.id) || x.tie - y.tie);
+          for (const { b } of partners) {
+            const ea = {}, eb = {};
+            range.forEach(x => { ea[x] = "I"; eb[x] = "II"; });
+            const lo = d - 7, hi = d + L + 7;
+            const ok = (id, e) => countViolations(x => (x in e ? e[x] : get(id, x)), lo, hi, zameneIds.has(id)) <=
+              countViolations(x => get(id, x), lo, hi, zameneIds.has(id));
+            if (!ok(a.id, ea) || !ok(b.id, eb)) continue;
+            range.forEach(x => { scheduleMap[a.id][keys[x]] = "I"; scheduleMap[b.id][keys[x]] = "II"; });
+            swapped = done = true;
+            break;
+          }
+        }
+      }
+      // b = radi I a više voli II, a u II je neko kome je svejedno (prvi krug već je pokrio "voli I")
+      for (const b of everyone) {
+        if (iiOverI(b.id) <= 0 || !swappable(b.id, d, "I")) continue;
+        const partners = everyone
+          .filter(a => a.id !== b.id && iiOverI(a.id) === 0 && swappable(a.id, d, "II"))
+          .map(a => ({ a, tie: rng ? rng() : 0 }))
+          .sort((x, y) => x.tie - y.tie);
+        for (const { a } of partners) {
+          const lo = d - 7, hi = d + 7;
+          const ok = (id, v) => countViolations(x => (x === d ? v : get(id, x)), lo, hi, zameneIds.has(id)) <=
+            countViolations(x => get(id, x), lo, hi, zameneIds.has(id));
+          if (!ok(a.id, "I") || !ok(b.id, "II")) continue;
+          scheduleMap[a.id][keys[d]] = "I"; scheduleMap[b.id][keys[d]] = "II";
+          swapped = true;
+          break;
+        }
+      }
+    }
+    if (!swapped) break;
   }
 
   // ---------- Faza 4 — višak smena ----------
@@ -967,6 +1077,6 @@ if (typeof module !== "undefined") {
     buildBaseCycle, SHIFT_VARIANTS, findVariant, daysInMonth, monthFond, dateKey,
     isoWeekNumber, orthodoxEasterDate, isHolidayOrWeekendLike,
     generateFixedFunctionSchedule, generateRadniciSchedule, liderShiftForWeek,
-    fixedScheduleForWeek, assignWeekendLeaders, assignSlavaLeaders,
+    fixedScheduleForWeek, assignWeekendLeaders, assignSlavaLeaders, shiftPrefOf,
   };
 }

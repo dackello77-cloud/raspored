@@ -4,11 +4,12 @@ function genShowBanner(message, type) {
 }
 
 async function genFetchEmployees() {
-  const { data, error } = await sb
-    .from("employees")
-    .select("id, funkcija, monitoring_smena, slava_date, profiles(full_name)")
-    .eq("active", true)
+  // Sklonosti prema smenama (pref_i/ii/iii, sql/migration_045) — bez te kolone svima je svejedno.
+  const BASE = "id, funkcija, monitoring_smena, slava_date, profiles(full_name)";
+  const q = (cols) => sb.from("employees").select(cols).eq("active", true)
     .in("funkcija", ["radnik", "shift_lider", "monitoring"]);
+  let { data, error } = await q(BASE + ", pref_i, pref_ii, pref_iii");
+  if (error) ({ data, error } = await q(BASE));
   if (error) {
     console.error(error);
     return [];
