@@ -474,6 +474,20 @@
   .gen-table td.gen-over { color: #9a5b00; background: #fff4e0; font-weight: 700; }
   .gen-table td.gen-ms { color: var(--text-muted); }
   .underfond-chip { display: inline-block; background: var(--red-soft); color: var(--red-text); border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700; margin: 2px; }
+  /* Plutajući pregled smena po zaposlenom — stalno vidljiv dok se ručno sređuje nacrt */
+  .gen-float { position: fixed; right: 12px; bottom: 12px; z-index: 50; width: 380px; max-width: calc(100vw - 24px);
+    background: #fff; border: 2px solid #e0a43a; border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.18); display: none; }
+  .gen-float.show { display: block; }
+  .gen-float-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; cursor: pointer; user-select: none; font-size: 13px; font-weight: 800; }
+  .gen-float-head .muted { font-weight: 500; font-size: 11px; }
+  .gen-float-toggle { border: 0; background: none; font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .gen-float-body { max-height: 60vh; overflow: auto; border-top: 1px solid var(--border); }
+  .gen-float.min .gen-float-body { display: none; }
+  .gen-float .gen-table td, .gen-float .gen-table th { padding: 4px 6px; }
+  .gen-float .gen-table td:first-child { cursor: pointer; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  .gen-float .gen-table td:first-child:hover { text-decoration: underline; }
+  .gen-float .gen-table tr.grp td { background: #faf6ee; color: var(--text-muted); font-size: 10px; text-transform: uppercase; font-weight: 700; text-align: left; cursor: default; text-decoration: none; }
+  .gen-float .gen-table tfoot td { font-weight: 700; border-top: 2px solid var(--border); position: sticky; bottom: 0; background: #fff; }
 </style>
 </head>
 <body>
@@ -631,7 +645,7 @@
         </div>
         <div class="card">
           <h2 style="margin:0 0 2px;font-size:14px;">Fond smena po zaposlenom</h2>
-          <p class="muted" style="margin:0 0 8px;font-size:11px;">Iz nacrta — menja se posle svake ručne izmene. MS ulazi u ukupan fond.</p>
+          <p class="muted" style="margin:0 0 8px;font-size:11px;">Iz nacrta — menja se posle svake ručne izmene. 13–21 i 21–05 su međusmene i ulaze u ukupan fond.</p>
           <div class="scroll-x" style="max-height:360px;overflow-y:auto;">
             <table class="gen-table" id="gen-fond-table"></table>
           </div>
@@ -640,6 +654,14 @@
       </div>
 
       <div class="card gen-draft" id="gen-draft" style="display:none;"></div>
+
+      <div class="gen-float" id="gen-float">
+        <div class="gen-float-head" id="gen-float-head">
+          <span>Smene po zaposlenom <span class="muted" id="gen-float-sub"></span></span>
+          <button type="button" class="gen-float-toggle" id="gen-float-toggle" title="Skupi / raširi">▾</button>
+        </div>
+        <div class="gen-float-body"><table class="gen-table" id="gen-float-table"></table></div>
+      </div>
 
       <div class="card" style="margin-bottom:16px;">
         <h2 style="margin:0 0 2px;font-size:15px;">Tekući i naredni rasporedi</h2>

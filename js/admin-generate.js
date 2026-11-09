@@ -387,8 +387,8 @@ async function genRenderDraftStats(year, month, rows) {
       // Za minimum se broje radnici (i zamene), bez lidera/monitoringa i bez zamene za lidera.
       if (!isFixed(r.employee_id) && !(r.replacement_for && isFixed(r.replacement_for))) dd["w" + r.shift_code]++;
     }
-    const f = per[r.employee_id] || (per[r.employee_id] = { I: 0, II: 0, III: 0, MS: 0, total: 0 });
-    if (r.is_medju_smena) f.MS++; else f[r.shift_code]++;
+    const f = per[r.employee_id] || (per[r.employee_id] = { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, total: 0 });
+    if (r.is_medju_smena) f["MS" + r.shift_code] = (f["MS" + r.shift_code] || 0) + 1; else f[r.shift_code]++;
     f.total++;
   });
 
@@ -416,9 +416,13 @@ async function genRenderDraftStats(year, month, rows) {
     emps.filter(e => e.funkcija === "monitoring"),
   ];
   const underfond = [], overfond = [];
-  let fondHtml = "<thead><tr><th>Zaposleni</th><th>I</th><th>II</th><th>III</th><th>MS</th><th>Ukupno</th></tr></thead><tbody>";
+  let fondHtml = "<thead><tr><th>Zaposleni</th><th>I</th><th>II</th><th>III</th><th>13–21</th><th>21–05</th><th>Ukupno</th></tr></thead><tbody>";
+  // Plutajući panel (stalno vidljiv dok se sređuje nacrt): isti brojevi, kraće.
+  const grpNames = ["Radnici", "Zamene", "Lideri", "Monitoring"];
+  const sum = { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, total: 0 };
+  let floatHtml = "<thead><tr><th>Ime</th><th>I</th><th>II</th><th>III</th><th>13–21</th><th>21–05</th><th>Uk.</th></tr></thead><tbody>";
   groups.forEach((list, gi) => list.forEach(e => {
-    const f = per[e.id] || { I: 0, II: 0, III: 0, MS: 0, total: 0 };
+    const f = per[e.id] || { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, total: 0 };
     const name = e.name.toUpperCase();
     const target = rdmFondOf(e, month, fondTarget);
     let tag = "", cls = "";
@@ -431,10 +435,17 @@ async function genRenderDraftStats(year, month, rows) {
       tag = gi === 2 ? "Lider" : `Monitoring ${e.monitoringSmena || ""}`;
     }
     fondHtml += `<tr><td>${name}${tag ? `<br/><span class="muted" style="font-weight:500;">${tag}</span>` : ""}</td>` +
-      `<td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="gen-ms">${f.MS || ""}</td><td class="total ${cls}">${f.total}</td></tr>`;
+      `<td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="gen-ms">${f.MSI || ""}</td><td class="gen-ms">${f.MSII || ""}</td><td class="total ${cls}">${f.total}</td></tr>`;
+    if (list[0] === e) floatHtml += `<tr class="grp"><td colspan="7">${grpNames[gi]}</td></tr>`;
+    Object.keys(sum).forEach(k => { sum[k] += f[k] || 0; });
+    const fondTxt = gi <= 1 ? `${f.total}/${target}` : `${f.total}`;
+    floatHtml += `<tr><td data-name="${e.name.replace(/"/g, "&quot;")}" title="${name} — klik: pronađi u nacrtu">${name}</td>` +
+      `<td>${f.I}</td><td>${f.II}</td><td>${f.III}</td><td class="gen-ms">${f.MSI || ""}</td><td class="gen-ms">${f.MSII || ""}</td><td class="total ${cls}">${fondTxt}</td></tr>`;
   }));
   fondHtml += "</tbody>";
   document.getElementById("gen-fond-table").innerHTML = fondHtml;
+  floatHtml += `</tbody><tfoot><tr><td>Ukupno</td><td>${sum.I}</td><td>${sum.II}</td><td>${sum.III}</td><td>${sum.MSI}</td><td>${sum.MSII}</td><td>${sum.total}</td></tr></tfoot>`;
+  genRenderFloat(year, month, floatHtml);
 
   const chips = (title, list, top) => list.length
     ? `<div class="field-label" style="margin:${top}px 0 6px;">${title}</div>` + list.map(n => `<span class="underfond-chip">${n}</span>`).join("")
@@ -443,6 +454,39 @@ async function genRenderDraftStats(year, month, rows) {
     chips("Smene ispod minimuma — popuniti ručno:", belowMin, 0) +
     chips("Nemaju pun fond — dopuniti ručno:", underfond, belowMin.length ? 10 : 0) +
     chips("Imaju višak smena — skinuti ručno:", overfond, 10);
+}
+
+// Plutajući panel "Smene po zaposlenom" — vidi se dok je nacrt otvoren; može da se skupi
+// (pamti se u pregledaču). Klik na ime upisuje ime u pretragu nacrta.
+function genRenderFloat(year, month, html) {
+  const box = document.getElementById("gen-float");
+  if (!box) return;
+  document.getElementById("gen-float-table").innerHTML = html;
+  document.getElementById("gen-float-sub").textContent = `· ${MONTH_NAMES_SR[month - 1]} ${year}`;
+  if (!box.dataset.init) {
+    box.dataset.init = "1";
+    let min = false;
+    try { min = localStorage.getItem("gen-float-min") === "1"; } catch (e) { /* nije bitno */ }
+    const setMin = (v) => {
+      box.classList.toggle("min", v);
+      document.getElementById("gen-float-toggle").textContent = v ? "▴" : "▾";
+      try { localStorage.setItem("gen-float-min", v ? "1" : "0"); } catch (e) { /* nije bitno */ }
+    };
+    setMin(min);
+    document.getElementById("gen-float-head").addEventListener("click", () => setMin(!box.classList.contains("min")));
+    box.querySelector(".gen-float-body").addEventListener("click", (ev) => {
+      const td = ev.target.closest("td[data-name]");
+      const inp = document.querySelector("#gen-draft .rdm-search-bar input");
+      if (!td || !inp) return;
+      inp.value = inp.value === td.dataset.name ? "" : td.dataset.name;
+      inp.dispatchEvent(new Event("input"));
+    });
+  }
+  box.classList.add("show");
+}
+function genHideFloat() {
+  const box = document.getElementById("gen-float");
+  if (box) box.classList.remove("show");
 }
 
 // ---------- Nacrt: ručno sređivanje pa objava ----------
@@ -465,6 +509,7 @@ async function genShowDraft(year, month, scrollTo) {
   if (!count) {
     box.style.display = "none"; box.innerHTML = "";
     document.getElementById("gen-results").style.display = "none";
+    genHideFloat();
     return;
   }
 
