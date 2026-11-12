@@ -193,6 +193,8 @@ function generateFixedFunctionSchedule(employees, weeks, forcedOff, weeklyOverri
 //         "prebacivanje" iz Excela (crveno): II blok -> prvi dan postaje I, a II se
 //         dodaje posle bloka; ili poslednji II postaje III, a II se dodaje pre bloka.
 // Faza 3: vikendom/praznikom dopuna samo radnicima koji i dalje nemaju pun fond.
+// Faza 1a: utorkom, sredom i četvrtkom III smena se prvo puni do maksimuma (2/3 -> 3, 3/4 -> 4);
+//         taj maksimum za te dane važi kao minimum (ne skida se, a rupe se popunjavaju).
 // Faza 1b: sklonosti (Smene I/II/III u "Osobe u sistemu") — radnim danima se prvo dopunjuju
 //         oni koji vole III, pa II, pa I. Ostatak (kome je svejedno) ide u fazi 2.
 // Rokade: na kraju, isti dan I <-> II između onih koji više vole I a rade II i onih koji
@@ -503,13 +505,13 @@ function generateRadniciSchedule(radnici, variant, year, month, weeks, weeklyOve
       // Svaki treći pokušaj puni starim redosledom (I pa III pa II) — ako novi redosled nekome uzme
       // pun fond, pobeđuje taj; inače pobeđuje raspored sa I na minimumu i punim II/III.
       { ...opts, plainFill: hasPrefs && attempt % 2 === 1, legacyOrder: seed % 3 === 2 });
-    const score = res.deficit * 100000 + res.overfond.length * 10000 + res.weekendExtra * 2 + res.shapeCost;
+    const score = res.deficit * 100000 + res.overfond.length * 10000 + (res.midweekShort || 0) * 1000 + res.weekendExtra * 2 + res.shapeCost;
     const pref = prefScore(res);
     const fair = fairScore(res);
     if (score < bestScore || (score === bestScore && (pref < bestPref || (pref === bestPref && fair < bestFair)))) {
       best = res; bestScore = score; bestPref = pref; bestFair = fair;
     }
-    if (!opts.fairDev && !hasPrefs && res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0 && res.shapeCost === 0) break;
+    if (!opts.fairDev && !hasPrefs && res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0 && res.shapeCost === 0 && !res.midweekShort) break;
   }
   return best;
 }
@@ -665,6 +667,10 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     return scheduleMap[id][keys[d]];
   };
   const isProtected = (id, d) => protectedOff[id].has(keys[d]);
+  // Utorak, sreda, četvrtak (radni dan, ne praznik): III smena uvek ima maksimalan broj
+  // (2/3 -> 3, 3/4 -> 4). Za te dane maksimum III važi kao minimum.
+  const midweekIII = (d) => !weekendLike[d] && (dow[d] === 2 || dow[d] === 3 || dow[d] === 4);
+  const minOf = (d, code) => (code === "III" && midweekIII(d) ? variant.maxs.III : variant.mins[code]);
 
   const counts = [];
   for (let d = 1; d <= nDays; d++) {
@@ -694,7 +700,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
       if (!allowWeekend && weekendLike[d]) return false;
       const oldV = get(id, d), newV = edits[d];
       if (isWorkShift(newV) && counts[d][newV] + 1 > variant.maxs[newV]) return false;
-      if (isWorkShift(oldV) && counts[d][oldV] - 1 < variant.mins[oldV]) return false;
+      if (isWorkShift(oldV) && counts[d][oldV] - 1 < minOf(d, oldV)) return false;
     }
     const lo = Math.min(...days) - 7, hi = Math.max(...days) + 7;
     const strict = zameneIds.has(id);
@@ -878,6 +884,9 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     });
   }
 
+  // ---------- Faza 1a — III utorkom, sredom i četvrtkom do maksimuma (pre svega ostalog) ----------
+  fillRounds(["III"], midweekIII, false);
+
   // ---------- Faza 1b — sklonosti: radnim danima prvo oni koji vole III, pa II, pa I ----------
   // Popunjava se do maksimuma po smeni i do fonda, uz ista pravila niza. Kome su sve tri
   // uključene (svejedno mu je) dopunjuje se posle, u fazi 2, kao i do sada.
@@ -900,7 +909,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
   // Rupa ispod minimuma (npr. zbog odmora) — popuni bilo kim ko sme da radi taj dan.
   for (let d = 1; d <= nDays; d++) {
     for (const code of ORDER) {
-      while (counts[d][code] < variant.mins[code]) {
+      while (counts[d][code] < minOf(d, code)) {
         const options = everyone
           .filter(e => get(e.id, d) === "OFF")
           .sort((a, b) => total[a.id] - total[b.id] || fillRank(a.id, code) - fillRank(b.id, code));
@@ -910,7 +919,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
         const mover = everyone.find(e => {
           const cur = get(e.id, d);
           return isWorkShift(cur) && cur !== code && !notCounted[e.id].has(keys[d]) &&
-            counts[d][cur] > variant.mins[cur] && editAllowed(e.id, { [d]: code }, true);
+            counts[d][cur] > minOf(d, cur) && editAllowed(e.id, { [d]: code }, true);
         });
         if (!mover) break;
         applyEdits(mover.id, { [d]: code });
@@ -979,7 +988,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
       const satSunMon = dow[d] === 6 || dow[d] === 0 || dow[d] === 1;
       if (!satSunMon || get(emp.id, d) !== "III" || isProtected(emp.id, d)) continue;
       const exactlyTwoFree = d + 3 <= nDays && get(emp.id, d + 1) === "OFF" && get(emp.id, d + 2) === "OFF" && isWorkShift(get(emp.id, d + 3));
-      if (!exactlyTwoFree || counts[d].III - 1 < variant.mins.III) continue;
+      if (!exactlyTwoFree || counts[d].III - 1 < minOf(d, "III")) continue;
       applyEdits(emp.id, { [d]: "OFF" });
     }
   });
@@ -1007,12 +1016,14 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
 
   // Oblik rasporeda: I iznad minimuma i (radnim danima) II/III ispod maksimuma — što manje, to bolje.
   let shapeCost = 0;
+  let midweekShort = 0; // III utorak/sreda/četvrtak ispod maksimuma
+  for (let d = 1; d <= nDays; d++) if (midweekIII(d)) midweekShort += Math.max(0, variant.maxs.III - counts[d].III);
   for (let d = 1; d <= nDays; d++) {
     shapeCost += Math.max(0, counts[d].I - variant.mins.I);
     if (!weekendLike[d]) ["II", "III"].forEach(c => { shapeCost += Math.max(0, variant.maxs[c] - counts[d][c]); });
   }
 
-  return { scheduleMap, fondByEmployee, fondTarget, overfond, deficit, weekendExtra, shapeCost, handoverFor };
+  return { scheduleMap, fondByEmployee, fondTarget, overfond, deficit, weekendExtra, shapeCost, midweekShort, handoverFor };
 }
 
 // ------------------------------------------------------------

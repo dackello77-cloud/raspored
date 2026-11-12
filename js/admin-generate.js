@@ -398,8 +398,12 @@ async function genRenderDraftStats(year, month, rows) {
   for (let d = 1; d <= nDays; d++) {
     const key = dateKey(year, month, d);
     const dd = day[key] || { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, wI: 0, wII: 0, wIII: 0 };
-    const low = (c) => mins && dd["w" + c] < mins[c];
-    ["I", "II", "III"].forEach(c => { if (low(c)) belowMin.push(`${p2(d)}.${p2(month)}. ${c} smena (${dd["w" + c]}/${mins[c]})`); });
+    // Utorak/sreda/četvrtak (ne praznik): III mora imati maksimum (minimum + 1).
+    const dtD = new Date(year, month - 1, d);
+    const midweek = !isHolidayOrWeekendLike(dtD) && [2, 3, 4].includes(dtD.getDay());
+    const need = (c) => (mins ? mins[c] + (c === "III" && midweek ? 1 : 0) : 0);
+    const low = (c) => mins && dd["w" + c] < need(c);
+    ["I", "II", "III"].forEach(c => { if (low(c)) belowMin.push(`${p2(d)}.${p2(month)}. ${c} smena (${dd["w" + c]}/${need(c)})`); });
     const cell = (c) => `<td class="${low(c) ? "gen-low" : ""}">${dd[c]}</td>`;
     const ms = (n) => `<td class="gen-ms">${n || ""}</td>`;
     const dow = DOW_SR[new Date(year, month - 1, d).getDay()];
