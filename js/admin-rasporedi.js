@@ -19,15 +19,18 @@ let RDM_SHIFT_TYPES = [];
 let RDM_ACTIVE_EMPLOYEES = [];
 
 async function rdmLoadStaticData() {
-  const [{ data: shiftTypes }, { data: employees }] = await Promise.all([
+  const EMP_BASE = "id, funkcija, monitoring_smena, slava_date, profiles(full_name, username)";
+  const empQ = (cols) => sb.from("employees").select(cols).eq("active", true);
+  let [{ data: shiftTypes }, { data: employees, error: empErr }] = await Promise.all([
     sb.from("shift_types").select("*").order("sort_order"),
-    sb.from("employees").select("id, funkcija, monitoring_smena, slava_date, profiles(full_name, username)").eq("active", true),
+    empQ(EMP_BASE + ", pref_iii"),
   ]);
+  if (empErr) ({ data: employees } = await empQ(EMP_BASE)); // baza bez migration_045
   RDM_SHIFT_TYPES = shiftTypes || [];
   const n = belgradeNow();
   await leadWeeksLoad(`${n.getFullYear() - 1}-01-01`, `${n.getFullYear() + 1}-12-31`);
   RDM_ACTIVE_EMPLOYEES = (employees || [])
-    .map(e => ({ id: e.id, funkcija: e.funkcija, monitoringSmena: e.monitoring_smena, slava: e.slava_date, name: e.profiles?.full_name || "" }))
+    .map(e => ({ id: e.id, funkcija: e.funkcija, monitoringSmena: e.monitoring_smena, slava: e.slava_date, prefIII: e.pref_iii !== false, name: e.profiles?.full_name || "" }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 

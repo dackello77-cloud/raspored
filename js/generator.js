@@ -261,6 +261,11 @@ function shiftPrefRank(pref, code) {
   if (!pref || pref.neutral) return 1;
   return pref[code] ? 0 : 2;
 }
+// Ko nema čekiranu III smenu (pref_iii = false) sme najviše 6 III smena u mesecu.
+const MAX_III_NO_PREF = 6;
+function iiiCapOf(emp) {
+  return emp && emp.pref_iii === false ? MAX_III_NO_PREF : Infinity;
+}
 const MAX_SAME_RUN = { I: 3, II: 4, III: 2 };
 const isWorkShift = (v) => v === "I" || v === "II" || v === "III";
 
@@ -393,9 +398,17 @@ function fairnessDeviation(radnici, history) {
 // da svaki dan i dalje ima minimum po smeni) tako da se niz iz prošlog meseca nastavi.
 // Bez podataka iz prošlog meseca: radnik 1 kreće od početka kruga 1., radnik 2 od 2. itd.
 // fair (opciono): { dev, weekendDays: [d], nDays } — dodaje cenu za neravnomernu raspodelu.
-function chooseStartPositions(radnici, cycle, prevTail, fair) {
+function chooseStartPositions(radnici, cycle, prevTail, fair, nDays) {
   const N = radnici.length;
   const startPos = {};
+  // Ko sme najviše 6 III: pozicija u krugu sa više III od dozvoljenog je skupa (ali nastavak niza ima prednost).
+  const capCost = (e, pos) => {
+    const cap = iiiCapOf(e);
+    if (!isFinite(cap) || !nDays) return 0;
+    let iii = 0;
+    for (let d = 1; d <= nDays; d++) if (cycle[(pos + d - 1) % N] === "III") iii++;
+    return 300 * Math.max(0, iii - cap);
+  };
   const tailOf = (id) => (prevTail && prevTail[id]) || {};
   const hasPrev = radnici.some(e => Object.values(tailOf(e.id)).some(isWorkShift));
   // Koliko vikend/praznik i III smena bi radnik imao u mesecu kad krene od pozicije pos.
@@ -411,11 +424,11 @@ function chooseStartPositions(radnici, cycle, prevTail, fair) {
   };
   if (!hasPrev) {
     const defaultPos = (idx) => ((-idx % N) + N) % N;
-    if (!fair) {
+    if (!fair && !radnici.some(e => isFinite(iiiCapOf(e)))) {
       radnici.forEach((e, idx) => { startPos[e.id] = defaultPos(idx); });
       return startPos;
     }
-    const cost = radnici.map((e, idx) => cycle.map((_, pos) => fairCost(e.id, pos) + (pos === defaultPos(idx) ? 0 : 0.01)));
+    const cost = radnici.map((e, idx) => cycle.map((_, pos) => fairCost(e.id, pos) + capCost(e, pos) + (pos === defaultPos(idx) ? 0 : 0.01)));
     const assign = minCostAssignment(cost);
     radnici.forEach((e, i) => { startPos[e.id] = assign[i]; });
     return startPos;
@@ -435,7 +448,7 @@ function chooseStartPositions(radnici, cycle, prevTail, fair) {
           if (cycle[(((pos + k - 1) % N) + N) % N] !== (tail[k] || "OFF")) c += 1;
         }
       }
-      return c + fairCost(e.id, pos);
+      return c + fairCost(e.id, pos) + capCost(e, pos);
     });
   });
   const assign = minCostAssignment(cost);
@@ -463,7 +476,7 @@ function generateRadniciSchedule(radnici, variant, year, month, weeks, weeklyOve
   const baseCycle = buildBaseCycle(variant, radnici.length);
   if (baseCycle) {
     opts.startPos = chooseStartPositions(radnici, baseCycle, opts.prevTail,
-      opts.fairDev ? { dev: opts.fairDev, weekendDays, nDays } : null);
+      opts.fairDev ? { dev: opts.fairDev, weekendDays, nDays } : null, nDays);
   }
   // Među podjednako dobrim pokušajima bira onaj gde vikende i III više dobijaju oni koji su ih ranije imali manje.
   const fairScore = (res) => {
@@ -505,13 +518,13 @@ function generateRadniciSchedule(radnici, variant, year, month, weeks, weeklyOve
       // Svaki treći pokušaj puni starim redosledom (I pa III pa II) — ako novi redosled nekome uzme
       // pun fond, pobeđuje taj; inače pobeđuje raspored sa I na minimumu i punim II/III.
       { ...opts, plainFill: hasPrefs && attempt % 2 === 1, legacyOrder: seed % 3 === 2 });
-    const score = res.deficit * 100000 + res.overfond.length * 10000 + (res.midweekShort || 0) * 1000 + res.weekendExtra * 2 + res.shapeCost;
+    const score = (res.iiiOver || 0) * 10000000 + res.deficit * 100000 + res.overfond.length * 10000 + (res.midweekShort || 0) * 1000 + res.weekendExtra * 2 + res.shapeCost;
     const pref = prefScore(res);
     const fair = fairScore(res);
     if (score < bestScore || (score === bestScore && (pref < bestPref || (pref === bestPref && fair < bestFair)))) {
       best = res; bestScore = score; bestPref = pref; bestFair = fair;
     }
-    if (!opts.fairDev && !hasPrefs && res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0 && res.shapeCost === 0 && !res.midweekShort) break;
+    if (!opts.fairDev && !hasPrefs && !res.iiiOver && res.deficit === 0 && res.overfond.length === 0 && res.weekendExtra === 0 && res.shapeCost === 0 && !res.midweekShort) break;
   }
   return best;
 }
@@ -681,9 +694,17 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     });
   }
   const total = {};
+  const iiiN = {}; // broj III smena u mesecu
+  const iiiCap = {};
   everyone.forEach(e => {
     total[e.id] = 0;
-    for (let d = 1; d <= nDays; d++) if (isWorkShift(get(e.id, d))) total[e.id]++;
+    iiiN[e.id] = 0;
+    iiiCap[e.id] = iiiCapOf(e);
+    for (let d = 1; d <= nDays; d++) {
+      const v = get(e.id, d);
+      if (isWorkShift(v)) total[e.id]++;
+      if (v === "III") iiiN[e.id]++;
+    }
   });
 
   function countViolations(st, lo, hi, twoOffAfterBlock) {
@@ -702,6 +723,11 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
       if (isWorkShift(newV) && counts[d][newV] + 1 > variant.maxs[newV]) return false;
       if (isWorkShift(oldV) && counts[d][oldV] - 1 < minOf(d, oldV)) return false;
     }
+    // Ko nema čekiranu III: ne sme preko 6 III u mesecu.
+    if (isFinite(iiiCap[id])) {
+      const delta = days.reduce((a, d) => a + (edits[d] === "III") - (get(id, d) === "III"), 0);
+      if (delta > 0 && iiiN[id] + delta > iiiCap[id]) return false;
+    }
     const lo = Math.min(...days) - 7, hi = Math.max(...days) + 7;
     const strict = zameneIds.has(id);
     const before = countViolations(x => get(id, x), lo, hi, strict);
@@ -715,6 +741,8 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
       const oldV = get(id, d);
       if (isWorkShift(oldV)) { counts[d][oldV]--; total[id]--; }
       if (isWorkShift(newV)) { counts[d][newV]++; total[id]++; }
+      if (oldV === "III") iiiN[id]--;
+      if (newV === "III") iiiN[id]++;
       scheduleMap[id][keys[d]] = newV;
     });
   }
@@ -850,6 +878,58 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
       }
     });
   }
+
+  // ---------- Najviše 6 III za one koji nemaju čekiranu III ----------
+  // Ako osnovni krug (ili nastavak iz prošlog meseca) nekome da više III od dozvoljenog, njegov
+  // deo rasporeda (1–5 uzastopnih dana sa tom III) menja se sa nekim kome je III dozvoljena —
+  // isti dani, ceo niz: broj ljudi po smeni ostaje isti, a pravila niza ne smeju da se pokvare.
+  function reduceIII(id) {
+    const free = (who, x) => x >= 1 && x <= nDays && !isProtected(who, x) && !notCounted[who].has(keys[x]);
+    for (let d = 1; d <= nDays && iiiN[id] > iiiCap[id]; d++) {
+      if (get(id, d) !== "III" || !free(id, d)) continue;
+      let best = null;
+      for (let L = 1; L <= 5; L++) {
+        for (let s = d - L + 1; s <= d; s++) {
+          const range = []; for (let x = s; x < s + L; x++) range.push(x);
+          if (!range.every(x => free(id, x))) continue;
+          const lo = s - 7, hi = s + L + 7;
+          for (const o of everyone) {
+            if (o.id === id || !range.every(x => free(o.id, x))) continue;
+            const ea = {}, eb = {};
+            let dA = 0, dB = 0, tA = 0, tB = 0, same = true;
+            range.forEach(x => {
+              const va = get(id, x), vb = get(o.id, x);
+              if (va !== vb) same = false;
+              ea[x] = vb; eb[x] = va;
+              dA += (vb === "III") - (va === "III"); dB += (va === "III") - (vb === "III");
+              tA += isWorkShift(vb) - isWorkShift(va); tB += isWorkShift(va) - isWorkShift(vb);
+            });
+            if (same || dA >= 0 || iiiN[o.id] + dB > iiiCap[o.id]) continue;
+            const strictA = zameneIds.has(id), strictB = zameneIds.has(o.id);
+            const ok = (who, e, strict) => countViolations(x => (x in e ? e[x] : get(who, x)), lo, hi, strict) <=
+              countViolations(x => get(who, x), lo, hi, strict);
+            if (!ok(id, ea, strictA) || !ok(o.id, eb, strictB)) continue;
+            // prednost: fond obojici ostaje isti, pa kraći niz
+            const cost = (tA !== 0 || tB !== 0 ? 100 : 0) + L + (rng ? rng() * 0.5 : 0);
+            if (!best || cost < best.cost) best = { cost, o: o.id, ea, eb };
+          }
+        }
+        if (best && best.cost < 100) break;
+      }
+      if (!best) continue;
+      Object.entries(best.ea).forEach(([x, v]) => {
+        const xd = Number(x), va = get(id, xd), vb = v;
+        if (va === "III") iiiN[id]--; if (vb === "III") iiiN[id]++;
+        if (isWorkShift(va)) total[id]--; if (isWorkShift(vb)) total[id]++;
+        if (vb === "III") iiiN[best.o]--; if (va === "III") iiiN[best.o]++;
+        if (isWorkShift(vb)) total[best.o]--; if (isWorkShift(va)) total[best.o]++;
+        scheduleMap[id][keys[xd]] = vb;
+        scheduleMap[best.o][keys[xd]] = va;
+      });
+      d = 0; // od početka — raspored se promenio
+    }
+  }
+  everyone.forEach(e => { if (iiiN[e.id] > iiiCap[e.id]) reduceIII(e.id); });
 
   // ---------- Zamene — pun fond, PRE dopune redovnih radnika ----------
   // Pored preuzetih smena (odmor), zamena radi u blokovima: najviše 5 dana rada,
@@ -1005,6 +1085,8 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     };
   });
   const overfond = everyone.filter(e => total[e.id] > fondOf(e.id)).map(e => e.id);
+  let iiiOver = 0; // III preko dozvoljenih 6 (ko nema čekiranu III)
+  everyone.forEach(e => { iiiOver += Math.max(0, iiiN[e.id] - iiiCap[e.id]); });
 
   let deficit = 0;
   everyone.forEach(e => { deficit += Math.max(0, fondOf(e.id) - total[e.id]); }); // i zamene imaju pun fond
@@ -1023,7 +1105,7 @@ function generateRadniciAttempt(radnici, variant, year, month, weeks, weeklyOver
     if (!weekendLike[d]) ["II", "III"].forEach(c => { shapeCost += Math.max(0, variant.maxs[c] - counts[d][c]); });
   }
 
-  return { scheduleMap, fondByEmployee, fondTarget, overfond, deficit, weekendExtra, shapeCost, midweekShort, handoverFor };
+  return { scheduleMap, fondByEmployee, fondTarget, overfond, deficit, weekendExtra, shapeCost, midweekShort, iiiOver, handoverFor };
 }
 
 // ------------------------------------------------------------
@@ -1102,6 +1184,6 @@ if (typeof module !== "undefined") {
     buildBaseCycle, SHIFT_VARIANTS, findVariant, daysInMonth, monthFond, dateKey,
     isoWeekNumber, orthodoxEasterDate, isHolidayOrWeekendLike,
     generateFixedFunctionSchedule, generateRadniciSchedule, liderShiftForWeek,
-    fixedScheduleForWeek, assignWeekendLeaders, assignSlavaLeaders, shiftPrefOf,
+    fixedScheduleForWeek, assignWeekendLeaders, assignSlavaLeaders, shiftPrefOf, iiiCapOf, MAX_III_NO_PREF,
   };
 }

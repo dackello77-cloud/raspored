@@ -419,7 +419,7 @@ async function genRenderDraftStats(year, month, rows) {
     emps.filter(e => e.funkcija === "shift_lider"),
     emps.filter(e => e.funkcija === "monitoring"),
   ];
-  const underfond = [], overfond = [];
+  const underfond = [], overfond = [], tooManyIII = [];
   let fondHtml = "<thead><tr><th>Zaposleni</th><th>I</th><th>II</th><th>III</th><th>13–21</th><th>21–05</th><th>Ukupno</th></tr></thead><tbody>";
   groups.forEach((list, gi) => list.forEach(e => {
     const f = per[e.id] || { I: 0, II: 0, III: 0, MSI: 0, MSII: 0, total: 0 };
@@ -431,6 +431,8 @@ async function genRenderDraftStats(year, month, rows) {
       if (target < fondTarget) tag = (tag ? tag + " · " : "") + `Slava · fond ${target}`;
       if (f.total < target) { cls = "gen-low"; if (gi === 0) underfond.push(`${name} (${f.total}/${target})`); }
       if (f.total > target) { cls = "gen-over"; overfond.push(`${name} (${f.total}/${target})`); }
+      // Bez čekirane III smene: najviše 6 III u mesecu.
+      if (e.prefIII === false && f.III > MAX_III_NO_PREF) tooManyIII.push(`${name} (${f.III} III / max ${MAX_III_NO_PREF})`);
     } else {
       tag = gi === 2 ? "Lider" : `Monitoring ${e.monitoringSmena || ""}`;
     }
@@ -446,7 +448,8 @@ async function genRenderDraftStats(year, month, rows) {
   document.getElementById("gen-underfond").innerHTML =
     chips("Smene ispod minimuma — popuniti ručno:", belowMin, 0) +
     chips("Nemaju pun fond — dopuniti ručno:", underfond, belowMin.length ? 10 : 0) +
-    chips("Imaju višak smena — skinuti ručno:", overfond, 10);
+    chips("Imaju višak smena — skinuti ručno:", overfond, 10) +
+    chips("Bez čekirane III, a imaju više od 6 III — prebaciti ručno:", tooManyIII, 10);
 }
 
 // Plutajući panel "Smene po zaposlenom" (I/II/III/13–21/21–05) — stalno vidljiv na strani Rasporedi.
