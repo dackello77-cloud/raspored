@@ -7,6 +7,20 @@ const OD_ROLES = ["radnik", "shift_lider", "monitoring", "accounting", "office_m
 const OD_RASPORED = ["radnik", "shift_lider", "monitoring"];
 const OD_LABEL = { radnik: "Radnik", shift_lider: "Shift lider", monitoring: "Monitoring", accounting: "Accounting", office_manager: "Office manager" };
 
+// Grupe imaju odvojene termine (sql/migration_047_odmori_grupe.sql): term_no = (grupa - 1) * 1000 + nedelja.
+const OD_GROUPS = [
+  { no: 1, label: "Radnici", roles: ["radnik"] },
+  { no: 2, label: "Shift lideri i monitoring", roles: ["shift_lider", "monitoring"] },
+  { no: 3, label: "Accounting i office manager", roles: ["accounting", "office_manager"] },
+];
+// Termini aktivirani pre podele na grupe (bez term_list) — jedna zajednička lista.
+function odGroups() { return OD.round.term_list ? OD_GROUPS : [{ no: 1, label: "", roles: OD_ROLES }]; }
+function odGroupTerms(g) {
+  const all = OD.round.term_list ? OD.round.term_list.filter(k => Math.floor(k / 1000) + 1 === g.no)
+    : Array.from({ length: OD.round.term_count }, (_, k) => k);
+  return all.filter(k => !odTermBlocked(k)).sort((a, b) => a - b);
+}
+
 const OD_SEASONS = { letnji: "Letnji", zimski: "Zimski" };
 
 // round/picks = trenutno izabran tab (sezona); rounds = aktivni termini obe sezone.
@@ -27,15 +41,13 @@ function odAddDays(iso, n) { const d = new Date(iso + "T00:00:00"); d.setDate(d.
 function odFmt(iso) { const [y, m, d] = iso.split("-"); return `${+d}.${+m}.${y}.`; }
 function odFmtShort(iso) { const [, m, d] = iso.split("-"); return `${+d}.${+m}.`; }
 function odToday() { return odIso(belgradeNow()); }
-function odTerm(k) { const from = odAddDays(OD.round.start_date, 7 * k); return { from, to: odAddDays(from, 13) }; }
+function odTerm(k) { const from = odAddDays(OD.round.start_date, 7 * (k % 1000)); return { from, to: odAddDays(from, 13) }; }
 // Od 22.12. do 10.1. svi rade — termin koji dodiruje taj period se ne prikazuje
 // (isto kao vacation_term_blocked u bazi, sql/migration_037_odmori_praznici.sql).
 function odTermBlocked(k) {
   const t = odTerm(k), y = +t.from.slice(0, 4);
   return [y - 1, y].some(n => t.from <= `${n + 1}-01-10` && t.to >= `${n}-12-22`);
 }
-
-function odTermCount() { let n = 0; for (let k = 0; k < OD.round.term_count; k++) if (!odTermBlocked(k)) n++; return n; }
 
 function odBanner(message, type) {
   const box = document.getElementById("od-banner");
@@ -127,14 +139,16 @@ function odRender() {
       : "Odmori su počeli — izbor termina je zatvoren.";
 
   let html = "";
-  let no = 0; // redni broj prikazanog termina (praznični se preskaču)
-  for (let k = 0; k < r.term_count; k++) {
-    if (odTermBlocked(k)) continue;
+  odGroups().forEach(g => {
+  let no = 0; // redni broj termina u grupi (praznični se preskaču)
+  let groupHtml = "";
+  odGroupTerms(g).forEach(k => {
     no++;
     const t = odTerm(k);
     let st = OD.terms.find(x => x.term_no === k);
-    // Zaposleni vidi samo termine koje mu baza vrati (novi radnik = termini za nove, stariji = ostali).
-    if (!st && !OD.isAdmin && OD.me) continue;
+    // Zaposleni vidi samo termine koje mu baza vrati (svoja grupa; novi radnik = termini za nove, stariji = ostali).
+    if (!st && !OD.isAdmin && OD.me) return;
+    const canPick = !!st; // termin koji baza nije vratila administrator samo gleda
     st = st || {};
     const isMine = !!st.mine;
     // Zašto ja ne mogu ovaj termin (Zauzeto / Preklapa se sa drugim odmorom / Pravo na odmor od…) —
@@ -143,7 +157,7 @@ function odRender() {
     let action = "";
     if (isMine) {
       action = open ? '<button type="button" class="btn btn-ghost od-unpick">Otkaži</button>' : "";
-    } else if (open && OD.me && OD_ROLES.includes(myF)) {
+    } else if (canPick && open && OD.me && OD_ROLES.includes(myF)) {
       const err = st.err;
       // Zaposlenom razlog već piše u sredini (katanac) — ne ponavlja se desno.
       action = err
@@ -153,7 +167,7 @@ function odRender() {
     let people;
     const isResv = k in OD.reserved; // administrator odredio za nove radnike (sql/migration_042_odmori_novi_vide_svoje.sql)
     const free = !isMine && !st.taken && !OD.picks.some(p => p.term_no === k);
-    if (OD.isAdmin && free) {
+    if (OD.isAdmin && free && g.no !== 3) {
       action += `<button type="button" class="btn btn-ghost od-resv" data-term="${k}">${isResv ? "Ukloni čuvanje" : "🆕 Čuvaj za nove"}</button>`;
     }
     if (OD.seeAll) {
@@ -164,14 +178,22 @@ function odRender() {
       people = isMine ? `<span class="od-mine">✓ Moj termin</span>`
         : lockText ? `<span class="od-taken">🔒 ${zmEsc(lockText)}</span>` : "";
     }
-    html += `<div class="od-term${isMine ? " is-mine" : ""}${!OD.seeAll && lockText ? " is-taken" : ""}">
+    groupHtml += `<div class="od-term${isMine ? " is-mine" : ""}${!OD.seeAll && lockText ? " is-taken" : ""}">
       <div class="od-term-head"><b>Termin ${no}</b><span>${odFmtShort(t.from)} – ${odFmt(t.to)}</span></div>
       <div class="od-people">${people || '<span class="muted">Slobodno</span>'}</div>
       <div class="od-actions">${action}</div>
     </div>`;
+  });
+  if (OD.isAdmin) groupHtml += `<button type="button" class="od-add-term" data-group="${g.no}" title="Dodaj još jedan termin na kraj">＋ Dodaj termin</button>`;
+  if (groupHtml && g.label) {
+    const people = OD.emps.filter(e => g.roles.includes(e.funkcija)).length;
+    const few = no < people;
+    const count = OD.isAdmin ? ` <small class="${few ? "few" : ""}">${no} termina · ${people} osoba${few ? " — nema dovoljno termina, dodaj sa ＋" : ""}</small>` : "";
+    html += `<h3 class="od-group">${g.label}${count}</h3>`;
   }
-  if (!html && !OD.isAdmin) html = `<div class="od-none">Još nema termina za tebe — odrediće ih administrator.</div>`;
-  if (OD.isAdmin) html += `<button type="button" class="od-add-term" id="od-add-term" title="Dodaj još jedan termin na kraj">＋ Dodaj termin</button>`;
+  html += groupHtml;
+  });
+  if (!html) html = `<div class="od-none">Još nema termina za tebe — odrediće ih administrator.</div>`;
   list.innerHTML = html;
 }
 
@@ -185,7 +207,10 @@ function odRenderSide() {
   if (!r) return;
   const picked = new Set(OD.picks.map(p => p.employee_id));
   const left = OD.emps.filter(e => !picked.has(e.id));
-  const lastStart = odTerm(r.term_count - 1).from;
+  const lastStartFor = f => {
+    const terms = odGroupTerms(odGroups().find(g => g.roles.includes(f)));
+    return terms.length ? odTerm(terms[terms.length - 1]).from : r.start_date;
+  };
   let html = `<h2>Nisu izabrali <small>${left.length} od ${OD.emps.length}</small></h2>
     <p class="muted sub">${OD_SEASONS[OD.season]} odmor · nestaju sa spiska kad izaberu termin.</p>`;
   if (!left.length) html += `<div class="od-side-done">✓ Svi su izabrali termin</div>`;
@@ -193,7 +218,7 @@ function odRenderSide() {
   const isLater = e => { const el = odEligibleFrom(e.hire_date); return !!el && el > r.start_date; };
   const row = e => {
     const el = odEligibleFrom(e.hire_date);
-    const late = el && el > lastStart; // pravo stiče tek posle poslednjeg termina
+    const late = el && el > lastStartFor(e.funkcija); // pravo stiče tek posle poslednjeg termina
     return `<div class="od-side-row"><b>${zmEsc(e.name)}</b><span class="${late ? "late" : ""}"
       title="${late ? "Pravo stiče posle poslednjeg termina" : ""}">${el ? `pravo od ${odFmt(el)}` : "ima pravo"}</span></div>`;
   };
@@ -215,7 +240,7 @@ function odRenderAdmin() {
   const r = OD.round;
   const box = document.getElementById("od-admin-current");
   box.innerHTML = r
-    ? `Aktivni ${OD_SEASONS[OD.season].toLowerCase()} termini: objava <b>${odFmt(r.publish_date)}</b>, odmori od <b>${odFmt(r.start_date)}</b>, ${odTermCount()} termina
+    ? `Aktivni ${OD_SEASONS[OD.season].toLowerCase()} termini: objava <b>${odFmt(r.publish_date)}</b>, odmori od <b>${odFmt(r.start_date)}</b>, ${odGroups().map(g => `${g.label ? g.label + ": " : ""}${odGroupTerms(g).length}`).join(", ")} termina
        (do ${odFmt(odTerm(r.term_count - 1).to)}). Izabrano: ${OD.picks.length}.
        <button type="button" class="btn btn-danger" id="od-close">Deaktiviraj termine</button>`
     : `Nema aktivnih termina za ${OD_SEASONS[OD.season].toLowerCase()} odmor.`;
@@ -232,7 +257,8 @@ function odRenderAdmin() {
 // Dugme "+" na dnu liste (administrator): još jedan termin na kraj (sql/migration_040_odmori_dodaj_termin.sql).
 async function odAddTerm(add) {
   add.disabled = true;
-  const { data, error } = await sb.rpc("vacation_round_add_term", { p_season: OD.season });
+  const { data, error } = await sb.rpc("vacation_round_add_term",
+    OD.round.term_list ? { p_season: OD.season, p_group: Number(add.dataset.group) } : { p_season: OD.season });
   if (error) {
     odBanner(/vacation_round_add_term/.test(error.message)
       ? "Treba jednom pokrenuti SQL iz fajla sql/migration_040_odmori_dodaj_termin.sql u Supabase." : error.message, "error");
