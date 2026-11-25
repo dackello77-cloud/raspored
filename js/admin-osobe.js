@@ -23,6 +23,18 @@ function addDays(dateStr, days) {
 // Da li baza već ima kolone pref_i/pref_ii/pref_iii (sql/migration_045_smene_sklonosti.sql).
 let OSOBE_HAS_PREFS = false;
 
+// Letnji i zimski odmor se čuvaju odvojeno (kolona vacations.season, sql/migration_046_odmori_sezone_odvojeno.sql).
+let OSOBE_HAS_SEASON = false;
+const OSOBE_SEASONS = [["letnji", "☀️", "Letnji odmor"], ["zimski", "❄️", "Zimski odmor"]];
+// Odmor bez upisane sezone (pre migracije 046): april – oktobar = letnji, ostalo zimski.
+function vacationSeason(v) {
+  if (v.season) return v.season;
+  const m = Number(v.start_date.slice(5, 7));
+  return m >= 4 && m <= 10 ? "letnji" : "zimski";
+}
+// Vrednost reda iz polja — odmor se upisuje u bazu samo ako je promenjen.
+function odmorState(od, weeks) { return od ? `${od}|${weeks}` : ""; }
+
 // Tri polja I / II / III — sve uključeno = svejedno mu je koja smena.
 function prefChecksHtml(emp) {
   const on = (v) => v !== false;
@@ -52,8 +64,10 @@ async function fetchEmployeesWithVacations() {
   const ids = employees.map(e => e.id);
   let vacationsByEmp = {};
   if (ids.length) {
-    // Prikazuje se samo odmor koji još nije završen, i to najraniji (npr. letnji pa tek posle
-    // njegovog kraja zimski). Završeni odmori ostaju u bazi zbog plana/rasporeda, samo se ne prikazuju.
+    // Za svaku sezonu prikazuje se najraniji odmor koji još nije završen. Završeni odmori
+    // ostaju u bazi zbog plana/rasporeda, samo se ne prikazuju.
+    const { error: seasonError } = await sb.from("vacations").select("season").limit(1);
+    OSOBE_HAS_SEASON = !seasonError;
     const today = officeIso(belgradeNow());
     const { data: vacations } = await sb
       .from("vacations")
@@ -62,14 +76,16 @@ async function fetchEmployeesWithVacations() {
       .gte("end_date", today)
       .order("start_date", { ascending: true });
     (vacations || []).forEach(v => {
-      if (!vacationsByEmp[v.employee_id]) vacationsByEmp[v.employee_id] = v;
+      const mine = vacationsByEmp[v.employee_id] || (vacationsByEmp[v.employee_id] = {});
+      const s = vacationSeason(v);
+      if (!mine[s]) mine[s] = v;
     });
   }
   // Registrovani telefon (sql/migration_013_device_binding.sql) — greška = SQL još nije pokrenut.
   const { data: devices } = await sb.from("user_devices").select("*");
   const deviceByProfile = {};
   (devices || []).forEach(d => { deviceByProfile[d.profile_id] = d; });
-  return employees.map(e => ({ ...e, vacation: vacationsByEmp[e.id] || null, device: deviceByProfile[e.profile_id] || null }));
+  return employees.map(e => ({ ...e, vacations: vacationsByEmp[e.id] || {}, device: deviceByProfile[e.profile_id] || null }));
 }
 
 function osobeShortDate(ts) {
@@ -117,7 +133,6 @@ function buildEmployeeRow(emp) {
   row.className = "emp-row";
   row.dataset.employeeId = emp.id;
   if (!emp.active) row.dataset.inactive = "1";
-  if (emp.vacation) row.dataset.vacationId = emp.vacation.id;
 
   const name = (emp.profiles?.full_name || "").toUpperCase();
   const username = emp.profiles?.username || "";
@@ -145,16 +160,16 @@ function buildEmployeeRow(emp) {
       <input type="date" class="f-hire" value="${emp.hire_date || ""}" title="Početak radnog odnosa — pravo na odmor posle 6 meseci" />
     </div>
     <div class="field-odmor">
-      <input type="date" class="f-odmor-od" value="${emp.vacation ? emp.vacation.start_date : ""}" />
+      ${OSOBE_SEASONS.map(([s, icon, label]) => `<div class="od-line" title="${label}"><span>${icon}</span><input type="date" class="f-odmor-od" data-season="${s}" value="${emp.vacations[s] ? emp.vacations[s].start_date : ""}" /></div>`).join("")}
     </div>
     <div class="field-odmor">
-      <select class="f-trajanje">
-        <option value="1" ${emp.vacation && emp.vacation.weeks === 1 ? "selected" : ""}>1 nedelja</option>
-        <option value="2" ${!emp.vacation || emp.vacation.weeks === 2 ? "selected" : ""}>2 nedelje</option>
-      </select>
+      ${OSOBE_SEASONS.map(([s, , label]) => `<div class="od-line" title="${label}"><select class="f-trajanje" data-season="${s}">
+        <option value="1" ${emp.vacations[s] && emp.vacations[s].weeks === 1 ? "selected" : ""}>1 nedelja</option>
+        <option value="2" ${!emp.vacations[s] || emp.vacations[s].weeks === 2 ? "selected" : ""}>2 nedelje</option>
+      </select></div>`).join("")}
     </div>
     <div class="field-odmor">
-      <input type="date" class="f-odmor-do" value="${emp.vacation ? emp.vacation.end_date : ""}" disabled />
+      ${OSOBE_SEASONS.map(([s, , label]) => `<div class="od-line" title="${label}"><input type="date" class="f-odmor-do" data-season="${s}" value="${emp.vacations[s] ? emp.vacations[s].end_date : ""}" disabled /></div>`).join("")}
     </div>
     <div class="active-col">
       <input type="checkbox" class="f-active" ${emp.active ? "checked" : ""} />
@@ -168,20 +183,21 @@ function buildEmployeeRow(emp) {
 
   syncAllDateInputs(row);
 
-  const odmorOd = row.querySelector(".f-odmor-od");
-  const trajanje = row.querySelector(".f-trajanje");
-  const odmorDo = row.querySelector(".f-odmor-do");
+  OSOBE_SEASONS.forEach(([s]) => {
+    const odmorOd = row.querySelector(`.f-odmor-od[data-season="${s}"]`);
+    const trajanje = row.querySelector(`.f-trajanje[data-season="${s}"]`);
+    const odmorDo = row.querySelector(`.f-odmor-do[data-season="${s}"]`);
+    const v = emp.vacations[s];
+    if (v) odmorOd.dataset.vacationId = v.id;
+    odmorOd.dataset.saved = v ? odmorState(v.start_date, v.weeks) : "";
 
-  function recalcEnd() {
-    if (odmorOd.value) {
-      odmorDo.value = addDays(odmorOd.value, parseInt(trajanje.value, 10) * 7 - 1);
-    } else {
-      odmorDo.value = "";
+    function recalcEnd() {
+      odmorDo.value = odmorOd.value ? addDays(odmorOd.value, parseInt(trajanje.value, 10) * 7 - 1) : "";
+      syncDateInputVisual(odmorDo);
     }
-    syncDateInputVisual(odmorDo);
-  }
-  odmorOd.addEventListener("change", recalcEnd);
-  trajanje.addEventListener("change", recalcEnd);
+    odmorOd.addEventListener("change", recalcEnd);
+    trajanje.addEventListener("change", recalcEnd);
+  });
 
   row.querySelector(".f-uredi").addEventListener("click", () => openEditPersonDialog(emp, row));
 
@@ -465,9 +481,6 @@ async function handleSaveChanges() {
     const slava_date = row.querySelector(".f-slava").value || null;
     const hire_date = row.querySelector(".f-hire").value || null;
     const active = row.querySelector(".f-active").checked;
-    const odmorOd = row.querySelector(".f-odmor-od").value;
-    const odmorDo = row.querySelector(".f-odmor-do").value;
-    const weeks = parseInt(row.querySelector(".f-trajanje").value, 10);
     const empUpdate = { funkcija, monitoring_smena, slava_date, hire_date, active };
     if (OSOBE_HAS_PREFS) {
       empUpdate.pref_i = row.querySelector(".f-pref-i").checked;
@@ -484,27 +497,34 @@ async function handleSaveChanges() {
     else if (active) delete row.dataset.inactive;
     else row.dataset.inactive = "1";
 
-    const vacationId = row.dataset.vacationId;
-    if (odmorOd) {
-      if (vacationId) {
-        const { error } = await sb
-          .from("vacations")
-          .update({ start_date: odmorOd, weeks, end_date: odmorDo })
-          .eq("id", vacationId);
-        if (error) errors.push(error.message);
-      } else {
-        const { data, error } = await sb
-          .from("vacations")
-          .insert({ employee_id: employeeId, start_date: odmorOd, weeks, end_date: odmorDo })
-          .select()
-          .single();
-        if (error) errors.push(error.message);
-        else row.dataset.vacationId = data.id;
+    const empName = row.querySelector(".emp-name").firstChild.textContent;
+    for (const [season, , label] of OSOBE_SEASONS) {
+      const odInput = row.querySelector(`.f-odmor-od[data-season="${season}"]`);
+      const start_date = odInput.value;
+      const weeks = parseInt(row.querySelector(`.f-trajanje[data-season="${season}"]`).value, 10);
+      const state = odmorState(start_date, weeks);
+      if (state === odInput.dataset.saved) continue; // nije menjano
+      if (!OSOBE_HAS_SEASON) {
+        errors.push(`${empName}: odmor nije sačuvan — prvo jednom pokreni SQL iz fajla sql/migration_046_odmori_sezone_odvojeno.sql u Supabase`);
+        continue;
       }
-    } else if (vacationId) {
-      const { error } = await sb.from("vacations").delete().eq("id", vacationId);
-      if (error) errors.push(error.message);
-      else delete row.dataset.vacationId;
+      const vacationId = odInput.dataset.vacationId;
+      let error = null;
+      if (!start_date) {
+        if (vacationId) ({ error } = await sb.from("vacations").delete().eq("id", vacationId));
+        if (!error) delete odInput.dataset.vacationId;
+      } else {
+        const values = { start_date, weeks, end_date: addDays(start_date, weeks * 7 - 1), season };
+        if (vacationId) {
+          ({ error } = await sb.from("vacations").update(values).eq("id", vacationId));
+        } else {
+          let data;
+          ({ data, error } = await sb.from("vacations").insert({ employee_id: employeeId, ...values }).select().single());
+          if (!error) odInput.dataset.vacationId = data.id;
+        }
+      }
+      if (error) errors.push(`${empName} (${label.toLowerCase()}): ${error.message}`);
+      else odInput.dataset.saved = state;
     }
   }
 
