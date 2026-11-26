@@ -791,7 +791,7 @@ async function mobSwapGate(date) {
   if (st.used === 0) {
     swapGateDialog("Kolege dostupne za zamenu",
       `<p class="swap-gate-text">U toku 24 sata možeš <b>2 puta</b> da uđeš i pogledaš ko je dostupan za zamenu (za bilo koji dan).</p>
-       <p class="swap-gate-text">Ako uđeš i treći put, lista neće biti dostupna dok ne prođe 24h od prvog ulaska.</p>`,
+       <p class="swap-gate-text">Ulazak se računa i kad se menjaš i kad samo pogledaš. Posle 2 ulaska lista nije dostupna dok ne prođe 24h od prvog ulaska — tada opet imaš 2 ulaska.</p>`,
       "Pogledaj (1/2)", () => swapOpenCounted(date));
     return;
   }
