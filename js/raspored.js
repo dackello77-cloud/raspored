@@ -35,6 +35,12 @@ let RASPORED_ME = null;
 let RASPORED_ME_EMP = null;
 // Office manager / Accounting: nisu u rasporedu, ali vide svoje radne dane (pon–pet bez praznika).
 let RASPORED_ME_OFFICE = null;
+// Ceo raspored vide samo Administrator (i "Admin pristup"), Office manager i HR manager.
+// Ostali (radnici, lideri, monitoring, Accounting, bez prijave) vide zamagljenu stranu i obaveštenje;
+// zaposleni na telefonu vide svoje smene, a dodir na dan otvara listu kolega za zamenu.
+let RASPORED_FULL = false;
+function canSeeFullSchedule(p) { return !!p && (isAdminProfile(p) || !!p.hr_manager || p.role === "office_manager"); }
+const LOCK_TEXT = "Ceo raspored mogu da vide samo Administrator, Office manager i HR manager.";
 
 function renderChip(person, shiftCode) {
   const funkcija = person.funkcija || "radnik";
@@ -305,6 +311,36 @@ async function loadAndRenderMonths() {
   applySearchFilter(document.getElementById("filter-search").value);
 }
 
+// Zaključan raspored: vidi se samo ko radi danas, ispod plava površina sa obaveštenjem.
+async function renderLockedSchedule(session, shiftTypes) {
+  const sub = !session
+    ? `<a class="btn lock-btn" href="${APP_BASE}login.html">Prijava</a>`
+    : RASPORED_ME_EMP || RASPORED_ME_OFFICE
+      ? "<p>Svoje smene vidiš na početnoj strani u aplikaciji na telefonu. Dodirom na dan otvaraš listu kolega sa kojima možeš da se zameniš.</p>"
+      : "";
+  const container = document.getElementById("months-container");
+  container.innerHTML = `<div class="lock-today"></div><div class="lock-wrap">
+      <div class="lock-icon">🔒</div>
+      <b>Ceo raspored nije dostupan</b>
+      <p>${LOCK_TEXT}</p>
+      ${sub}
+    </div>`;
+  // Danas: pravi raspored samo za današnji dan.
+  const now = belgradeNow();
+  const today = mobIso(now);
+  const [{ data }, sick] = await Promise.all([
+    sb.from("schedule")
+      .select("date, shift_code, is_leader, is_medju_smena, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name, username))")
+      .eq("date", today),
+    sickFetch(today, today),
+  ]);
+  const section = buildMonthSectionEl(now.getFullYear(), now.getMonth() + 1, groupByDateAndShift(data || [], sick), shiftTypes, now);
+  section.querySelectorAll(".day-row").forEach(r => { if (r.dataset.date !== today) r.remove(); });
+  section.querySelector(".prev-days-toggle")?.remove();
+  section.querySelector(".month-header span").textContent = "Danas rade";
+  container.querySelector(".lock-today").appendChild(section);
+}
+
 // ---------- Zamene: desni klik na radnika -> "Zamena" ----------
 function zmChipMenu(ev, chip) {
   if (!RASPORED_ME_EMP) return; // nije prijavljen zaposleni — običan meni pregledača
@@ -404,14 +440,16 @@ zmOnDone = async (msg, isError) => {
   if (!isError) {
     // posle odobrenja raspored je promenjen
     document.querySelector(".day-sheet-overlay")?.remove();
-    await Promise.all([loadAndRenderMonths(), mobLoad()]);
+    await Promise.all([RASPORED_FULL ? loadAndRenderMonths() : null, mobLoad()]);
   }
 };
 
 // ---------- Mobilni prikaz (telefon) ----------
 // Bez prijave: ko sada radi. Prijavljeni zaposleni: naredne 3 smene, ko sada radi,
-// i njegovih narednih 20 dana. Dodir na dan otvara ceo raspored za taj dan.
+// i njegovih narednih 30 dana. Dodir na dan: ceo raspored tog dana (Admin/OM/HR) ili lista za zamenu.
 const MOB = { byDate: {}, shiftTypes: [], officeOff: new Set(), vacRound: null };
+// Koliko narednih dana zaposleni vidi na telefonu ("Tvojih narednih 30 dana").
+const MOB_DAYS = 30;
 
 // Kartica "Termini za odmor aktivni" (sql/migration_025_odmori.sql): od datuma objave dok ne počne
 // prvi termin, dok zaposleni ne izabere termin ili ne klikne na karticu (pamti se po terminima).
@@ -458,7 +496,7 @@ function mobOfficeDays(now, today) {
   const me = RASPORED_ME_OFFICE, o = me && OFFICE_ROLES[me.funkcija];
   if (!o) return [];
   const out = [];
-  for (let i = -1; i <= 21; i++) {
+  for (let i = -1; i <= MOB_DAYS + 1; i++) {
     const date = mobIso(mobAddDays(now, i));
     if (!officeIsWorkday(date) || MOB.officeOff.has(date)) continue;
     const a = o.startHour * 60;
@@ -485,7 +523,7 @@ function mobTimeLabel(code, isMS) {
 
 async function mobLoad() {
   const now = belgradeNow();
-  const from = mobIso(mobAddDays(now, -1)), to = mobIso(mobAddDays(now, 21));
+  const from = mobIso(mobAddDays(now, -1)), to = mobIso(mobAddDays(now, MOB_DAYS + 1));
   const [{ data }, sick] = await Promise.all([
     sb.from("schedule")
       .select("date, shift_code, is_leader, is_medju_smena, employee_id, employees!schedule_employee_id_fkey(funkcija, profiles(full_name, username))")
@@ -531,7 +569,7 @@ function mobRender() {
   const nowM = now.getHours() * 60 + now.getMinutes();
   let html = "";
 
-  // Moje smene (sa početkom/krajem) — za "naredne 3" i "narednih 20 dana".
+  // Moje smene (sa početkom/krajem) — za "naredne 3" i "narednih 30 dana".
   const mine = mobOfficeDays(now, today);
   if (MOB.vacRound) {
     const [y, m, d] = MOB.vacRound.start_date.split("-");
@@ -570,38 +608,54 @@ function mobRender() {
     }).join("")}</div></section>`;
   }
 
-  // Ko sada radi.
-  const cur = mobCurrentShift(now);
-  const clock = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
-  html += `<section class="mob-card"><div class="mob-title">Sada radi <span class="mob-clock">${clock}</span></div>`;
-  if (cur) {
-    const list = (MOB.byDate[cur.date] && MOB.byDate[cur.date][cur.code]) || [];
-    html += `<div class="mob-now-head shift-${cur.code}">
-        <span class="shift-icon">${SHIFT_ICON_SVG[cur.code] || ""}</span>
-        <span class="n">${cur.st.label}</span><span class="t">${shiftTimeLabel(cur.st)}</span>
-      </div>
-      <div class="mob-people">${mobPeopleHtml(list.filter(p => !p.isMS), false)}</div>`;
-    // međusmena koja je sada u toku (13–21 ili 21–05)
-    Object.entries(MS_LABEL).forEach(([code, label]) => {
-      [cur.date, mobIso(mobAddDays(new Date(cur.date + "T00:00:00"), -1))].forEach(date => {
-        const msList = ((MOB.byDate[date] && MOB.byDate[date][code]) || []).filter(p => p.isMS);
-        if (!msList.length) return;
-        const [a, b] = mobShiftSpan(code, true);
-        const off = Math.round((new Date(date + "T00:00:00") - new Date(today + "T00:00:00")) / 86400000) * 1440;
-        if (nowM >= off + a && nowM < off + b) {
-          html += `<div class="mob-sub shift-MS">Međusmena ${label.replace("MS ", "")}</div><div class="mob-people">${mobPeopleHtml(msList, false)}</div>`;
-        }
+  // Ko sada radi — samo za one koji vide ceo raspored.
+  if (RASPORED_FULL) {
+    const cur = mobCurrentShift(now);
+    const clock = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+    html += `<section class="mob-card"><div class="mob-title">Sada radi <span class="mob-clock">${clock}</span></div>`;
+    if (cur) {
+      const list = (MOB.byDate[cur.date] && MOB.byDate[cur.date][cur.code]) || [];
+      html += `<div class="mob-now-head shift-${cur.code}">
+          <span class="shift-icon">${SHIFT_ICON_SVG[cur.code] || ""}</span>
+          <span class="n">${cur.st.label}</span><span class="t">${shiftTimeLabel(cur.st)}</span>
+        </div>
+        <div class="mob-people">${mobPeopleHtml(list.filter(p => !p.isMS), false)}</div>`;
+      // međusmena koja je sada u toku (13–21 ili 21–05)
+      Object.entries(MS_LABEL).forEach(([code, label]) => {
+        [cur.date, mobIso(mobAddDays(new Date(cur.date + "T00:00:00"), -1))].forEach(date => {
+          const msList = ((MOB.byDate[date] && MOB.byDate[date][code]) || []).filter(p => p.isMS);
+          if (!msList.length) return;
+          const [a, b] = mobShiftSpan(code, true);
+          const off = Math.round((new Date(date + "T00:00:00") - new Date(today + "T00:00:00")) / 86400000) * 1440;
+          if (nowM >= off + a && nowM < off + b) {
+            html += `<div class="mob-sub shift-MS">Međusmena ${label.replace("MS ", "")}</div><div class="mob-people">${mobPeopleHtml(msList, false)}</div>`;
+          }
+        });
       });
-    });
-  } else {
-    html += '<div class="mob-empty">Trenutno nema smene.</div>';
+    } else {
+      html += '<div class="mob-empty">Trenutno nema smene.</div>';
+    }
+    html += `</section>`;
   }
-  html += `</section>`;
 
-  // Mojih narednih 20 dana.
+  // Zaključan raspored: na telefonu se vidi samo ko radi danas (sve tri smene).
+  if (!RASPORED_FULL && MOB.shiftTypes.length) {
+    const day = MOB.byDate[today] || { I: [], II: [], III: [] };
+    html += `<section class="mob-card"><div class="mob-title">Danas rade</div>${MOB.shiftTypes.map(st => {
+      const list = day[st.code] || [];
+      return `<div class="mob-now-head shift-${st.code}"><span class="shift-icon">${SHIFT_ICON_SVG[st.code] || ""}</span>
+          <span class="n">${st.label}</span><span class="t">${shiftTimeLabel(st)}</span></div>
+        <div class="mob-people">${mobPeopleHtml(list.filter(p => !p.isMS), false)}</div>
+        ${MS_LABEL[st.code] && list.some(p => p.isMS)
+          ? `<div class="mob-sub shift-MS">Međusmena ${MS_LABEL[st.code].replace("MS ", "")}</div><div class="mob-people">${mobPeopleHtml(list.filter(p => p.isMS), false)}</div>`
+          : ""}`;
+    }).join("")}</section>`;
+  }
+
+  // Mojih narednih 30 dana.
   if (RASPORED_ME_EMP || RASPORED_ME_OFFICE) {
     let days = "";
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < MOB_DAYS; i++) {
       const d = mobAddDays(now, i);
       const iso = mobIso(d);
       const m = mine.find(x => x.date === iso);
@@ -615,12 +669,12 @@ function mobRender() {
         <span class="chev">›</span>
       </div>`;
     }
-    html += `<section class="mob-card"><div class="mob-title">Tvojih narednih 20 dana</div><div class="mob-days">${days}</div></section>`;
+    html += `<section class="mob-card"><div class="mob-title">Tvojih narednih ${MOB_DAYS} dana</div><div class="mob-days">${days}</div></section>`;
   }
 
   mobRenderWeek(mine, now);
 
-  html += `<button type="button" class="btn btn-ghost mob-full-btn" id="mob-full-btn">${document.body.classList.contains("show-full") ? "Sakrij ceo raspored" : "Prikaži ceo raspored"}</button>`;
+  if (RASPORED_FULL) html += `<button type="button" class="btn btn-ghost mob-full-btn" id="mob-full-btn">${document.body.classList.contains("show-full") ? "Sakrij ceo raspored" : "Prikaži ceo raspored"}</button>`;
   box.innerHTML = html;
 }
 
@@ -656,8 +710,139 @@ document.addEventListener("click", (ev) => {
   row.classList.remove("flash"); void row.offsetWidth; row.classList.add("flash");
 });
 
-// Ceo raspored za jedan dan (prozor odozdo).
+// Kolege sa kojima zaposleni može da se zameni tog dana (prozor odozdo, bez celog rasporeda).
+//  - Radnik: samo radnici iz drugih smena. Iz III se vide samo oni kojima je ta III jedina
+//    ili prva od dve zaredom (ko je prethodni dan radio III — tog dana mu je druga III — ne vidi se).
+//  - Monitoring / shift lider: kao do sada — samo iste funkcije, za jedan dan ili celu nedelju.
+// Dodir na sebe i dalje otvara "Slobodan dan".
+function mobSwapCandidates(date, me, mine) {
+  const day = MOB.byDate[date] || { I: [], II: [], III: [] };
+  const prevDay = MOB.byDate[mobIso(mobAddDays(new Date(date + "T00:00:00"), -1))] || { III: [] };
+  const myF = effFunkcija(me.id, me.funkcija, date);
+  const out = {};
+  MOB.shiftTypes.forEach(st => {
+    if (mine && st.code === mine.shift_code) return;
+    out[st.code] = (day[st.code] || []).filter(p => {
+      if (p.employee_id === me.id || p.isSick) return false;
+      if (effFunkcija(p.employee_id, p.funkcija, date) !== myF) return false;
+      if (myF === "radnik" && st.code === "III" && (prevDay.III || []).some(x => x.employee_id === p.employee_id)) return false;
+      return true;
+    });
+  });
+  return out;
+}
+
+// ---------- Ograničenje: lista za zamenu najviše 2 puta u 24h (sql/migration_048_zamene_ulasci.sql) ----------
+function swapFmtWhen(iso) {
+  const p = {};
+  new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Belgrade", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date(iso)).forEach(x => { p[x.type] = x.value; });
+  return `${+p.day}.${+p.month}.${p.year}. u ${p.hour}:${p.minute}`;
+}
+function swapGateDialog(title, html, okLabel, onOk) {
+  document.getElementById("zm-dialog")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "zm-dialog";
+  overlay.className = "pw-overlay";
+  overlay.innerHTML = `<div class="pw-box swap-gate">
+      <h3>${title}</h3>
+      ${html}
+      <div class="pw-actions">
+        <button type="button" class="btn btn-ghost pw-cancel">${onOk ? "Odustani" : "U redu"}</button>
+        ${onOk ? `<button type="button" class="btn btn-primary pw-save">${okLabel}</button>` : ""}
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.querySelector(".pw-cancel").addEventListener("click", close);
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(); });
+  if (onOk) overlay.querySelector(".pw-save").addEventListener("click", async (e) => {
+    e.target.disabled = true;
+    await onOk();
+    close();
+  });
+}
+function swapBlocked(availableAt) {
+  swapGateDialog("Lista za zamenu nije dostupna",
+    `<p class="swap-gate-text">Iskoristio/la si oba ulaska u toku 24 sata. Možeš ponovo da pogledaš za 24h.</p>
+     <p class="swap-gate-when">Opcija je dostupna od<br><b>${swapFmtWhen(availableAt)}</b></p>`);
+}
+// Upisuje ulazak u bazi i otvara listu (ili poruku ako su ulasci potrošeni).
+async function swapOpenCounted(date) {
+  const { data, error } = await sb.rpc("swap_view_open");
+  if (error) { console.error(error); mobOpenSwapDay(date); return; } // SQL 048 još nije pokrenut
+  if (!data.ok) { swapBlocked(data.available_at); return; }
+  mobOpenSwapDay(date, data.limited
+    ? (data.used >= 2 ? "Ovo ti je 2. (poslednji) ulazak u 24h." : "Ovo ti je 1. od 2 ulaska u 24h.")
+    : "");
+}
+async function mobSwapGate(date) {
+  const me = RASPORED_ME_EMP;
+  if (!me) { mobOpenSwapDay(date); return; }
+  // Radnik koji tog dana ne radi dobija samo poruku — to se ne računa kao ulazak.
+  const day = MOB.byDate[date] || {};
+  const works = ["I", "II", "III"].some(c => (day[c] || []).some(p => p.employee_id === me.id));
+  if (!works && effFunkcija(me.id, me.funkcija, date) === "radnik") { mobOpenSwapDay(date); return; }
+  const { data: st, error } = await sb.rpc("swap_view_status");
+  if (error || !st || !st.limited) { if (error) console.error(error); mobOpenSwapDay(date); return; }
+  if (st.used >= 2) { swapBlocked(st.available_at); return; }
+  if (st.used === 0) {
+    swapGateDialog("Kolege dostupne za zamenu",
+      `<p class="swap-gate-text">U toku 24 sata možeš <b>2 puta</b> da uđeš i pogledaš ko je dostupan za zamenu (za bilo koji dan).</p>
+       <p class="swap-gate-text">Ako uđeš i treći put, lista neće biti dostupna dok ne prođe 24h od prvog ulaska.</p>`,
+      "Pogledaj (1/2)", () => swapOpenCounted(date));
+    return;
+  }
+  await swapOpenCounted(date);
+}
+
+function mobOpenSwapDay(date, note) {
+  document.querySelector(".day-sheet-overlay")?.remove();
+  const me = RASPORED_ME_EMP;
+  let body = note ? `<div class="swap-gate-note">${note}</div>` : "";
+  if (!me) {
+    // Office manager / Accounting nisu u rasporedu smena.
+    body = `<section class="mob-card"><div class="mob-empty">${LOCK_TEXT} Slobodan dan tražiš na stranici <a href="${APP_BASE}zamene.html">Zamene</a>.</div></section>`;
+  } else {
+    const day = MOB.byDate[date] || { I: [], II: [], III: [] };
+    const mine = ["I", "II", "III"].map(c => (day[c] || []).find(p => p.employee_id === me.id)).find(Boolean) || null;
+    const myF = effFunkcija(me.id, me.funkcija, date);
+    const st = mine && MOB.shiftTypes.find(s => s.code === mine.shift_code);
+    body += `<section class="mob-card"><div class="mob-title">Tvoja smena</div>
+      ${mine
+        ? `<div class="mob-now-head shift-${mine.isMS ? "MS" : mine.shift_code}"><span class="shift-icon">${SHIFT_ICON_SVG[mine.shift_code] || ""}</span>
+            <span class="n">${mine.isMS ? "Međusmena" : st ? st.label : mine.shift_code}</span><span class="t">${mobTimeLabel(mine.shift_code, mine.isMS)}</span></div>
+           <div class="mob-people">${mobPeopleHtml([mine], true)}</div>`
+        : '<div class="mob-empty">Tog dana ne radiš.</div>'}
+    </section>`;
+    // Radnik koji tog dana ne radi nema sa kim da se menja; monitoring i lideri i dalje mogu celu nedelju.
+    if (mine || myF !== "radnik") {
+      const cand = mobSwapCandidates(date, me, mine);
+      body += `<p class="mob-hint">${mine ? "Dodir na sebe: slobodan dan · dodir na kolegu: zahtev za zamenu." : "Dodir na kolegu: zamena za celu nedelju."}</p>`;
+      MOB.shiftTypes.forEach(s => {
+        if (!cand[s.code]) return;
+        body += `<section class="mob-card">
+          <div class="mob-now-head shift-${s.code}"><span class="shift-icon">${SHIFT_ICON_SVG[s.code] || ""}</span>
+            <span class="n">${s.label}</span><span class="t">${shiftTimeLabel(s)}</span></div>
+          <div class="mob-people">${cand[s.code].length ? mobPeopleHtml(cand[s.code], true) : '<div class="mob-empty">Nema nikoga za zamenu.</div>'}</div>
+        </section>`;
+      });
+    }
+  }
+  const overlay = document.createElement("div");
+  overlay.className = "day-sheet-overlay";
+  overlay.innerHTML = `<div class="day-sheet" data-date="${date}">
+      <div class="day-sheet-head"><h3>${zmFmtDate(date)}</h3><button type="button" class="day-sheet-close" aria-label="Zatvori">✕</button></div>
+      ${body}
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+// Ceo raspored za jedan dan (prozor odozdo) — Admin, Office manager, HR manager.
 function mobOpenDay(date) {
+  if (!RASPORED_FULL) { mobSwapGate(date); return; }
   document.querySelector(".day-sheet-overlay")?.remove();
   const day = MOB.byDate[date] || { I: [], II: [], III: [] };
   const d = new Date(date + "T00:00:00");
@@ -718,6 +903,12 @@ function startClock(shiftTypes) {
 
 (async () => {
   const { session, profile } = await mountHeader("raspored");
+  RASPORED_FULL = canSeeFullSchedule(profile);
+  document.body.classList.toggle("schedule-locked", !RASPORED_FULL);
+  if (!RASPORED_FULL) {
+    const hero = document.querySelector(".hero-card p");
+    if (hero) hero.textContent = session ? "Tvoje smene su na početnoj strani u aplikaciji na telefonu." : "Prijavite se da vidite svoje smene.";
+  }
   if (profile && !isAdminProfile(profile) && profile.username) RASPORED_ME = profile.username.toLowerCase();
   if (session) {
     const { data: me } = await sb.from("employees").select("id, funkcija").eq("profile_id", session.user.id).maybeSingle();
@@ -761,6 +952,8 @@ function startClock(shiftTypes) {
   await mobLoad();
   setInterval(mobRender, 60 * 1000);      // "Sada radi" i "u toku" prate sat
   setInterval(mobLoad, 10 * 60 * 1000);   // povremeno osveži podatke
+
+  if (!RASPORED_FULL) { renderLockedSchedule(session, shiftTypes); return; }
 
   document.getElementById("months-container").dataset.showUpcoming = "0";
   await loadAndRenderMonths();
