@@ -313,6 +313,16 @@
   .mob-day .mob-day-badge { background: var(--sc); color: #fff; border-radius: 8px; padding: 4px 11px; font-weight: 800; font-size: 16px; min-width: 38px; }
   .mob-day .chev { color: var(--text-muted); font-size: 18px; }
   .mob-full-btn { width: 100%; font-size: 15px; padding: 12px; }
+  /* Sada radi -> ceo dan; Sutra / Prekosutra na dodir */
+  .mob-fullday { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 4px; }
+  .mob-fullday .mob-now-head { margin: 8px 0 2px; }
+  .mob-expand { width: 100%; margin-top: 10px; padding: 10px; border: none; border-radius: 10px; background: var(--bg-soft); color: var(--text); font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; }
+  .mob-daycard-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: none; background: none; padding: 2px 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+  .mob-daycard-head .mob-title { margin: 0; }
+  .mob-daycard-date { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .mob-daycard-date .chev { color: var(--text-muted); font-size: 14px; }
+  .mob-dayoff-btn { width: 100%; font-size: 15.5px; padding: 13px; margin-bottom: 12px; }
+  .mob-dayoff-btn[disabled] { opacity: 0.55; }
   @media (max-width: 700px) {
     .zm-inbox h2 { font-size: 17px; }
     .zm-item .zm-date, .zm-item .zm-swap { font-size: 15px; }
@@ -427,6 +437,6 @@
   <script src="js/push.js?v=20261015a"></script>
   <script src="js/constants.js?v=20261026a"></script>
   <script src="js/swap-common.js?v=20261015a"></script>
-  <script src="js/raspored.js?v=20261126e"></script>
+  <script src="js/raspored.js?v=20261127a"></script>
 </body>
 </html>
